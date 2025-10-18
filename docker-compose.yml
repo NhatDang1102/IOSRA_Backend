@@ -6,7 +6,6 @@ services:
     environment:
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
       MYSQL_DATABASE: IOSRA_DB
-      TZ: UTC
     volumes:
       - mysqldata:/var/lib/mysql
     networks: [ iosra ]
@@ -22,8 +21,6 @@ services:
     volumes:
       - ./secrets/appsettings.Secret.json:/app/appsettings.Secret.json:ro
     depends_on: [ mysql ]
-    ports:
-      - "80:8080"
     networks: [ iosra ]
 
   caddy:
@@ -35,10 +32,11 @@ services:
       - "443:443"
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
-    depends_on:
-      - api
+    depends_on: [ api ]
     networks: [ iosra ]
+
 volumes:
   mysqldata:
+
 networks:
   iosra:
