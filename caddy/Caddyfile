@@ -1,0 +1,4 @@
+45-132-75-29.sslip.io {
+    reverse_proxy api:8080
+    encode gzip
+}
