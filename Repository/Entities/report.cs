@@ -1,0 +1,48 @@
+﻿using System;
+using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
+using Microsoft.EntityFrameworkCore;
+
+namespace Repository.Entities;
+
+[Index("moderator_id", Name = "ix_reports_moderator")]
+[Index("reporter_id", Name = "ix_reports_reporter")]
+[Index("target_type", "target_id", Name = "ix_reports_target")]
+public partial class report
+{
+    [Key]
+    public ulong report_id { get; set; }
+
+    [Column(TypeName = "enum('story','chapter','comment','user')")]
+    public string target_type { get; set; } = null!;
+
+    public ulong target_id { get; set; }
+
+    public ulong reporter_id { get; set; }
+
+    [StringLength(255)]
+    public string reason { get; set; } = null!;
+
+    [Column(TypeName = "text")]
+    public string? details { get; set; }
+
+    [Column(TypeName = "enum('open','in_review','resolved','rejected')")]
+    public string status { get; set; } = null!;
+
+    public ulong? moderator_id { get; set; }
+
+    [Column(TypeName = "datetime")]
+    public DateTime? reviewed_at { get; set; }
+
+    [Column(TypeName = "datetime")]
+    public DateTime created_at { get; set; }
+
+    [ForeignKey("moderator_id")]
+    [InverseProperty("reports")]
+    public virtual ContentMod? moderator { get; set; }
+
+    [ForeignKey("reporter_id")]
+    [InverseProperty("reports")]
+    public virtual account reporter { get; set; } = null!;
+}

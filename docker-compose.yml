@@ -1,0 +1,32 @@
+services:
+  mysql:
+    image: mysql:8.4
+    container_name: iosra_mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: IOSRA_DB
+      TZ: UTC
+    volumes:
+      - mysqldata:/var/lib/mysql
+    networks: [ iosra ]
+
+  api:
+    build:
+      context: .
+      dockerfile: Main/Dockerfile
+    container_name: iosra_api
+    restart: unless-stopped
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+    volumes:
+      - ./secrets/appsettings.Secret.json:/app/appsettings.Secret.json:ro
+    depends_on: [ mysql ]
+    ports:
+      - "80:8080"
+    networks: [ iosra ]
+
+volumes:
+  mysqldata:
+networks:
+  iosra:

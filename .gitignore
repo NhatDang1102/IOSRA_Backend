@@ -23,7 +23,6 @@ obj/
 # === Docker volumes ===
 docker-compose.override.yml
 .env
-docker-compose.yml
 
 # === EF Core migration folders (optional) ===
 **/Migrations/
