@@ -9,6 +9,9 @@ services:
       TZ: UTC
     volumes:
       - mysqldata:/var/lib/mysql
+    # CHỈ lắng nghe trên loopback của VPS (an toàn, dùng SSH/DBeaver tunnel)
+    ports:
+      - "127.0.0.1:3306:3306"
     networks: [ iosra ]
     healthcheck:
       test: ["CMD-SHELL", "mysqladmin ping -uroot -p$$MYSQL_ROOT_PASSWORD --silent"]
@@ -25,13 +28,12 @@ services:
     environment:
       ASPNETCORE_ENVIRONMENT: Production
     volumes:
-      # Connection string cho API để ở file này (KHÔNG commit)
       - ./secrets/appsettings.Secret.json:/app/appsettings.Secret.json:ro
     depends_on:
       mysql:
         condition: service_healthy
     networks: [ iosra ]
-    # KHÔNG mở port ra ngoài — Caddy sẽ reverse proxy vào api:8080
+    # KHÔNG expose port trực tiếp. Caddy reverse proxy vào api:8080
 
   caddy:
     image: caddy:2.8
@@ -41,7 +43,6 @@ services:
       - "80:80"
       - "443:443"
     volumes:
-      # Đặt file Caddyfile trong repo tại ./caddy/Caddyfile
       - ./caddy/Caddyfile:/etc/caddy/Caddyfile:ro
     depends_on:
       - api
