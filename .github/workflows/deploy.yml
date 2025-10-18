@@ -8,20 +8,24 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
 
       - name: Deploy via SSH
         uses: appleboy/ssh-action@v1.2.0
         with:
-          host: ${{ secrets.VPS_HOST }}
-          username: ${{ secrets.VPS_USER }}
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
           key: ${{ secrets.SSH_KEY }}
+          port: 22
           script: |
             set -e
-            cd /opt/iosra
-            # Đảm bảo KHÔNG còn file thủ công khác
-            git fetch --all --prune
-            git reset --hard origin/main
-            # Build & chạy theo compose TRONG REPO
+            # Clone lần đầu, các lần sau chỉ pull
+            if [ -d "${{ secrets.APP_DIR }}/.git" ]; then
+              cd ${{ secrets.APP_DIR }} && git fetch --all --prune && git reset --hard origin/main
+            else
+              cd /opt && git clone https://github.com/NhatDang1102/IOSRA_Backend.git iosra && cd iosra
+            fi
+            docker compose pull || true
             docker compose up -d --build
-            docker compose ps
+            docker system prune -f
