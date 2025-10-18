@@ -1,0 +1,42 @@
+# === .NET build files ===
+bin/
+obj/
+**/bin/
+**/obj/
+
+# === Visual Studio ===
+.vs/
+*.user
+*.suo
+
+# === Rider ===
+.idea/
+
+# === Logs / temp ===
+*.log
+*.tlog
+
+# === User-specific ===
+*.userosscache
+*.sln.docstates
+
+# === Docker volumes ===
+docker-compose.override.yml
+.env
+docker-compose.yml
+
+# === EF Core migration folders (optional) ===
+**/Migrations/
+
+# === secrets (nếu có) ===
+secrets.json
+appsettings.Development.json
+firebaseTest.html
+appsettings.Secret.json
+
+# === OS-specific ===
+.DS_Store
+Thumbs.db
+
+# === Publish output ===
+publish/
