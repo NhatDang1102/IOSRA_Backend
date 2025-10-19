@@ -14,18 +14,25 @@ public class AuthController : ControllerBase
     [HttpPost("register")]
     public async Task<IActionResult> Register([FromBody] RegisterRequest req, CancellationToken ct)
     {
-        await _auth.SendRegisterOtpAsync(req, ct);
-        return Ok(new { message = "OTP đã gửi. Vui lòng kiểm tra email." });
+        try
+        {
+            await _auth.SendRegisterOtpAsync(req, ct);
+            return Ok(new { message = "OTP đã gửi. Vui lòng kiểm tra email." });
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(new { error = new { code = "BadRequest", message = ex.Message } });
+        }
+        catch (InvalidOperationException ex)
+        {
+            return Conflict(new { error = new { code = "Conflict", message = ex.Message } });
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, new { error = new { code = "InternalError", message = "Lỗi hệ thống." } });
+        }
     }
 
-    [HttpPost("verify")]
-    public async Task<IActionResult> Verify([FromBody] VerifyOtpRequest req, CancellationToken ct)
-    {
-        var jwt = await _auth.VerifyRegisterAsync(req, ct);
-        return Ok(new { token = jwt });
-    }
-
-    // NEW:
     [HttpPost("login")]
     public async Task<IActionResult> Login([FromBody] LoginRequest req, CancellationToken ct)
     {
