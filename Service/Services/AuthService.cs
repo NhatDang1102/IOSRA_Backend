@@ -18,6 +18,7 @@ public class AuthService : IAuthService
     private readonly IJwtTokenFactory _jwt;
     private readonly IOtpStore _otpStore;
     private readonly IMailSender _mail;
+    private readonly IFirebaseAuthVerifier _fb;
 
     public AuthService(
         IAccountRepository accounts,
@@ -26,7 +27,8 @@ public class AuthService : IAuthService
         IAccountRoleRepository accountRoles,
         IJwtTokenFactory jwt,
         IOtpStore otpStore,
-        IMailSender mail)
+        IMailSender mail,
+        IFirebaseAuthVerifier fb)
     {
         _accounts = accounts;
         _readers = readers;
@@ -35,6 +37,7 @@ public class AuthService : IAuthService
         _jwt = jwt;
         _otpStore = otpStore;
         _mail = mail;
+        _fb = fb;
     }
 
     public async Task SendRegisterOtpAsync(RegisterRequest req, CancellationToken ct = default)
@@ -103,5 +106,78 @@ public class AuthService : IAuthService
             Email = acc.email,
             Token = token
         };
+    }
+    public async Task<LoginResponse> LoginWithGoogleAsync(GoogleLoginRequest req, CancellationToken ct = default)
+    {
+        FirebaseUserInfo user;
+        try
+        {
+            user = await _fb.VerifyIdTokenAsync(req.IdToken, ct);
+        }
+        catch
+        {
+            throw new UnauthorizedAccessException("Token Google không hợp lệ hoặc hết hạn.");
+        }
+
+        var acc = await _accounts.FindByIdentifierAsync(user.Email, ct);
+        if (acc == null)
+        {
+            throw new InvalidOperationException("AccountNotRegistered");
+        }
+
+        if (acc.status == "banned")
+            throw new UnauthorizedAccessException("Tài khoản đã bị khóa.");
+
+        var roles = await _roles.GetRoleCodesOfAccountAsync(acc.account_id, ct);
+        var token = _jwt.CreateToken(acc, roles);
+
+        return new LoginResponse
+        {
+            Username = acc.username,
+            Email = acc.email,
+            Token = token
+        };
+    }
+
+    public async Task<LoginResponse> CompleteGoogleRegisterAsync(CompleteGoogleRegisterRequest req, CancellationToken ct = default)
+    {
+        FirebaseUserInfo user;
+        try
+        {
+            user = await _fb.VerifyIdTokenAsync(req.IdToken, ct);
+        }
+        catch
+        {
+            throw new UnauthorizedAccessException("Token Google không hợp lệ hoặc hết hạn.");
+        }
+
+        if (await _accounts.ExistsByUsernameOrEmailAsync(req.Username, user.Email, ct))
+            throw new InvalidOperationException("Email hoặc username đã tồn tại.");
+
+        if (!System.Text.RegularExpressions.Regex.IsMatch(
+                req.Password, @"^(?=.*[A-Za-z])(?=.*\d).{6,20}$"))
+            throw new ArgumentException("Mật khẩu phải có ít nhất 1 chữ và 1 số, dài 6–20 ký tự.");
+
+        var pwdHash = BCrypt.Net.BCrypt.HashPassword(req.Password);
+
+        var acc = new account
+        {
+            username = req.Username,
+            email = user.Email,
+            password_hash = pwdHash,
+            status = "unbanned",
+            strike = 0,
+            avatar_url = user.Picture
+        };
+        await _accounts.AddAsync(acc, ct);
+        await _readers.AddAsync(new reader { account_id = acc.account_id }, ct);
+
+        var readerRoleId = await _roles.GetRoleIdByCodeAsync("reader", ct);
+        await _accountRoles.AddAsync(acc.account_id, readerRoleId, ct);
+
+        _ = _mail.SendWelcomeEmailAsync(user.Email, req.Username);
+
+        var token = _jwt.CreateToken(acc, new[] { "reader" });
+        return new LoginResponse { Username = acc.username, Email = acc.email, Token = token };
     }
 }
