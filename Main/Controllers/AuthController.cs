@@ -32,7 +32,12 @@ public class AuthController : ControllerBase
             return StatusCode(500, new { error = new { code = "InternalError", message = "Lỗi hệ thống." } });
         }
     }
-
+    [HttpPost("verify")]
+    public async Task<IActionResult> Verify([FromBody] VerifyOtpRequest req, CancellationToken ct)
+    {
+        var jwt = await _auth.VerifyRegisterAsync(req, ct);
+        return Ok(new { token = jwt });
+    }
     [HttpPost("login")]
     public async Task<IActionResult> Login([FromBody] LoginRequest req, CancellationToken ct)
     {
