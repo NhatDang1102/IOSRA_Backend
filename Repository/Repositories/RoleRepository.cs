@@ -20,4 +20,11 @@ public class RoleRepository : IRoleRepository
         if (id == 0) throw new InvalidOperationException($"Role '{roleCode}' chưa được seed.");
         return id;
     }
+
+    public Task<List<string>> GetRoleCodesOfAccountAsync(ulong accountId, CancellationToken ct = default)
+    => _db.account_roles
+          .Where(ar => ar.account_id == accountId)
+          .Join(_db.roles, ar => ar.role_id, r => r.role_id, (ar, r) => r.role_code)
+          .ToListAsync(ct);
 }
+

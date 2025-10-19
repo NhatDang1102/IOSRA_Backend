@@ -1,5 +1,6 @@
 ﻿using BCrypt.Net;
 using Contract.DTOs.Request;
+using Contract.DTOs.Respond;
 using Repository.Entities;
 using Repository.Interfaces;
 using Service.Helpers;
@@ -80,5 +81,27 @@ public class AuthService : IAuthService
         _ = _mail.SendWelcomeEmailAsync(req.Email, usernameStored);
 
         return _jwt.CreateToken(acc, new[] { "reader" });
+    }
+
+    public async Task<LoginResponse> LoginAsync(LoginRequest req, CancellationToken ct = default)
+    {
+        var acc = await _accounts.FindByIdentifierAsync(req.Identifier, ct);
+        if (acc == null) throw new UnauthorizedAccessException("Tài khoản không tồn tại.");
+
+        if (acc.status == "banned")
+            throw new UnauthorizedAccessException("Tài khoản đã bị khóa.");
+
+        var ok = BCrypt.Net.BCrypt.Verify(req.Password, acc.password_hash);
+        if (!ok) throw new UnauthorizedAccessException("Sai mật khẩu.");
+
+        var roles = await _roles.GetRoleCodesOfAccountAsync(acc.account_id, ct);
+        var token = _jwt.CreateToken(acc, roles);
+
+        return new LoginResponse
+        {
+            Username = acc.username,
+            Email = acc.email,
+            Token = token
+        };
     }
 }

@@ -11,5 +11,9 @@ namespace Repository.Interfaces
     {
         Task<bool> ExistsByUsernameOrEmailAsync(string username, string email, CancellationToken ct = default);
         Task<account> AddAsync(account entity, CancellationToken ct = default);
+
+
+        Task<account?> FindByIdentifierAsync(string identifier, CancellationToken ct = default); // email hoặc username
+
     }
 }

@@ -24,4 +24,19 @@ public class AuthController : ControllerBase
         var jwt = await _auth.VerifyRegisterAsync(req, ct);
         return Ok(new { token = jwt });
     }
+
+    // NEW:
+    [HttpPost("login")]
+    public async Task<IActionResult> Login([FromBody] LoginRequest req, CancellationToken ct)
+    {
+        try
+        {
+            var res = await _auth.LoginAsync(req, ct);
+            return Ok(res); // { username, email, token }
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            return Unauthorized(new { message = ex.Message });
+        }
+    }
 }

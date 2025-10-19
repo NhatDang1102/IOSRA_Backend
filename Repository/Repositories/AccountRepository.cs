@@ -19,4 +19,8 @@ public class AccountRepository : IAccountRepository
         await _db.SaveChangesAsync(ct);
         return entity;
     }
+
+    public Task<account?> FindByIdentifierAsync(string identifier, CancellationToken ct = default)
+        => _db.accounts
+              .FirstOrDefaultAsync(a => a.email == identifier || a.username == identifier, ct);
 }
