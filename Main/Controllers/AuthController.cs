@@ -39,4 +39,31 @@ public class AuthController : ControllerBase
             return Unauthorized(new { message = ex.Message });
         }
     }
+    [HttpPost("google")]
+    public async Task<IActionResult> GoogleLogin([FromBody] GoogleLoginRequest req, CancellationToken ct)
+    {
+        try
+        {
+            var res = await _auth.LoginWithGoogleAsync(req, ct);
+            return Ok(res);
+        }
+        catch (InvalidOperationException ex) when (ex.Message == "AccountNotRegistered")
+        {
+            return Conflict(new
+            {
+                error = new
+                {
+                    code = "AccountNotRegistered",
+                    message = "Tài khoản Google chưa liên kết. Vui lòng hoàn tất đăng ký."
+                }
+            });
+        }
+    }
+
+    [HttpPost("google/complete")]
+    public async Task<IActionResult> CompleteGoogleRegister([FromBody] CompleteGoogleRegisterRequest req, CancellationToken ct)
+    {
+        var res = await _auth.CompleteGoogleRegisterAsync(req, ct);
+        return Ok(res); // { username, email, token }
+    }
 }
