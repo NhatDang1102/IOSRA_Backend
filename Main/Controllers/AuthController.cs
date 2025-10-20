@@ -35,8 +35,15 @@ public class AuthController : ControllerBase
     [HttpPost("verify")]
     public async Task<IActionResult> Verify([FromBody] VerifyOtpRequest req, CancellationToken ct)
     {
-        var jwt = await _auth.VerifyRegisterAsync(req, ct);
-        return Ok(new { token = jwt });
+        try
+        {
+            var jwt = await _auth.VerifyRegisterAsync(req, ct);
+            return Ok(new { token = jwt });
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(new { error = new { code = "InvalidOtp", message = ex.Message } });
+        }
     }
     [HttpPost("login")]
     public async Task<IActionResult> Login([FromBody] LoginRequest req, CancellationToken ct)
