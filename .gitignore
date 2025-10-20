@@ -43,3 +43,7 @@ Thumbs.db
 publish/
 Main/firebase-service-account.json
 
+
+# === Local dev ===
+.env.local
+/docker/local/mysql/init/

@@ -1,17 +1,16 @@
-services:
+﻿services:
   mysql:
     image: mysql:8.4
     container_name: iosra_mysql
     restart: unless-stopped
     environment:
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
-      MYSQL_DATABASE: IOSRA_DB
+      MYSQL_DATABASE: ${MYSQL_DATABASE}
       TZ: UTC
     volumes:
       - mysqldata:/var/lib/mysql
-    # CHỈ lắng nghe trên loopback của VPS (an toàn, dùng SSH/DBeaver tunnel)
     ports:
-      - "127.0.0.1:3306:3306"
+      - "${MYSQL_PORT_MAPPING}"
     networks: [ iosra ]
     healthcheck:
       test: ["CMD-SHELL", "mysqladmin ping -uroot -p$$MYSQL_ROOT_PASSWORD --silent"]
@@ -33,7 +32,6 @@ services:
       mysql:
         condition: service_healthy
     networks: [ iosra ]
-    # KHÔNG expose port trực tiếp. Caddy reverse proxy vào api:8080
 
   caddy:
     image: caddy:2.8
@@ -53,7 +51,7 @@ services:
     container_name: iosra_redis
     restart: unless-stopped
     ports:
-      - "127.0.0.1:6379:6379"
+      - "${REDIS_PORT_MAPPING}"
     networks: [ iosra ]
 
 volumes:
@@ -61,3 +59,4 @@ volumes:
 
 networks:
   iosra:
+

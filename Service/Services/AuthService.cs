@@ -3,6 +3,7 @@ using Contract.DTOs.Request;
 using Contract.DTOs.Respond;
 using Repository.Entities;
 using Repository.Interfaces;
+using Service.Exceptions;
 using Service.Helpers;
 using Service.Interfaces;
 using System.Security.Cryptography;
@@ -43,15 +44,21 @@ public class AuthService : IAuthService
     public async Task SendRegisterOtpAsync(RegisterRequest req, CancellationToken ct = default)
     {
         if (string.IsNullOrWhiteSpace(req.Username) || string.IsNullOrWhiteSpace(req.Email) || string.IsNullOrWhiteSpace(req.Password))
-            throw new ArgumentException("Thiếu thông tin.");
+        {
+            throw new AppException("InvalidRequest", "ko đủ tt đkí.", 400);
+        }
 
         if (await _accounts.ExistsByUsernameOrEmailAsync(req.Username, req.Email, ct))
-            throw new InvalidOperationException("Email hoặc username đã tồn tại.");
+        {
+            throw new AppException("AccountExists", "email/username đã có.", 409);
+        }
 
         if (!await _otpStore.CanSendAsync(req.Email))
-            throw new InvalidOperationException("Bạn đã vượt quá số lần gửi OTP trong 1 giờ.");
+        {
+            throw new AppException("OtpRateLimit", "1 tiếng chỉ đc 1 otp.", 429);
+        }
 
-        var otp = RandomNumberGenerator.GetInt32(100000, 1000000).ToString(); // 6 số
+        var otp = RandomNumberGenerator.GetInt32(100000, 1000000).ToString();
         var bcrypt = BCrypt.Net.BCrypt.HashPassword(req.Password);
 
         await _otpStore.SaveAsync(req.Email, otp, bcrypt, req.Username);
@@ -61,10 +68,16 @@ public class AuthService : IAuthService
     public async Task<string> VerifyRegisterAsync(VerifyOtpRequest req, CancellationToken ct = default)
     {
         var entry = await _otpStore.GetAsync(req.Email);
-        if (entry == null) throw new InvalidOperationException("OTP hết hạn hoặc không tồn tại.");
+        if (entry == null)
+        {
+            throw new AppException("InvalidOtp", "otp hết hạn/sai.", 400);
+        }
 
         var (otpStored, pwdHashStored, usernameStored) = entry.Value;
-        if (otpStored != req.Otp) throw new InvalidOperationException("OTP không đúng.");
+        if (otpStored != req.Otp)
+        {
+            throw new AppException("InvalidOtp", "otp hết hạn/sai.", 400);
+        }
 
         var acc = new account
         {
@@ -89,13 +102,21 @@ public class AuthService : IAuthService
     public async Task<LoginResponse> LoginAsync(LoginRequest req, CancellationToken ct = default)
     {
         var acc = await _accounts.FindByIdentifierAsync(req.Identifier, ct);
-        if (acc == null) throw new UnauthorizedAccessException("Tài khoản không tồn tại.");
+        if (acc == null)
+        {
+            throw new AppException("AccountNotFound", "acc ko tồn tại.", 401);
+        }
 
         if (acc.status == "banned")
-            throw new UnauthorizedAccessException("Tài khoản đã bị khóa.");
+        {
+            throw new AppException("AccountBanned", "acc bị khóa.", 403);
+        }
 
         var ok = BCrypt.Net.BCrypt.Verify(req.Password, acc.password_hash);
-        if (!ok) throw new UnauthorizedAccessException("Sai mật khẩu.");
+        if (!ok)
+        {
+            throw new AppException("InvalidCredentials", "sai pass.", 401);
+        }
 
         var roles = await _roles.GetRoleCodesOfAccountAsync(acc.account_id, ct);
         var token = _jwt.CreateToken(acc, roles);
@@ -107,6 +128,7 @@ public class AuthService : IAuthService
             Token = token
         };
     }
+
     public async Task<LoginResponse> LoginWithGoogleAsync(GoogleLoginRequest req, CancellationToken ct = default)
     {
         FirebaseUserInfo user;
@@ -116,17 +138,19 @@ public class AuthService : IAuthService
         }
         catch
         {
-            throw new UnauthorizedAccessException("Token Google không hợp lệ hoặc hết hạn.");
+            throw new AppException("InvalidGoogleToken", "Token Google không hợp lệ hoặc hết hạn.", 401);
         }
 
         var acc = await _accounts.FindByIdentifierAsync(user.Email, ct);
         if (acc == null)
         {
-            throw new InvalidOperationException("AccountNotRegistered");
+            throw new AppException("AccountNotRegistered", "chưa đkí tk, hoàn thiện đkí.", 409);
         }
 
         if (acc.status == "banned")
-            throw new UnauthorizedAccessException("Tài khoản đã bị khóa.");
+        {
+            throw new AppException("AccountBanned", "acc đã bị khóa.", 403);
+        }
 
         var roles = await _roles.GetRoleCodesOfAccountAsync(acc.account_id, ct);
         var token = _jwt.CreateToken(acc, roles);
@@ -148,15 +172,18 @@ public class AuthService : IAuthService
         }
         catch
         {
-            throw new UnauthorizedAccessException("Token Google không hợp lệ hoặc hết hạn.");
+            throw new AppException("InvalidGoogleToken", "Token Google không hợp lệ hoặc hết hạn.", 401);
         }
 
         if (await _accounts.ExistsByUsernameOrEmailAsync(req.Username, user.Email, ct))
-            throw new InvalidOperationException("Email hoặc username đã tồn tại.");
+        {
+            throw new AppException("AccountExists", "email/username đã có tk.", 409);
+        }
 
-        if (!System.Text.RegularExpressions.Regex.IsMatch(
-                req.Password, @"^(?=.*[A-Za-z])(?=.*\d).{6,20}$"))
-            throw new ArgumentException("Mật khẩu phải có ít nhất 1 chữ và 1 số, dài 6–20 ký tự.");
+        if (!System.Text.RegularExpressions.Regex.IsMatch(req.Password, @"^(?=.*[A-Za-z])(?=.*\d).{6,20}$"))
+        {
+            throw new AppException("InvalidPassword", "pass phỉ có 1 chữ 1 số.", 400);
+        }
 
         var pwdHash = BCrypt.Net.BCrypt.HashPassword(req.Password);
 
