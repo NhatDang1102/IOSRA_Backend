@@ -12,6 +12,10 @@
     using Contract.DTOs.Settings;
     using FirebaseAdmin;
     using Google.Apis.Auth.OAuth2;
+    using Main.Middleware;
+    using Main.Models;
+    using Microsoft.AspNetCore.Mvc;
+    using System.Linq;
 
     var builder = WebApplication.CreateBuilder(args);
 
@@ -89,6 +93,22 @@ builder.Services.AddCors(options =>
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
+
+builder.Services.Configure<ApiBehaviorOptions>(options =>
+{
+    options.InvalidModelStateResponseFactory = context =>
+    {
+        var errors = context.ModelState
+            .Where(x => x.Value?.Errors.Count > 0)
+            .ToDictionary(
+                kvp => kvp.Key,
+                kvp => kvp.Value!.Errors.Select(error => error.ErrorMessage).ToArray());
+
+        var response = ErrorResponse.From("ValidationFailed", "Dữ liệu không hợp lệ.", errors);
+
+        return new BadRequestObjectResult(response);
+    };
+});
 
     var app = builder.Build();
     app.UseSwagger();
