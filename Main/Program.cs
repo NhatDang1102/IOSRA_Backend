@@ -1,4 +1,4 @@
-﻿    using Microsoft.AspNetCore.Authentication.JwtBearer;
+    using Microsoft.AspNetCore.Authentication.JwtBearer;
     using Microsoft.EntityFrameworkCore;
     using Microsoft.IdentityModel.Tokens;
     using Repository.DBContext;
@@ -15,8 +15,10 @@
 
     var builder = WebApplication.CreateBuilder(args);
 
-    // bắt buộc có Secret
-    builder.Configuration.AddJsonFile("appsettings.Secret.json", optional: false, reloadOnChange: true);
+    var env = builder.Environment;
+    builder.Configuration
+        .AddJsonFile("appsettings.Secret.json", optional: false, reloadOnChange: true)
+        .AddJsonFile($"appsettings.Secret.{env.EnvironmentName}.json", optional: true, reloadOnChange: true);
 
     // Options
     builder.Services.Configure<SmtpSettings>(builder.Configuration.GetSection("Smtp"));

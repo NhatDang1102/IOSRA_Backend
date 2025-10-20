@@ -32,6 +32,8 @@ secrets.json
 appsettings.Development.json
 firebaseTest.html
 appsettings.Secret.json
+appsettings.Secret.*.json
+Main/appsettings.Secret.*.json
 firebase-service-account.json
 # === OS-specific ===
 .DS_Store
