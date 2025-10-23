@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Contract.DTOs.Respond
+namespace Contract.DTOs.Respond.Auth
 {
     public class LoginResponse
     {

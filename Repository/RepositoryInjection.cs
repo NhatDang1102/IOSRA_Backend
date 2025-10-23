@@ -8,10 +8,7 @@ namespace Repository
     {
         public static IServiceCollection AddRepositoryServices(this IServiceCollection services)
         {
-            services.AddScoped<IAccountRepository, AccountRepository>();
-            services.AddScoped<IReaderRepository, ReaderRepository>();
-            services.AddScoped<IRoleRepository, RoleRepository>();
-            services.AddScoped<IAccountRoleRepository, AccountRoleRepository>();
+            services.AddScoped<IAuthRepository, AuthRepository>();
             services.AddScoped<IAdminRepository, AdminRepository>();
             return services;
         }

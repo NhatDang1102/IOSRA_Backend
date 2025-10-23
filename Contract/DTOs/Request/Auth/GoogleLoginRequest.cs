@@ -1,6 +1,6 @@
 ﻿using System.ComponentModel.DataAnnotations;
 
-namespace Contract.DTOs.Request;
+namespace Contract.DTOs.Request.Auth;
 
 public class GoogleLoginRequest
 {
