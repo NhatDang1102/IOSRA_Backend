@@ -10,6 +10,7 @@ namespace Repository
         {
             services.AddScoped<IAuthRepository, AuthRepository>();
             services.AddScoped<IAdminRepository, AdminRepository>();
+            services.AddScoped<IProfileRepository, ProfileRepository>();
             return services;
         }
     }

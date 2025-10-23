@@ -2,7 +2,6 @@
 using Service.Helpers;
 using Service.Implementations;
 using Service.Interfaces;
-using Service.Services;
 
 namespace Service
 {
@@ -15,7 +14,11 @@ namespace Service
             services.AddSingleton<IJwtBlacklistService, RedisJwtBlacklist>();
             services.AddScoped<IJwtTokenFactory, JwtTokenFactory>();
             services.AddScoped<IAuthService, AuthService>();
-            services.AddScoped<IAdminService, AdminService>();
+            services.AddScoped<IAdminService, Service.Services.AdminService>();
+
+            services.AddSingleton<IImageUploader, CloudinaryUploader>();
+            services.AddScoped<IProfileService, ProfileService>();
+
             return services;
         }
     }

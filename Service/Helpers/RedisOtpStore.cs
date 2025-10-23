@@ -2,8 +2,6 @@
 using Microsoft.Extensions.Options;
 using Service.Interfaces;
 using StackExchange.Redis;
-using System;
-using System.Threading.Tasks;
 
 namespace Service.Helpers
 {
@@ -19,8 +17,8 @@ namespace Service.Helpers
 
         private string Key(string email) => $"{_opt.RedisPrefix}:{email}";
         private string CountKey(string email) => $"{_opt.RedisPrefix}:count:{email}";
-
         private string ForgotKey(string email) => $"{_opt.RedisPrefix}:forgot:{email}";
+        private string EmailChangeKey(ulong accountId) => $"{_opt.RedisPrefix}:emailchange:{accountId}";
 
         public async Task SaveAsync(string email, string otp, string passwordBcrypt, string username)
         {
@@ -72,6 +70,28 @@ namespace Service.Helpers
         {
             var db = _redis.GetDatabase();
             return db.KeyDeleteAsync(ForgotKey(email));
+        }
+
+        // Change email
+        public async Task SaveEmailChangeAsync(ulong accountId, string newEmail, string otp)
+        {
+            var db = _redis.GetDatabase();
+            await db.StringSetAsync(EmailChangeKey(accountId), $"{newEmail}|{otp}", TimeSpan.FromMinutes(_opt.TtlMinutes));
+        }
+
+        public async Task<(string NewEmail, string Otp)?> GetEmailChangeAsync(ulong accountId)
+        {
+            var db = _redis.GetDatabase();
+            var v = await db.StringGetAsync(EmailChangeKey(accountId));
+            if (v.IsNullOrEmpty) return null;
+            var parts = v.ToString().Split('|', 2);
+            return (parts[0], parts[1]);
+        }
+
+        public Task<bool> DeleteEmailChangeAsync(ulong accountId)
+        {
+            var db = _redis.GetDatabase();
+            return db.KeyDeleteAsync(EmailChangeKey(accountId));
         }
     }
 }
