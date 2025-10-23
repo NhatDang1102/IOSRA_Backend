@@ -35,6 +35,7 @@ appsettings.Secret.json
 appsettings.Secret.*.json
 Main/appsettings.Secret.*.json
 firebase-service-account.json
+iosra-e1982-firebase-adminsdk-fbsvc-9956dfeef9.json
 # === OS-specific ===
 .DS_Store
 Thumbs.db
