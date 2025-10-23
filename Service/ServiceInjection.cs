@@ -12,6 +12,7 @@ namespace Service
         {
             services.AddSingleton<IMailSender, MailSender>();
             services.AddSingleton<IOtpStore, RedisOtpStore>();
+            services.AddSingleton<IJwtBlacklistService, RedisJwtBlacklist>();
             services.AddScoped<IJwtTokenFactory, JwtTokenFactory>();
             services.AddScoped<IAuthService, AuthService>();
             services.AddScoped<IAdminService, AdminService>();

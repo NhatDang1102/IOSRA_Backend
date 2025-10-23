@@ -3,11 +3,6 @@ using Contract.DTOs.Respond.Admin;
 using Repository.Interfaces;
 using Service.Exceptions;
 using Service.Interfaces;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Service.Services
 {
@@ -17,14 +12,12 @@ namespace Service.Services
     public sealed class AdminService : IAdminService
     {
         private readonly IAdminRepository _adminRepo;
-        private readonly IRoleRepository _roleRepo;
-        private readonly IAccountRepository _accRepo;
+        private readonly IAuthRepository _authRepo;
 
-        public AdminService(IAdminRepository adminRepo, IRoleRepository roleRepo, IAccountRepository accRepo)
+        public AdminService(IAdminRepository adminRepo, IAuthRepository authRepo)
         {
             _adminRepo = adminRepo;
-            _roleRepo = roleRepo;
-            _accRepo = accRepo;
+            _authRepo = authRepo;
         }
 
         public async Task<PagedResult<AccountAdminResponse>> QueryAccountsAsync(AccountQuery q, CancellationToken ct)
@@ -37,8 +30,8 @@ namespace Service.Services
             var result = new List<AccountAdminResponse>(items.Count);
             foreach (var a in items)
             {
-                // dùng repo RoleRepository sẵn có
-                var roles = await _roleRepo.GetRoleCodesOfAccountAsync(a.account_id, ct);
+                // Lấy role codes từ AuthRepository
+                var roles = await _authRepo.GetRoleCodesOfAccountAsync(a.account_id, ct);
 
                 result.Add(new AccountAdminResponse
                 {
@@ -75,7 +68,7 @@ namespace Service.Services
             var roleIds = new List<ushort>();
             foreach (var code in roleCodes.Distinct(StringComparer.OrdinalIgnoreCase))
             {
-                var id = await _roleRepo.GetRoleIdByCodeAsync(code, ct);
+                var id = await _authRepo.GetRoleIdByCodeAsync(code, ct);
                 if (id == 0)
                     throw new AppException("RoleNotFound", $"role_code '{code}' không tồn tại.", 404);
                 roleIds.Add(id);
@@ -91,7 +84,7 @@ namespace Service.Services
             if (acc.status == "banned") return;
 
             // Không cho ban ADMIN (chính sách mẫu)
-            var roles = await _roleRepo.GetRoleCodesOfAccountAsync(accountId, ct);
+            var roles = await _authRepo.GetRoleCodesOfAccountAsync(accountId, ct);
             if (roles.Contains("ADMIN", StringComparer.OrdinalIgnoreCase))
                 throw new AppException("Forbidden", "Không thể ban tài khoản ADMIN.", 403, new { reason });
 
@@ -112,11 +105,11 @@ namespace Service.Services
             if (string.IsNullOrWhiteSpace(identifier))
                 throw new AppException("BadRequest", "Thiếu tham số identifier.", 400, new { identifier });
 
-            var acc = await _accRepo.FindByIdentifierAsync(identifier, ct);
+            var acc = await _authRepo.FindAccountByIdentifierAsync(identifier, ct);
             if (acc is null)
                 throw new AppException("AccountNotFound", "Không tìm thấy tài khoản.", 404, new { identifier });
 
-            var roles = await _roleRepo.GetRoleCodesOfAccountAsync(acc.account_id, ct);
+            var roles = await _authRepo.GetRoleCodesOfAccountAsync(acc.account_id, ct);
 
             return new AccountAdminResponse
             {

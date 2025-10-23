@@ -1,12 +1,11 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using Repository.DBContext;
 using Repository.Entities;
 using Repository.Interfaces;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace Repository.Repositories
 {
@@ -27,6 +26,16 @@ namespace Repository.Repositories
 
         public Task<account?> FindAccountByIdentifierAsync(string identifier, CancellationToken ct = default)
             => _db.accounts.FirstOrDefaultAsync(a => a.email == identifier || a.username == identifier, ct);
+
+        public Task<account?> FindAccountByEmailAsync(string email, CancellationToken ct = default)
+            => _db.accounts.FirstOrDefaultAsync(a => a.email == email, ct);
+
+        public async Task UpdatePasswordHashAsync(ulong accountId, string newHash, CancellationToken ct = default)
+        {
+            var acc = await _db.accounts.FirstAsync(a => a.account_id == accountId, ct);
+            acc.password_hash = newHash;
+            await _db.SaveChangesAsync(ct);
+        }
 
         public async Task<reader> AddReaderAsync(reader entity, CancellationToken ct = default)
         {
@@ -63,5 +72,4 @@ namespace Repository.Repositories
             await _db.SaveChangesAsync(ct);
         }
     }
-
 }

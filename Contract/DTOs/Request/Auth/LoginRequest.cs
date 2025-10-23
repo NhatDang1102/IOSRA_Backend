@@ -9,9 +9,10 @@ namespace Contract.DTOs.Request.Auth
 {
     public class LoginRequest
     {
-        //identifier là cả mail/username
+        // identifier là cả mail/username
         [Required(ErrorMessage = "Vui lòng nhập email hoặc username")]
         [StringLength(255, ErrorMessage = "Identifier quá dài")]
+        [RegularExpression(@"^\S+$", ErrorMessage = "Identifier không được chứa khoảng trắng")]
         public string Identifier { get; set; } = null!;
 
         [Required(ErrorMessage = "Vui lòng nhập mật khẩu")]

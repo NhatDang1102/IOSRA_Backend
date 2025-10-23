@@ -8,6 +8,7 @@ public class CompleteGoogleRegisterRequest
     public string IdToken { get; set; } = null!;
 
     [Required, StringLength(50, MinimumLength = 3)]
+    [RegularExpression(@"^\S+$", ErrorMessage = "Username không được chứa khoảng trắng")]
     public string Username { get; set; } = null!;
 
     [Required, StringLength(20, MinimumLength = 6)]

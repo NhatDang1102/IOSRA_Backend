@@ -19,6 +19,8 @@ namespace Repository.Interfaces
         Task<List<string>> GetRoleCodesOfAccountAsync(ulong accountId, CancellationToken ct = default);
 
         Task AddAccountRoleAsync(ulong accountId, ushort roleId, CancellationToken ct = default);
+        Task<account?> FindAccountByEmailAsync(string email, CancellationToken ct = default);
+        Task UpdatePasswordHashAsync(ulong accountId, string newHash, CancellationToken ct = default);
     }
 
 }
