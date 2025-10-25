@@ -7,7 +7,7 @@ using Microsoft.EntityFrameworkCore;
 namespace Repository.Entities;
 
 [PrimaryKey("reader_id", "story_id")]
-[Table("favvorite_story")]
+[Table("favorite_story")]
 [Index("story_id", Name = "ix_fav_story")]
 public partial class favvorite_story
 {

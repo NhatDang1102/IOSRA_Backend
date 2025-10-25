@@ -28,7 +28,7 @@ public partial class reader
     public virtual ICollection<chapter_comment> chapter_comments { get; set; } = new List<chapter_comment>();
 
     [InverseProperty("reader")]
-    public virtual ICollection<favvorite_story> favvorite_stories { get; set; } = new List<favvorite_story>();
+    public virtual ICollection<favorite_story> favvorite_stories { get; set; } = new List<favorite_story>();
 
     [InverseProperty("follower")]
     public virtual ICollection<follow> follows { get; set; } = new List<follow>();
