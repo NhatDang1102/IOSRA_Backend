@@ -1,6 +1,6 @@
 ﻿using System.ComponentModel.DataAnnotations;
 
-namespace Contract.DTOs.Request;
+namespace Contract.DTOs.Request.Auth;
 
 public class CompleteGoogleRegisterRequest
 {
@@ -8,6 +8,7 @@ public class CompleteGoogleRegisterRequest
     public string IdToken { get; set; } = null!;
 
     [Required, StringLength(50, MinimumLength = 3)]
+    [RegularExpression(@"^\S+$", ErrorMessage = "Username không được chứa khoảng trắng")]
     public string Username { get; set; } = null!;
 
     [Required, StringLength(20, MinimumLength = 6)]

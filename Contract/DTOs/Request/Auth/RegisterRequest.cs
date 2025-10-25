@@ -5,12 +5,13 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Contract.DTOs.Request
+namespace Contract.DTOs.Request.Auth
 {
     public class RegisterRequest
     {
         [Required(ErrorMessage = "Username không được bỏ trống")]
         [StringLength(20, MinimumLength = 3, ErrorMessage = "Username phải từ 3 đến 20 ký tự")]
+        [RegularExpression(@"^\S+$", ErrorMessage = "Username không được chứa khoảng trắng")]
         public string Username { get; set; } = null!;
 
         [Required(ErrorMessage = "Email không được bỏ trống")]
@@ -23,5 +24,5 @@ namespace Contract.DTOs.Request
             ErrorMessage = "Mật khẩu phải có ít nhất 1 chữ và 1 số")]
         public string Password { get; set; } = null!;
     }
-
 }
+

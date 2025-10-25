@@ -25,6 +25,7 @@ namespace Main
             // Options
             services.Configure<SmtpSettings>(configuration.GetSection("Smtp"));
             services.Configure<OtpSettings>(configuration.GetSection("Otp"));
+            services.Configure<CloudinarySettings>(configuration.GetSection("CloudinarySettings"));
 
             // EF Core
             var cs = configuration.GetConnectionString("Default");
@@ -44,7 +45,7 @@ namespace Main
             });
             services.AddSingleton<IFirebaseAuthVerifier, FirebaseAuthVerifier>();
 
-            // JWT
+            // JWT (giữ nguyên phần Events kiểm tra blacklist)
             var jwt = configuration.GetSection("Jwt");
             services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
                 .AddJwtBearer(o =>
@@ -59,7 +60,7 @@ namespace Main
                         ValidAudience = jwt["Audience"],
                         IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwt["Key"]!)),
                         RoleClaimType = ClaimTypes.Role,
-                        NameClaimType = ClaimTypes.Name
+                        NameClaimType = "username"
                     };
 
                     o.Events = new JwtBearerEvents
@@ -71,10 +72,10 @@ namespace Main
                             logger.LogError(ctx.Exception, "JWT authentication failed");
                             return Task.CompletedTask;
                         },
-                        OnTokenValidated = context =>
+                        OnTokenValidated = async context =>
                         {
                             var claimsIdentity = context.Principal?.Identity as ClaimsIdentity;
-                            if (claimsIdentity is null) return Task.CompletedTask;
+                            if (claimsIdentity is null) return;
 
                             var rolesArray = context.Principal?.Claims
                                 .Where(c => c.Type == "roles")
@@ -97,7 +98,16 @@ namespace Main
                                 claimsIdentity.AddClaim(new Claim(ClaimTypes.Role, singleRole));
                             }
 
-                            return Task.CompletedTask;
+                            // Blacklist
+                            var jti = context.Principal?.FindFirst("jti")?.Value;
+                            if (!string.IsNullOrEmpty(jti))
+                            {
+                                var bl = context.HttpContext.RequestServices.GetRequiredService<IJwtBlacklistService>();
+                                if (await bl.IsBlacklistedAsync(jti))
+                                {
+                                    context.Fail("Token đã bị đăng xuất (blacklisted).");
+                                }
+                            }
                         }
                     };
                 });
@@ -111,23 +121,19 @@ namespace Main
             {
                 options.AddPolicy(name: corsPolicyName, policy =>
                 {
-                    policy.AllowAnyOrigin()
-                          .AllowAnyHeader()
-                          .AllowAnyMethod();
+                    policy.AllowAnyOrigin().AllowAnyHeader().AllowAnyMethod();
                 });
             });
 
-            // Authorization (ADMIN policy)
+            // Authorization
             services.AddAuthorization(options =>
             {
                 options.AddPolicy("AdminOnly", p => p.RequireRole("ADMIN"));
             });
 
-            // Controllers + Endpoints
+            // Controllers + Swagger
             services.AddControllers();
             services.AddEndpointsApiExplorer();
-
-            // Swagger + Bearer
             services.AddSwaggerGen(c =>
             {
                 c.SwaggerDoc("v1", new OpenApiInfo { Title = "API", Version = "v1" });
@@ -146,18 +152,13 @@ namespace Main
                     {
                         new OpenApiSecurityScheme
                         {
-                            Reference = new OpenApiReference
-                            {
-                                Type = ReferenceType.SecurityScheme,
-                                Id = "Bearer"
-                            }
+                            Reference = new OpenApiReference { Type = ReferenceType.SecurityScheme, Id = "Bearer" }
                         },
                         Array.Empty<string>()
                     }
                 });
             });
 
-            // ApiBehavior - Validation error shape
             services.Configure<ApiBehaviorOptions>(options =>
             {
                 options.InvalidModelStateResponseFactory = context =>
