@@ -1,5 +1,4 @@
 ﻿using Contract.DTOs.Request.Auth;
-using Contract.DTOs.Respond.Auth;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Service.Interfaces;
@@ -7,9 +6,8 @@ using System.IdentityModel.Tokens.Jwt;
 
 namespace Main.Controllers;
 
-[ApiController]
 [Route("api/[controller]")]
-public class AuthController : ControllerBase
+public class AuthController : AppControllerBase
 {
     private readonly IAuthService _auth;
     private readonly IJwtBlacklistService _blacklist;

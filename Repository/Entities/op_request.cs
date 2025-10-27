@@ -1,19 +1,18 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 using Microsoft.EntityFrameworkCore;
 
 namespace Repository.Entities;
 
-[Index("author_id", Name = "ix_opreq_author")]
+[Index("requester_id", Name = "ix_opreq_requester")]
 [Index("omod_id", Name = "ix_opreq_omod")]
 public partial class op_request
 {
     [Key]
     public ulong request_id { get; set; }
 
-    public ulong author_id { get; set; }
+    public ulong requester_id { get; set; } // <- đổi tên
 
     [Column(TypeName = "enum('withdraw','other')")]
     public string request_type { get; set; } = null!;
@@ -23,7 +22,7 @@ public partial class op_request
 
     public ulong? withdraw_amount { get; set; }
 
-    public ulong omod_id { get; set; }
+    public ulong? omod_id { get; set; }     // <- nullable
 
     [Column(TypeName = "enum('pending','approved','rejected')")]
     public string status { get; set; } = null!;
@@ -34,11 +33,10 @@ public partial class op_request
     [Column(TypeName = "datetime")]
     public DateTime created_at { get; set; }
 
-    [ForeignKey("author_id")]
-    [InverseProperty("op_requests")]
-    public virtual author author { get; set; } = null!;
+    // Navs
+    [ForeignKey("requester_id")]
+    public virtual account requester { get; set; } = null!;  // <- sang account
 
     [ForeignKey("omod_id")]
-    [InverseProperty("op_requests")]
-    public virtual OperationMod omod { get; set; } = null!;
+    public virtual OperationMod? omod { get; set; }          // <- nullable
 }

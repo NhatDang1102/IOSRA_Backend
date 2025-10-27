@@ -9,7 +9,7 @@ namespace Repository.Entities;
 [PrimaryKey("reader_id", "story_id")]
 [Table("favorite_story")]
 [Index("story_id", Name = "ix_fav_story")]
-public partial class favvorite_story
+public partial class favorite_story
 {
     [Key]
     public ulong reader_id { get; set; }
@@ -24,10 +24,10 @@ public partial class favvorite_story
     public DateTime created_at { get; set; }
 
     [ForeignKey("reader_id")]
-    [InverseProperty("favvorite_stories")]
+    [InverseProperty("favorite_stories")]
     public virtual reader reader { get; set; } = null!;
 
     [ForeignKey("story_id")]
-    [InverseProperty("favvorite_stories")]
+    [InverseProperty("favorite_stories")]
     public virtual story story { get; set; } = null!;
 }

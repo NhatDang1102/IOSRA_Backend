@@ -12,12 +12,15 @@ namespace Service
             services.AddSingleton<IMailSender, MailSender>();
             services.AddSingleton<IOtpStore, RedisOtpStore>();
             services.AddSingleton<IJwtBlacklistService, RedisJwtBlacklist>();
+            services.AddSingleton<IImageUploader, CloudinaryUploader>();
+
             services.AddScoped<IJwtTokenFactory, JwtTokenFactory>();
             services.AddScoped<IAuthService, AuthService>();
             services.AddScoped<IAdminService, Service.Services.AdminService>();
-
-            services.AddSingleton<IImageUploader, CloudinaryUploader>();
+            services.AddScoped<IAuthorUpgradeService, AuthorUpgradeService>();
+            services.AddScoped<IOperationModService, OperationModService>();
             services.AddScoped<IProfileService, ProfileService>();
+
 
             return services;
         }

@@ -45,7 +45,7 @@ public partial class story
     public virtual ICollection<content_approve> content_approves { get; set; } = new List<content_approve>();
 
     [InverseProperty("story")]
-    public virtual ICollection<favvorite_story> favvorite_stories { get; set; } = new List<favvorite_story>();
+    public virtual ICollection<favorite_story> favorite_stories { get; set; } = new List<favorite_story>();
 
     [InverseProperty("story")]
     public virtual ICollection<story_tag> story_tags { get; set; } = new List<story_tag>();

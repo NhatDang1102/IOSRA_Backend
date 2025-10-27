@@ -30,8 +30,7 @@ public partial class author
     [InverseProperty("followee")]
     public virtual ICollection<follow> follows { get; set; } = new List<follow>();
 
-    [InverseProperty("author")]
-    public virtual ICollection<op_request> op_requests { get; set; } = new List<op_request>();
+
 
     [ForeignKey("rank_id")]
     [InverseProperty("authors")]

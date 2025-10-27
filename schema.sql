@@ -198,7 +198,7 @@ CREATE TABLE follow (
     REFERENCES author(account_id) ON DELETE CASCADE ON UPDATE CASCADE
 ) ENGINE=InnoDB;
 
-CREATE TABLE favvorite_story ( -- giữ nguyên cách viết trên ERD
+CREATE TABLE favorite_story ( -- giữ nguyên cách viết trên ERD
   reader_id        BIGINT UNSIGNED NOT NULL, -- reader.account_id
   story_id         BIGINT UNSIGNED NOT NULL,
   noti_new_chapter TINYINT(1) NOT NULL DEFAULT 1,

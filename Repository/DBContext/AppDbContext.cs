@@ -42,7 +42,7 @@ public partial class AppDbContext : DbContext
 
     public virtual DbSet<dia_wallet> dia_wallets { get; set; }
 
-    public virtual DbSet<favvorite_story> favvorite_stories { get; set; }
+    public virtual DbSet<favorite_story> favvorite_stories { get; set; }
 
     public virtual DbSet<follow> follows { get; set; }
 
@@ -263,7 +263,7 @@ public partial class AppDbContext : DbContext
             entity.HasOne(d => d.account).WithOne(p => p.dia_wallet).HasConstraintName("fk_wallet_account");
         });
 
-        modelBuilder.Entity<favvorite_story>(entity =>
+        modelBuilder.Entity<favorite_story>(entity =>
         {
             entity.HasKey(e => new { e.reader_id, e.story_id })
                 .HasName("PRIMARY")
@@ -272,9 +272,9 @@ public partial class AppDbContext : DbContext
             entity.Property(e => e.created_at).HasDefaultValueSql("CURRENT_TIMESTAMP");
             entity.Property(e => e.noti_new_chapter).HasDefaultValueSql("'1'");
 
-            entity.HasOne(d => d.reader).WithMany(p => p.favvorite_stories).HasConstraintName("fk_fav_reader");
+            entity.HasOne(d => d.reader).WithMany(p => p.favorite_stories).HasConstraintName("fk_fav_reader");
 
-            entity.HasOne(d => d.story).WithMany(p => p.favvorite_stories).HasConstraintName("fk_fav_story");
+            entity.HasOne(d => d.story).WithMany(p => p.favorite_stories).HasConstraintName("fk_fav_story");
         });
 
         modelBuilder.Entity<follow>(entity =>
@@ -303,15 +303,20 @@ public partial class AppDbContext : DbContext
             entity.Property(e => e.created_at).HasDefaultValueSql("CURRENT_TIMESTAMP");
             entity.Property(e => e.status).HasDefaultValueSql("'pending'");
 
-            entity.HasOne(d => d.author).WithMany(p => p.op_requests)
-                .OnDelete(DeleteBehavior.ClientSetNull)
-                .HasConstraintName("fk_opreq_author");
+            // requester -> account (DUY NHẤT quan hệ này; không quan hệ nào khác tới account)
+            entity.HasOne(d => d.requester)
+                .WithMany(p => p.op_requests_as_requester)   // <-- trỏ đúng collection
+                .HasForeignKey(d => d.requester_id)
+                .OnDelete(DeleteBehavior.Restrict)
+                .HasConstraintName("fk_opreq_requester");
 
-            entity.HasOne(d => d.omod).WithMany(p => p.op_requests)
+            // omod (nullable)
+            entity.HasOne(d => d.omod)
+                .WithMany(p => p.op_requests)
+                .HasForeignKey(d => d.omod_id)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("fk_opreq_omod");
         });
-
         modelBuilder.Entity<reader>(entity =>
         {
             entity.HasKey(e => e.account_id).HasName("PRIMARY");
