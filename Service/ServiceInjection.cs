@@ -20,9 +20,11 @@ namespace Service
             services.AddScoped<IAuthorUpgradeService, AuthorUpgradeService>();
             services.AddScoped<IOperationModService, OperationModService>();
             services.AddScoped<IProfileService, ProfileService>();
+            services.AddScoped<ITagService, TagService>();
 
 
             return services;
         }
     }
 }
+
