@@ -1,4 +1,4 @@
--- MySQL 8.0+ schema for IOSRA, single-DB
+﻿-- MySQL 8.0+ schema for IOSRA, single-DB
 SET NAMES utf8mb4;
 SET time_zone = '+00:00';
 
@@ -198,7 +198,7 @@ CREATE TABLE follow (
     REFERENCES author(account_id) ON DELETE CASCADE ON UPDATE CASCADE
 ) ENGINE=InnoDB;
 
-CREATE TABLE favorite_story ( -- giữ nguyên cách viết trên ERD
+CREATE TABLE favorite_story (
   reader_id        BIGINT UNSIGNED NOT NULL, -- reader.account_id
   story_id         BIGINT UNSIGNED NOT NULL,
   noti_new_chapter TINYINT(1) NOT NULL DEFAULT 1,
@@ -291,21 +291,21 @@ CREATE TABLE content_approve (
 
 CREATE TABLE op_requests (
   request_id       BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
-  author_id        BIGINT UNSIGNED NOT NULL,
+  requester_id     BIGINT UNSIGNED NOT NULL,
   request_type     ENUM('withdraw','other') NOT NULL,
   request_content  TEXT NULL,
   withdraw_amount  BIGINT UNSIGNED NULL,
-  omod_id          BIGINT UNSIGNED NOT NULL,
+  omod_id          BIGINT UNSIGNED NULL,
   status           ENUM('pending','approved','rejected') NOT NULL DEFAULT 'pending',
   withdraw_code    VARCHAR(64) NULL,
   created_at       DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (request_id),
-  KEY ix_opreq_author (author_id),
+  KEY ix_opreq_requester (requester_id),
   KEY ix_opreq_omod (omod_id),
-  CONSTRAINT fk_opreq_author FOREIGN KEY (author_id)
-    REFERENCES author(account_id) ON DELETE RESTRICT ON UPDATE CASCADE,
+  CONSTRAINT fk_opreq_requester FOREIGN KEY (requester_id)
+    REFERENCES account(account_id) ON DELETE RESTRICT ON UPDATE CASCADE,
   CONSTRAINT fk_opreq_omod FOREIGN KEY (omod_id)
-    REFERENCES OperationMod(account_id) ON DELETE RESTRICT ON UPDATE CASCADE
+    REFERENCES OperationMod(account_id) ON DELETE SET NULL ON UPDATE CASCADE
 ) ENGINE=InnoDB;
 
 -- ===================== Wallet & Payments =====================
@@ -375,7 +375,7 @@ CREATE TABLE subscription_plan (
   PRIMARY KEY (plan_code)
 ) ENGINE=InnoDB;
 
-CREATE TABLE subcriptions ( -- giữ nguyên cách viết trên ERD
+CREATE TABLE subcriptions ( 
   sub_id          BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
   user_id         BIGINT UNSIGNED NOT NULL, -- account_id
   plan_code       VARCHAR(32) NOT NULL,
@@ -391,3 +391,5 @@ CREATE TABLE subcriptions ( -- giữ nguyên cách viết trên ERD
   CONSTRAINT fk_sub_plan FOREIGN KEY (plan_code)
     REFERENCES subscription_plan(plan_code) ON DELETE RESTRICT ON UPDATE CASCADE
 ) ENGINE=InnoDB;
+
+
