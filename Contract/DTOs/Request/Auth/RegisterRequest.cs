@@ -1,9 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.ComponentModel.DataAnnotations;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using System.ComponentModel.DataAnnotations;
 
 namespace Contract.DTOs.Request.Auth
 {
@@ -23,6 +18,9 @@ namespace Contract.DTOs.Request.Auth
         [RegularExpression(@"^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d]{6,20}$",
             ErrorMessage = "Mật khẩu phải có ít nhất 1 chữ và 1 số")]
         public string Password { get; set; } = null!;
+
+        [Required(ErrorMessage = "Xác nhận mật khẩu không được bỏ trống")]
+        [Compare(nameof(Password), ErrorMessage = "Xác nhận mật khẩu không khớp")]
+        public string ConfirmPassword { get; set; } = null!;
     }
 }
-
