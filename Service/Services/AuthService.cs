@@ -34,7 +34,6 @@ namespace Service.Implementations
 
         public async Task SendRegisterOtpAsync(RegisterRequest req, CancellationToken ct = default)
         {
-            // Các validate định dạng/độ dài... đã làm ở DTO (ModelState).
             if (string.IsNullOrWhiteSpace(req.Username) || string.IsNullOrWhiteSpace(req.Email) || string.IsNullOrWhiteSpace(req.Password))
                 throw new AppException("InvalidRequest", "ko đủ tt đkí.", 400);
 
@@ -51,7 +50,8 @@ namespace Service.Implementations
             await _mail.SendOtpEmailAsync(req.Email, otp);
         }
 
-        public async Task<string> VerifyRegisterAsync(VerifyOtpRequest req, CancellationToken ct = default)
+        // Đổi trả về LoginResponse + thêm AccountId
+        public async Task<LoginResponse> VerifyRegisterAsync(VerifyOtpRequest req, CancellationToken ct = default)
         {
             var entry = await _otpStore.GetAsync(req.Email);
             if (entry == null) throw new AppException("InvalidOtp", "otp hết hạn/sai.", 400);
@@ -76,12 +76,21 @@ namespace Service.Implementations
             await _otpStore.DeleteAsync(req.Email);
             _ = _mail.SendWelcomeEmailAsync(req.Email, usernameStored);
 
-            return _jwt.CreateToken(acc, new[] { "reader" });
+            var roles = new List<string> { "reader" };
+            var token = _jwt.CreateToken(acc, roles);
+
+            return new LoginResponse
+            {
+                AccountId = acc.account_id,
+                Username = acc.username,
+                Email = acc.email,
+                Token = token,
+                Roles = roles
+            };
         }
 
         public async Task<LoginResponse> LoginAsync(LoginRequest req, CancellationToken ct = default)
         {
-            // Không kiểm tra regex ở Service nữa — đã do DTO đảm nhiệm
             var acc = await _authRepo.FindAccountByIdentifierAsync(req.Identifier, ct);
             if (acc == null) throw new AppException("AccountNotFound", "acc ko tồn tại.", 401);
             if (acc.status == "banned") throw new AppException("AccountBanned", "acc bị khóa.", 403);
@@ -92,7 +101,14 @@ namespace Service.Implementations
             var roles = await _authRepo.GetRoleCodesOfAccountAsync(acc.account_id, ct);
             var token = _jwt.CreateToken(acc, roles);
 
-            return new LoginResponse { Username = acc.username, Email = acc.email, Token = token, Roles = roles };
+            return new LoginResponse
+            {
+                AccountId = acc.account_id,
+                Username = acc.username,
+                Email = acc.email,
+                Token = token,
+                Roles = roles
+            };
         }
 
         public async Task<LoginResponse> LoginWithGoogleAsync(GoogleLoginRequest req, CancellationToken ct = default)
@@ -107,7 +123,14 @@ namespace Service.Implementations
 
             var roles = await _authRepo.GetRoleCodesOfAccountAsync(acc.account_id, ct);
             var token = _jwt.CreateToken(acc, roles);
-            return new LoginResponse { Username = acc.username, Email = acc.email, Token = token, Roles = roles };
+            return new LoginResponse
+            {
+                AccountId = acc.account_id,
+                Username = acc.username,
+                Email = acc.email,
+                Token = token,
+                Roles = roles
+            };
         }
 
         public async Task<LoginResponse> CompleteGoogleRegisterAsync(CompleteGoogleRegisterRequest req, CancellationToken ct = default)
@@ -116,7 +139,6 @@ namespace Service.Implementations
             try { user = await _fb.VerifyIdTokenAsync(req.IdToken, ct); }
             catch { throw new AppException("InvalidGoogleToken", "Token Google không hợp lệ hoặc hết hạn.", 401); }
 
-            // Định dạng Username/Password đã validate ở DTO
             if (await _authRepo.ExistsByUsernameOrEmailAsync(req.Username, user.Email, ct))
                 throw new AppException("AccountExists", "email/username đã có tk.", 409);
 
@@ -139,15 +161,22 @@ namespace Service.Implementations
 
             _ = _mail.SendWelcomeEmailAsync(user.Email, req.Username);
 
-            var token = _jwt.CreateToken(acc, new[] { "reader" });
-            return new LoginResponse { Username = acc.username, Email = acc.email, Token = token, Roles = new() { "reader" } };
+            var roles = new List<string> { "reader" };
+            var token = _jwt.CreateToken(acc, roles);
+            return new LoginResponse
+            {
+                AccountId = acc.account_id,
+                Username = acc.username,
+                Email = acc.email,
+                Token = token,
+                Roles = roles
+            };
         }
 
-        // Forgot password: gửi OTP
         public async Task SendForgotOtpAsync(ForgotPasswordRequest req, CancellationToken ct = default)
         {
             var acc = await _authRepo.FindAccountByEmailAsync(req.Email, ct);
-            if (acc == null) return; // tránh lộ email tồn tại
+            if (acc == null) return;
 
             if (!await _otpStore.CanSendAsync(req.Email))
                 throw new AppException("OtpRateLimit", "1 tiếng chỉ đc 1 otp.", 429);
@@ -157,7 +186,6 @@ namespace Service.Implementations
             await _mail.SendOtpForgotEmailAsync(req.Email, otp);
         }
 
-        // Forgot password: xác minh OTP và đổi mật khẩu
         public async Task VerifyForgotAsync(VerifyForgotPasswordRequest req, CancellationToken ct = default)
         {
             var acc = await _authRepo.FindAccountByEmailAsync(req.Email, ct);
@@ -169,7 +197,6 @@ namespace Service.Implementations
             var (otpStored, _) = entry.Value;
             if (otpStored != req.Otp) throw new AppException("InvalidOtp", "otp hết hạn/sai.", 400);
 
-            // Định dạng mật khẩu mới: nên để ở DTO VerifyForgotPasswordRequest
             var newHash = BCrypt.Net.BCrypt.HashPassword(req.NewPassword);
             await _authRepo.UpdatePasswordHashAsync(acc.account_id, newHash, ct);
             await _otpStore.DeleteForgotAsync(req.Email);

@@ -15,6 +15,7 @@ using Repository.DBContext;
 using Service.Helpers;
 using Service.Interfaces;
 using StackExchange.Redis;
+using Yitter.IdGenerator; // Snowflake
 
 namespace Main
 {
@@ -45,7 +46,7 @@ namespace Main
             });
             services.AddSingleton<IFirebaseAuthVerifier, FirebaseAuthVerifier>();
 
-            // JWT (giữ nguyên phần Events kiểm tra blacklist)
+            // JWT
             var jwt = configuration.GetSection("Jwt");
             services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
                 .AddJwtBearer(o =>
@@ -98,7 +99,6 @@ namespace Main
                                 claimsIdentity.AddClaim(new Claim(ClaimTypes.Role, singleRole));
                             }
 
-                            // Blacklist
                             var jti = context.Principal?.FindFirst("jti")?.Value;
                             if (!string.IsNullOrEmpty(jti))
                             {
@@ -114,7 +114,31 @@ namespace Main
 
             // Redis
             var r = configuration.GetSection("Redis");
-            services.AddSingleton<IConnectionMultiplexer>(ConnectionMultiplexer.Connect($"{r["Host"]}:{r["Port"]}"));
+            services.AddSingleton<IConnectionMultiplexer>(
+                ConnectionMultiplexer.Connect($"{r["Host"]}:{r["Port"]}"));
+
+            // Snowflake (Yitter) - ÉP KIỂU ushort/byte + validate
+            var snow = configuration.GetSection("Snowflake");
+            int workerIdInt = snow.GetValue<int>("WorkerId", 1);
+            int workerBitsInt = snow.GetValue<int>("WorkerIdBitLength", 6);
+            int seqBitsInt = snow.GetValue<int>("SeqBitLength", 6);
+            DateTime baseTimeUtc = snow.GetValue<DateTime>("BaseTimeUtc", new DateTime(2024, 1, 1, 0, 0, 0, DateTimeKind.Utc));
+
+            if (workerBitsInt < 1 || workerBitsInt > 20) throw new ArgumentOutOfRangeException(nameof(workerBitsInt));
+            if (seqBitsInt < 1 || seqBitsInt > 20) throw new ArgumentOutOfRangeException(nameof(seqBitsInt));
+
+            // Max workerId = (1 << workerBits) - 1
+            int maxWorkerId = (1 << workerBitsInt) - 1;
+            if (workerIdInt < 0 || workerIdInt > maxWorkerId) throw new ArgumentOutOfRangeException(nameof(workerIdInt),
+                $"WorkerId must be 0..{maxWorkerId}");
+
+            var idOpts = new IdGeneratorOptions((ushort)workerIdInt)
+            {
+                BaseTime = baseTimeUtc,
+                WorkerIdBitLength = (byte)workerBitsInt,
+                SeqBitLength = (byte)seqBitsInt
+            };
+            YitIdHelper.SetIdGenerator(idOpts);
 
             // CORS
             services.AddCors(options =>

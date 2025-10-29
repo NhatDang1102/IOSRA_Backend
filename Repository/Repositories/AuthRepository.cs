@@ -2,10 +2,12 @@
 using Repository.DBContext;
 using Repository.Entities;
 using Repository.Interfaces;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Yitter.IdGenerator;
 
 namespace Repository.Repositories
 {
@@ -19,6 +21,13 @@ namespace Repository.Repositories
 
         public async Task<account> AddAccountAsync(account entity, CancellationToken ct = default)
         {
+            // Gán Snowflake ID nếu chưa có
+            if (entity.account_id == 0UL)
+            {
+                // YitIdHelper.NextId() -> long (signed); ép về ulong
+                entity.account_id = unchecked((ulong)YitIdHelper.NextId());
+            }
+
             _db.accounts.Add(entity);
             await _db.SaveChangesAsync(ct);
             return entity;
@@ -39,6 +48,7 @@ namespace Repository.Repositories
 
         public async Task<reader> AddReaderAsync(reader entity, CancellationToken ct = default)
         {
+            // reader.account_id là FK từ account, không phát ID ở đây
             _db.readers.Add(entity);
             await _db.SaveChangesAsync(ct);
             return entity;
@@ -46,10 +56,10 @@ namespace Repository.Repositories
 
         public async Task<ushort> GetRoleIdByCodeAsync(string roleCode, CancellationToken ct = default)
         {
+            // role_id SMALLINT UNSIGNED -> ushort
             var id = await _db.roles
                 .Where(r => r.role_code == roleCode)
                 .Select(r => r.role_id)
-                .Cast<ushort>()
                 .FirstOrDefaultAsync(ct);
 
             if (id == 0) throw new InvalidOperationException($"Role '{roleCode}' chưa được seed.");

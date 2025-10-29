@@ -28,8 +28,9 @@ public class AuthController : AppControllerBase
     [HttpPost("verify")]
     public async Task<IActionResult> Verify([FromBody] VerifyOtpRequest req, CancellationToken ct)
     {
-        var jwt = await _auth.VerifyRegisterAsync(req, ct);
-        return Ok(new { token = jwt });
+        // Trả LoginResponse (có AccountId, Token, Roles...)
+        var res = await _auth.VerifyRegisterAsync(req, ct);
+        return Ok(res);
     }
 
     [HttpPost("login")]
@@ -57,7 +58,6 @@ public class AuthController : AppControllerBase
     [HttpPost("logout")]
     public async Task<IActionResult> Logout(CancellationToken ct)
     {
-        // Lấy JTI và EXP từ token hiện tại
         var jti = User.FindFirst(JwtRegisteredClaimNames.Jti)?.Value;
         var expStr = User.FindFirst("exp")?.Value;
 
