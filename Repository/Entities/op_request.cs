@@ -14,7 +14,7 @@ public partial class op_request
 
     public ulong requester_id { get; set; } // <- đổi tên
 
-    [Column(TypeName = "enum('withdraw','other')")]
+    [Column(TypeName = "enum('withdraw','rank_up','become_author')")]
     public string request_type { get; set; } = null!;
 
     [Column(TypeName = "text")]

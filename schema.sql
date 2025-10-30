@@ -293,7 +293,7 @@ CREATE TABLE content_approve (
 CREATE TABLE op_requests (
   request_id       BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
   requester_id     BIGINT UNSIGNED NOT NULL,
-  request_type     ENUM('withdraw','other') NOT NULL,
+  request_type     ENUM('withdraw','rank_up','become_author') NOT NULL,
   request_content  TEXT NULL,
   withdraw_amount  BIGINT UNSIGNED NULL,
   omod_id          BIGINT UNSIGNED NULL,

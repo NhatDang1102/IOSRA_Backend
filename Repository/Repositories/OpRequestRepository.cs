@@ -18,7 +18,7 @@ namespace Repository.Repositories
             {
                 request_id = NewId(),
                 requester_id = accountId,
-                request_type = "other",
+                request_type = "become_author",
                 request_content = content,
                 withdraw_amount = null,
                 omod_id = null,
