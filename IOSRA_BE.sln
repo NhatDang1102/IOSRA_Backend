@@ -11,6 +11,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Service", "Service\Service.
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Contract", "Contract\Contract.csproj", "{4F074096-3383-44CC-8368-56747AE99CC7}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Main.Tests", "Main.Tests\Main.Tests.csproj", "{338F2304-1088-4EA2-8919-015555E28DA6}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -33,8 +35,15 @@ Global
 		{4F074096-3383-44CC-8368-56747AE99CC7}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{4F074096-3383-44CC-8368-56747AE99CC7}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{4F074096-3383-44CC-8368-56747AE99CC7}.Release|Any CPU.Build.0 = Release|Any CPU
+		{338F2304-1088-4EA2-8919-015555E28DA6}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{338F2304-1088-4EA2-8919-015555E28DA6}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{338F2304-1088-4EA2-8919-015555E28DA6}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{338F2304-1088-4EA2-8919-015555E28DA6}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {DDD9CE8F-FB7C-4125-AD63-A5850C069C87}
 	EndGlobalSection
 EndGlobal
