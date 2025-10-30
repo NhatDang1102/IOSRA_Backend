@@ -1,26 +1,25 @@
-﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations;
 
 namespace Contract.DTOs.Request.Auth
 {
     public class RegisterRequest
     {
-        [Required(ErrorMessage = "Username không được bỏ trống")]
-        [StringLength(20, MinimumLength = 3, ErrorMessage = "Username phải từ 3 đến 20 ký tự")]
-        [RegularExpression(@"^\S+$", ErrorMessage = "Username không được chứa khoảng trắng")]
+        [Required(ErrorMessage = "Username is required.")]
+        [StringLength(20, MinimumLength = 3, ErrorMessage = "Username must be between 3 and 20 characters.")]
+        [RegularExpression(@"^\S+$", ErrorMessage = "Username cannot contain whitespace.")]
         public string Username { get; set; } = null!;
 
-        [Required(ErrorMessage = "Email không được bỏ trống")]
-        [EmailAddress(ErrorMessage = "Email không hợp lệ")]
+        [Required(ErrorMessage = "Email is required.")]
+        [EmailAddress(ErrorMessage = "Email is invalid.")]
         public string Email { get; set; } = null!;
 
-        [Required(ErrorMessage = "Mật khẩu không được bỏ trống")]
-        [StringLength(20, MinimumLength = 6, ErrorMessage = "Mật khẩu phải từ 6 đến 20 ký tự")]
-        [RegularExpression(@"^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d]{6,20}$",
-            ErrorMessage = "Mật khẩu phải có ít nhất 1 chữ và 1 số")]
+        [Required(ErrorMessage = "Password is required.")]
+        [StringLength(20, MinimumLength = 6, ErrorMessage = "Password must be between 6 and 20 characters.")]
+        [RegularExpression(@"^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d]{6,20}$", ErrorMessage = "Password must contain at least one letter and one number.")]
         public string Password { get; set; } = null!;
 
-        [Required(ErrorMessage = "Xác nhận mật khẩu không được bỏ trống")]
-        [Compare(nameof(Password), ErrorMessage = "Xác nhận mật khẩu không khớp")]
+        [Required(ErrorMessage = "Password confirmation is required.")]
+        [Compare(nameof(Password), ErrorMessage = "Password confirmation does not match.")]
         public string ConfirmPassword { get; set; } = null!;
     }
 }

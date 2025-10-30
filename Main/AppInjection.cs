@@ -1,4 +1,4 @@
-﻿using System.Security.Claims;
+using System.Security.Claims;
 using System.Text;
 using Contract.DTOs.Settings;
 using FirebaseAdmin;
@@ -15,7 +15,7 @@ using Repository.DBContext;
 using Service.Helpers;
 using Service.Interfaces;
 using StackExchange.Redis;
-using Yitter.IdGenerator; // Snowflake
+using Yitter.IdGenerator;
 
 namespace Main
 {
@@ -23,31 +23,27 @@ namespace Main
     {
         public static IServiceCollection AddMainAppServices(this IServiceCollection services, IConfiguration configuration, string corsPolicyName)
         {
-            // Options
             services.Configure<SmtpSettings>(configuration.GetSection("Smtp"));
             services.Configure<OtpSettings>(configuration.GetSection("Otp"));
             services.Configure<CloudinarySettings>(configuration.GetSection("CloudinarySettings"));
             services.Configure<OpenAiSettings>(configuration.GetSection("OpenAi"));
 
-            // EF Core
-            var cs = configuration.GetConnectionString("Default");
-            services.AddDbContext<AppDbContext>(o => o.UseMySql(cs, ServerVersion.AutoDetect(cs)));
+            var connectionString = configuration.GetConnectionString("Default");
+            services.AddDbContext<AppDbContext>(o => o.UseMySql(connectionString, ServerVersion.AutoDetect(connectionString)));
 
-            // Firebase
-            var fb = configuration.GetSection("Firebase");
+            var firebaseSection = configuration.GetSection("Firebase");
             services.AddSingleton(provider =>
             {
-                var path = fb["CredentialPath"];
+                var path = firebaseSection["CredentialPath"];
                 var options = new AppOptions
                 {
                     Credential = GoogleCredential.FromFile(path),
-                    ProjectId = fb["ProjectId"]
+                    ProjectId = firebaseSection["ProjectId"]
                 };
                 return FirebaseApp.DefaultInstance ?? FirebaseApp.Create(options);
             });
             services.AddSingleton<IFirebaseAuthVerifier, FirebaseAuthVerifier>();
 
-            // JWT
             var jwt = configuration.GetSection("Jwt");
             services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
                 .AddJwtBearer(o =>
@@ -67,96 +63,96 @@ namespace Main
 
                     o.Events = new JwtBearerEvents
                     {
-                        OnAuthenticationFailed = ctx =>
+                        OnAuthenticationFailed = context =>
                         {
-                            var logger = ctx.HttpContext.RequestServices.GetRequiredService<ILoggerFactory>()
-                                                  .CreateLogger("JWT");
-                            logger.LogError(ctx.Exception, "JWT authentication failed");
+                            var logger = context.HttpContext.RequestServices.GetRequiredService<ILoggerFactory>()
+                                .CreateLogger("JWT");
+                            logger.LogError(context.Exception, "JWT authentication failed");
                             return Task.CompletedTask;
                         },
                         OnTokenValidated = async context =>
                         {
-                            var claimsIdentity = context.Principal?.Identity as ClaimsIdentity;
-                            if (claimsIdentity is null) return;
+                            var identity = context.Principal?.Identity as ClaimsIdentity;
+                            if (identity is null)
+                            {
+                                return;
+                            }
 
-                            var rolesArray = context.Principal?.Claims
+                            var rolesClaim = context.Principal?.Claims
                                 .Where(c => c.Type == "roles")
                                 .Select(c => c.Value)
                                 .ToList();
 
-                            if (rolesArray is { Count: > 0 })
+                            if (rolesClaim is { Count: > 0 })
                             {
-                                foreach (var role in rolesArray.SelectMany(r => r.Split(',', StringSplitOptions.RemoveEmptyEntries)))
+                                foreach (var role in rolesClaim.SelectMany(r => r.Split(',', StringSplitOptions.RemoveEmptyEntries)))
                                 {
-                                    if (!claimsIdentity.Claims.Any(c => c.Type == ClaimTypes.Role && c.Value.Equals(role, StringComparison.OrdinalIgnoreCase)))
-                                        claimsIdentity.AddClaim(new Claim(ClaimTypes.Role, role));
+                                    if (!identity.Claims.Any(c => c.Type == ClaimTypes.Role && c.Value.Equals(role, StringComparison.OrdinalIgnoreCase)))
+                                    {
+                                        identity.AddClaim(new Claim(ClaimTypes.Role, role));
+                                    }
                                 }
                             }
 
                             var singleRole = context.Principal?.Claims.FirstOrDefault(c => c.Type == "role")?.Value;
                             if (!string.IsNullOrWhiteSpace(singleRole) &&
-                                !claimsIdentity.Claims.Any(c => c.Type == ClaimTypes.Role && c.Value.Equals(singleRole, StringComparison.OrdinalIgnoreCase)))
+                                !identity.Claims.Any(c => c.Type == ClaimTypes.Role && c.Value.Equals(singleRole, StringComparison.OrdinalIgnoreCase)))
                             {
-                                claimsIdentity.AddClaim(new Claim(ClaimTypes.Role, singleRole));
+                                identity.AddClaim(new Claim(ClaimTypes.Role, singleRole));
                             }
 
                             var jti = context.Principal?.FindFirst("jti")?.Value;
                             if (!string.IsNullOrEmpty(jti))
                             {
-                                var bl = context.HttpContext.RequestServices.GetRequiredService<IJwtBlacklistService>();
-                                if (await bl.IsBlacklistedAsync(jti))
+                                var blacklist = context.HttpContext.RequestServices.GetRequiredService<IJwtBlacklistService>();
+                                if (await blacklist.IsBlacklistedAsync(jti))
                                 {
-                                    context.Fail("Token đã bị đăng xuất (blacklisted).");
+                                    context.Fail("Token has been revoked (blacklisted).");
                                 }
                             }
                         }
                     };
                 });
 
-            // Redis
-            var r = configuration.GetSection("Redis");
-            services.AddSingleton<IConnectionMultiplexer>(
-                ConnectionMultiplexer.Connect($"{r["Host"]}:{r["Port"]}"));
+            var redis = configuration.GetSection("Redis");
+            services.AddSingleton<IConnectionMultiplexer>(ConnectionMultiplexer.Connect($"{redis["Host"]}:{redis["Port"]}"));
 
-            // Snowflake (Yitter) - ÉP KIỂU ushort/byte + validate
-            var snow = configuration.GetSection("Snowflake");
-            int workerIdInt = snow.GetValue<int>("WorkerId", 1);
-            int workerBitsInt = snow.GetValue<int>("WorkerIdBitLength", 6);
-            int seqBitsInt = snow.GetValue<int>("SeqBitLength", 6);
-            DateTime baseTimeUtc = snow.GetValue<DateTime>("BaseTimeUtc", new DateTime(2024, 1, 1, 0, 0, 0, DateTimeKind.Utc));
+            var snowflake = configuration.GetSection("Snowflake");
+            int workerId = snowflake.GetValue<int>("WorkerId", 1);
+            int workerBits = snowflake.GetValue<int>("WorkerIdBitLength", 6);
+            int sequenceBits = snowflake.GetValue<int>("SeqBitLength", 6);
+            DateTime baseTimeUtc = snowflake.GetValue<DateTime>("BaseTimeUtc", new DateTime(2024, 1, 1, 0, 0, 0, DateTimeKind.Utc));
 
-            if (workerBitsInt < 1 || workerBitsInt > 20) throw new ArgumentOutOfRangeException(nameof(workerBitsInt));
-            if (seqBitsInt < 1 || seqBitsInt > 20) throw new ArgumentOutOfRangeException(nameof(seqBitsInt));
+            if (workerBits < 1 || workerBits > 20) throw new ArgumentOutOfRangeException(nameof(workerBits));
+            if (sequenceBits < 1 || sequenceBits > 20) throw new ArgumentOutOfRangeException(nameof(sequenceBits));
 
-            // Max workerId = (1 << workerBits) - 1
-            int maxWorkerId = (1 << workerBitsInt) - 1;
-            if (workerIdInt < 0 || workerIdInt > maxWorkerId) throw new ArgumentOutOfRangeException(nameof(workerIdInt),
-                $"WorkerId must be 0..{maxWorkerId}");
+            int maxWorkerId = (1 << workerBits) - 1;
+            if (workerId < 0 || workerId > maxWorkerId)
+            {
+                throw new ArgumentOutOfRangeException(nameof(workerId), $"WorkerId must be between 0 and {maxWorkerId}.");
+            }
 
-            var idOpts = new IdGeneratorOptions((ushort)workerIdInt)
+            var idOptions = new IdGeneratorOptions((ushort)workerId)
             {
                 BaseTime = baseTimeUtc,
-                WorkerIdBitLength = (byte)workerBitsInt,
-                SeqBitLength = (byte)seqBitsInt
+                WorkerIdBitLength = (byte)workerBits,
+                SeqBitLength = (byte)sequenceBits
             };
-            YitIdHelper.SetIdGenerator(idOpts);
+            YitIdHelper.SetIdGenerator(idOptions);
 
-            // CORS
             services.AddCors(options =>
             {
-                options.AddPolicy(name: corsPolicyName, policy =>
+                options.AddPolicy(corsPolicyName, policy =>
                 {
                     policy.AllowAnyOrigin().AllowAnyHeader().AllowAnyMethod();
                 });
             });
 
-            // Authorization
             services.AddAuthorization(options =>
             {
                 options.AddPolicy("AdminOnly", p => p.RequireRole("ADMIN"));
             });
 
-            // Controllers + Swagger
             services.AddControllers();
             services.AddEndpointsApiExplorer();
             services.AddSwaggerGen(c =>
@@ -164,7 +160,7 @@ namespace Main
                 c.SwaggerDoc("v1", new OpenApiInfo { Title = "API", Version = "v1" });
                 c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
                 {
-                    Description = "Nhập JWT theo dạng: Bearer {token}",
+                    Description = "Enter JWT as: Bearer {token}",
                     Name = "Authorization",
                     In = ParameterLocation.Header,
                     Type = SecuritySchemeType.Http,
@@ -194,7 +190,7 @@ namespace Main
                             kvp => kvp.Key,
                             kvp => kvp.Value!.Errors.Select(error => error.ErrorMessage).ToArray());
 
-                    var response = ErrorResponse.From("ValidationFailed", "Dữ liệu không hợp lệ.", errors);
+                    var response = ErrorResponse.From("VALIDATION_FAILED", "Validation failed.", errors);
                     return new BadRequestObjectResult(response);
                 };
             });

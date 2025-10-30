@@ -12,6 +12,7 @@ namespace Contract.DTOs.Respond.Story
         public string? CoverUrl { get; set; }
         public DateTime CreatedAt { get; set; }
         public DateTime UpdatedAt { get; set; }
+        public DateTime? PublishedAt { get; set; }
         public IReadOnlyCollection<StoryTagResponse> Tags { get; set; } = Array.Empty<StoryTagResponse>();
     }
 }
