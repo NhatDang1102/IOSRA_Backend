@@ -6,7 +6,7 @@ using Service.Interfaces;
 namespace Main.Controllers
 {
     [Route("api/[controller]")]
-    [Authorize(Roles = "author,AUTHOR,admin,ADMIN")]
+    [Authorize(Roles = "author,AUTHOR")]
     public class StoryController : AppControllerBase
     {
         private readonly IStoryService _storyService;
@@ -42,6 +42,13 @@ namespace Main.Controllers
         public async Task<IActionResult> Submit([FromRoute] ulong storyId, [FromBody] StorySubmitRequest request, CancellationToken ct)
         {
             var story = await _storyService.SubmitForReviewAsync(AccountId, storyId, request, ct);
+            return Ok(story);
+        }
+
+        [HttpPost("{storyId}/complete")]
+        public async Task<IActionResult> Complete([FromRoute] ulong storyId, CancellationToken ct)
+        {
+            var story = await _storyService.CompleteAsync(AccountId, storyId, ct);
             return Ok(story);
         }
     }

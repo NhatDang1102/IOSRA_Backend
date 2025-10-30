@@ -1,21 +1,17 @@
-﻿using System;
-using System.Collections.Generic;
+using System;
 using System.ComponentModel.DataAnnotations;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Contract.DTOs.Request.Profile
 {
     public class ProfileUpdateRequest
     {
-        [StringLength(500, ErrorMessage = "Bio tối đa 500 ký tự")]
+        [StringLength(500, ErrorMessage = "Bio must not exceed 500 characters.")]
         public string? Bio { get; set; }
 
-        [RegularExpression(@"^(M|F|other|unspecified)$", ErrorMessage = "Gender chỉ nhận M/F/other/unspecified")]
+        [RegularExpression(@"^(M|F|other|unspecified)$", ErrorMessage = "Gender must be one of M, F, other, or unspecified.")]
         public string? Gender { get; set; }
 
-        [DataType(DataType.Date, ErrorMessage = "Birthday phải là ngày (yyyy-MM-dd)")]
+        [DataType(DataType.Date, ErrorMessage = "Birthday must be a valid date (yyyy-MM-dd).")]
         public DateOnly? Birthday { get; set; }
     }
 }

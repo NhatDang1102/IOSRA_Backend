@@ -117,10 +117,11 @@ CREATE TABLE story (
   author_id    BIGINT UNSIGNED NOT NULL,  -- author.account_id
   `desc`       MEDIUMTEXT NULL,
   cover_url    VARCHAR(512) NULL,
-  status       ENUM('draft','pending','rejected','published','hidden','removed') NOT NULL DEFAULT 'draft',
+  status       ENUM('draft','pending','rejected','published','completed','hidden','removed') NOT NULL DEFAULT 'draft',
   is_premium   TINYINT(1) NOT NULL DEFAULT 0,
   created_at   DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at   DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  published_at DATETIME NULL,
   PRIMARY KEY (story_id),
   KEY ix_story_author (author_id),
   FULLTEXT KEY ft_story_title_desc (title, `desc`),

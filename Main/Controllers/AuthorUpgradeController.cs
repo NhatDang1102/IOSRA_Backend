@@ -1,7 +1,9 @@
-﻿using Contract.DTOs.Request.Author;
+using Contract.DTOs.Request.Author;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Service.Interfaces;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace Main.Controllers
 {
@@ -15,7 +17,7 @@ namespace Main.Controllers
             _authorUpgrade = authorUpgrade;
         }
 
-        // Reader nộp form xin lên Author (Casual)
+        // Reader submits an upgrade request to become an author (Casual rank)
         [Authorize(Roles = "reader,READER")]
         [HttpPost("request")]
         public async Task<IActionResult> Submit([FromBody] SubmitAuthorUpgradeRequest req, CancellationToken ct)
@@ -24,7 +26,7 @@ namespace Main.Controllers
             return Ok(res);
         }
 
-        // Reader/Author xem các form của chính mình
+        // Reader/Author retrieves their own upgrade requests
         [Authorize(Roles = "reader,READER,author,AUTHOR")]
         [HttpGet("my-requests")]
         public async Task<IActionResult> MyRequests(CancellationToken ct)

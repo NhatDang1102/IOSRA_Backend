@@ -1,9 +1,14 @@
-﻿using Contract.DTOs.Request.Author;
+using Contract.DTOs.Request.Author;
 using Contract.DTOs.Respond.Author;
 using Contract.DTOs.Respond.OperationMod;
 using Repository.Interfaces;
 using Service.Exceptions;
 using Service.Interfaces;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace Service.Implementations
 {
@@ -22,15 +27,20 @@ namespace Service.Implementations
         public async Task<AuthorUpgradeResponse> SubmitAsync(ulong accountId, SubmitAuthorUpgradeRequest req, CancellationToken ct = default)
         {
             _ = await _profileRepo.GetAccountByIdAsync(accountId, ct)
-                ?? throw new AppException("NotFound", "Không tìm thấy tài khoản.", 404);
+                ?? throw new AppException("AccountNotFound", "Account was not found.", 404);
+
             _ = await _profileRepo.GetReaderByIdAsync(accountId, ct)
-                ?? throw new AppException("NotFound", "Không tìm thấy hồ sơ reader.", 404);
+                ?? throw new AppException("ReaderProfileMissing", "Reader profile was not found.", 404);
 
             if (await _opRepo.AuthorIsUnrestrictedAsync(accountId, ct))
-                throw new AppException("AlreadyAuthor", "Tài khoản đã là tác giả.", 409);
+            {
+                throw new AppException("AlreadyAuthor", "Account is already an author.", 409);
+            }
 
             if (await _opRepo.HasPendingAsync(accountId, ct))
-                throw new AppException("AlreadyPending", "Bạn đang có yêu cầu chờ duyệt.", 409);
+            {
+                throw new AppException("AlreadyPending", "You already have a pending upgrade request.", 409);
+            }
 
             var lastRejectedAt = await _opRepo.GetLastRejectedAtAsync(accountId, ct);
             if (lastRejectedAt.HasValue)
@@ -40,10 +50,10 @@ namespace Service.Implementations
                 if (now < until)
                 {
                     var remain = until - now;
-                    var msg = remain.TotalHours >= 1
-                        ? $"Bạn có thể nộp lại sau {Math.Ceiling(remain.TotalHours)} giờ."
-                        : $"Bạn có thể nộp lại sau {Math.Ceiling(remain.TotalMinutes)} phút.";
-                    throw new AppException("Cooldown", $"Đơn trước đã bị từ chối. Vui lòng chờ 7 ngày để nộp lại. {msg}", 429);
+                    var message = remain.TotalHours >= 1
+                        ? $"You can submit again in {Math.Ceiling(remain.TotalHours)} hour(s)."
+                        : $"You can submit again in {Math.Ceiling(remain.TotalMinutes)} minute(s).";
+                    throw new AppException("Cooldown", $"The previous request was rejected. Please wait 7 days before submitting again. {message}", 429);
                 }
             }
 
@@ -53,20 +63,20 @@ namespace Service.Implementations
             {
                 RequestId = created.request_id,
                 Status = created.status,
-                AssignedOmodId = created.omod_id // nullable
+                AssignedOmodId = created.omod_id
             };
         }
 
         public async Task<List<OpRequestItemResponse>> ListMyRequestsAsync(ulong accountId, CancellationToken ct = default)
         {
             _ = await _profileRepo.GetAccountByIdAsync(accountId, ct)
-                ?? throw new AppException("NotFound", "Không tìm thấy tài khoản.", 404);
+                ?? throw new AppException("AccountNotFound", "Account was not found.", 404);
 
             var data = await _opRepo.ListRequestsOfRequesterAsync(accountId, ct);
             return data.Select(x => new OpRequestItemResponse
             {
                 RequestId = x.request_id,
-                RequesterId = x.requester_id,  // ⬅️ map mới
+                RequesterId = x.requester_id,
                 Status = x.status,
                 Content = x.request_content,
                 CreatedAt = x.created_at,

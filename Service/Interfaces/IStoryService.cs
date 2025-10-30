@@ -12,6 +12,6 @@ namespace Service.Interfaces
         Task<StoryResponse> SubmitForReviewAsync(ulong authorAccountId, ulong storyId, StorySubmitRequest request, CancellationToken ct = default);
         Task<IReadOnlyList<StoryListItemResponse>> ListAsync(ulong authorAccountId, CancellationToken ct = default);
         Task<StoryResponse> GetAsync(ulong authorAccountId, ulong storyId, CancellationToken ct = default);
+        Task<StoryResponse> CompleteAsync(ulong authorAccountId, ulong storyId, CancellationToken ct = default);
     }
 }
-

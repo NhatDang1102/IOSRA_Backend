@@ -123,6 +123,37 @@ namespace Repository.Repositories
                   .OrderBy(s => s.created_at)
                   .ToListAsync(ct);
 
+        public Task<bool> AuthorHasPendingStoryAsync(ulong authorId, ulong? excludeStoryId = null, CancellationToken ct = default)
+        {
+            var query = _db.stories.Where(s => s.author_id == authorId && s.status == "pending");
+            if (excludeStoryId.HasValue)
+            {
+                var excluded = excludeStoryId.Value;
+                query = query.Where(s => s.story_id != excluded);
+            }
+
+            return query.AnyAsync(ct);
+        }
+
+        public Task<bool> AuthorHasUncompletedPublishedStoryAsync(ulong authorId, CancellationToken ct = default)
+            => _db.stories.AnyAsync(s => s.author_id == authorId && s.status == "published", ct);
+
+        public Task<DateTime?> GetLastStoryRejectedAtAsync(ulong storyId, CancellationToken ct = default)
+            => _db.content_approves
+                  .Where(c => c.story_id == storyId && c.approve_type == "story" && c.status == "rejected")
+                  .OrderByDescending(c => c.created_at)
+                  .Select(c => (DateTime?)c.created_at)
+                  .FirstOrDefaultAsync(ct);
+
+        public Task<int> GetChapterCountAsync(ulong storyId, CancellationToken ct = default)
+            => _db.chapters.CountAsync(c => c.story_id == storyId, ct);
+
+        public Task<DateTime?> GetStoryPublishedAtAsync(ulong storyId, CancellationToken ct = default)
+            => _db.stories
+                  .Where(s => s.story_id == storyId)
+                  .Select(s => (DateTime?)s.published_at)
+                  .FirstOrDefaultAsync(ct);
+
         public Task SaveChangesAsync(CancellationToken ct = default)
             => _db.SaveChangesAsync(ct);
     }

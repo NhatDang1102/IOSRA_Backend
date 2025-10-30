@@ -42,6 +42,16 @@ namespace Service.Services
                 throw new AppException("AuthorRestricted", "Your author account is restricted.", 403);
             }
 
+            if (await _storyRepository.AuthorHasPendingStoryAsync(author.account_id, null, ct))
+            {
+                throw new AppException("PendingStoryLimit", "You already have a story waiting for moderation.", 400);
+            }
+
+            if (await _storyRepository.AuthorHasUncompletedPublishedStoryAsync(author.account_id, ct))
+            {
+                throw new AppException("PublishedStoryIncomplete", "Please complete your published story before creating a new one.", 400);
+            }
+
             if (!AllowedCoverModes.Contains(request.CoverMode, StringComparer.OrdinalIgnoreCase))
             {
                 throw new AppException("InvalidCoverMode", "CoverMode must be either 'upload' or 'generate'.", 400);
@@ -100,15 +110,35 @@ namespace Service.Services
                 throw new AppException("StoryPublished", "Published stories cannot be resubmitted.", 400);
             }
 
+            if (await _storyRepository.AuthorHasPendingStoryAsync(author.account_id, story.story_id, ct))
+            {
+                throw new AppException("PendingStoryLimit", "You already have another story waiting for moderation.", 400);
+            }
+
+            if (await _storyRepository.AuthorHasUncompletedPublishedStoryAsync(author.account_id, ct))
+            {
+                throw new AppException("PublishedStoryIncomplete", "Please complete your published story before submitting a new one.", 400);
+            }
+
+            if (story.status == "rejected")
+            {
+                var lastRejectedAt = await _storyRepository.GetLastStoryRejectedAtAsync(story.story_id, ct);
+                if (lastRejectedAt.HasValue && lastRejectedAt.Value > DateTime.UtcNow.AddDays(-7))
+                {
+                    throw new AppException("StoryRejectedCooldown", "Please wait 7 days before resubmitting this story.", 400, new
+                    {
+                        availableAtUtc = lastRejectedAt.Value.AddDays(7)
+                    });
+                }
+            }
+
             var aiResult = await _openAiModerationService.ModerateStoryAsync(story.title, story.desc, ct);
-            var aiScore = aiResult.Score.HasValue ? (decimal?)Math.Round(aiResult.Score.Value, 4) : null;
-            var aiNote = aiResult.Categories is { Length: > 0 }
-                ? string.Join(", ", aiResult.Categories.Where(c => !string.IsNullOrWhiteSpace(c)))
-                : null;
+            var aiScore = (decimal)Math.Round(aiResult.Score, 2, MidpointRounding.AwayFromZero);
+            var aiNote = aiResult.Explanation;
 
             story.updated_at = DateTime.UtcNow;
 
-            if (aiResult.IsFlagged)
+            if (aiResult.ShouldReject)
             {
                 story.status = "rejected";
 
@@ -124,7 +154,15 @@ namespace Service.Services
 
                 throw new AppException("StoryRejectedByAi", "Story was rejected by automated moderation.", 400, new
                 {
-                    categories = aiResult.Categories
+                    score = Math.Round(aiResult.Score, 2),
+                    sanitizedContent = aiResult.SanitizedContent,
+                    explanation = aiResult.Explanation,
+                    violations = aiResult.Violations.Select(v => new
+                    {
+                        v.Word,
+                        v.Count,
+                        Samples = v.Samples
+                    })
                 });
             }
 
@@ -176,6 +214,48 @@ namespace Service.Services
             var author = await RequireAuthorAsync(authorAccountId, ct);
             var story = await _storyRepository.GetStoryForAuthorAsync(storyId, author.account_id, ct)
                         ?? throw new AppException("StoryNotFound", "Story was not found.", 404);
+
+            var approvals = await _storyRepository.GetContentApprovalsForStoryAsync(story.story_id, ct);
+            return MapStory(story, approvals);
+        }
+
+        public async Task<StoryResponse> CompleteAsync(ulong authorAccountId, ulong storyId, CancellationToken ct = default)
+        {
+            var author = await RequireAuthorAsync(authorAccountId, ct);
+            var story = await _storyRepository.GetStoryForAuthorAsync(storyId, author.account_id, ct)
+                        ?? throw new AppException("StoryNotFound", "Story was not found.", 404);
+
+            if (story.status != "published")
+            {
+                throw new AppException("StoryNotPublished", "Only published stories can be marked as completed.", 400);
+            }
+
+            var chapterCount = await _storyRepository.GetChapterCountAsync(story.story_id, ct);
+            if (chapterCount < 1)
+            {
+                throw new AppException("StoryInsufficientChapters", "Story needs at least one chapter before completion.", 400);
+            }
+
+            var publishedAt = story.published_at ?? await _storyRepository.GetStoryPublishedAtAsync(story.story_id, ct);
+            if (!publishedAt.HasValue)
+            {
+                publishedAt = story.updated_at;
+                story.published_at = publishedAt;
+            }
+
+            var earliestCompletion = publishedAt.Value.AddDays(30);
+            if (DateTime.UtcNow < earliestCompletion)
+            {
+                throw new AppException("StoryCompletionCooldown", "Story must be published for at least 30 days before completion.", 400, new
+                {
+                    availableAtUtc = earliestCompletion
+                });
+            }
+
+            story.status = "completed";
+            story.updated_at = DateTime.UtcNow;
+
+            await _storyRepository.UpdateStoryAsync(story, ct);
 
             var approvals = await _storyRepository.GetContentApprovalsForStoryAsync(story.story_id, ct);
             return MapStory(story, approvals);
@@ -257,6 +337,7 @@ namespace Service.Services
                 ModeratorNote = latestHuman?.moderator_note,
                 CreatedAt = story.created_at,
                 UpdatedAt = story.updated_at,
+                PublishedAt = story.published_at,
                 Tags = tags
             };
         }
@@ -282,6 +363,7 @@ namespace Service.Services
                 CoverUrl = story.cover_url,
                 CreatedAt = story.created_at,
                 UpdatedAt = story.updated_at,
+                PublishedAt = story.published_at,
                 Tags = tags
             };
         }
