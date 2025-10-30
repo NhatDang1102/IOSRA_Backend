@@ -4,8 +4,11 @@ using Contract.DTOs.Settings;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Options;
 using Service.Interfaces;
-using System.Net;
+using System;
 using System.IO;
+using System.Net;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace Service.Helpers
 {
@@ -72,3 +75,4 @@ namespace Service.Helpers
         }
     }
 }
+

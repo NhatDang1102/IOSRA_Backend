@@ -8,11 +8,13 @@ namespace Repository
     {
         public static IServiceCollection AddRepositoryServices(this IServiceCollection services)
         {
+            services.AddSingleton<ISnowflakeIdGenerator, YitterSnowflakeIdGenerator>();
             services.AddScoped<IAuthRepository, AuthRepository>();
             services.AddScoped<IAdminRepository, AdminRepository>();
             services.AddScoped<IProfileRepository, ProfileRepository>();
             services.AddScoped<IOpRequestRepository, OpRequestRepository>();
             services.AddScoped<ITagRepository, TagRepository>();
+            services.AddScoped<IStoryRepository, StoryRepository>();
 
             return services;
         }

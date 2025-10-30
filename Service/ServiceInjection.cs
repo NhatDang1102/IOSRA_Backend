@@ -3,6 +3,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using Service.Helpers;
 using Service.Implementations;
+using Service.Services;
 using Service.Interfaces;
 using System;
 using System.Net.Http.Headers;
@@ -27,8 +28,8 @@ namespace Service
                 client.DefaultRequestHeaders.Accept.Clear();
                 client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
             });
-            services.AddTransient<IOpenAiModerationService, OpenAiService>();
-            services.AddTransient<IOpenAiImageService, OpenAiService>();
+            services.AddTransient<IOpenAiModerationService>(sp => sp.GetRequiredService<OpenAiService>());
+            services.AddTransient<IOpenAiImageService>(sp => sp.GetRequiredService<OpenAiService>());
 
             services.AddScoped<IJwtTokenFactory, JwtTokenFactory>();
             services.AddScoped<IAuthService, AuthService>();
@@ -37,8 +38,11 @@ namespace Service
             services.AddScoped<IOperationModService, OperationModService>();
             services.AddScoped<IProfileService, ProfileService>();
             services.AddScoped<ITagService, TagService>();
+            services.AddScoped<IStoryService, StoryService>();
+            services.AddScoped<IStoryModerationService, StoryModerationService>();
 
             return services;
         }
     }
 }
+

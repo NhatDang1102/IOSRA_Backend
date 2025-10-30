@@ -5,12 +5,13 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Net;
 using System.Net.Http;
 using System.Net.Http.Json;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace Service.Helpers
 {
@@ -56,7 +57,7 @@ namespace Service.Helpers
             var first = result.Results?.FirstOrDefault()
                         ?? throw new InvalidOperationException("OpenAI moderation did not return any results.");
 
-            var categories = first.Categories?.Where(kv => kv.Value).Select(kv => kv.Key).ToArray() ?? Array.Empty<string>();
+            var categories = first.Categories?.Where(kv => kv.Value).Select(kv => kv.Key).Cast<string?>().ToArray() ?? Array.Empty<string?>();
             double? maxScore = null;
             if (first.CategoryScores != null && first.CategoryScores.Count > 0)
             {
@@ -72,11 +73,10 @@ namespace Service.Helpers
             {
                 Model = _settings.ImageModel,
                 Prompt = prompt,
-                Size = "1024x1024",
-                ResponseFormat = "b64_json"
+                Size = "1024x1024"
             };
 
-            using var response = await _httpClient.PostAsJsonAsync("images", payload, cancellationToken: ct);
+            using var response = await _httpClient.PostAsJsonAsync("images/generations", payload, cancellationToken: ct);
             if (!response.IsSuccessStatusCode)
             {
                 var body = await response.Content.ReadAsStringAsync(ct);
@@ -89,15 +89,43 @@ namespace Service.Helpers
             var image = result.Data?.FirstOrDefault()
                         ?? throw new InvalidOperationException("OpenAI image generation did not return any images.");
 
-            if (string.IsNullOrWhiteSpace(image.Base64Data))
-                throw new InvalidOperationException("OpenAI image generation returned an empty payload.");
+            Stream stream;
+            string fileName;
+            string contentType;
 
-            var bytes = Convert.FromBase64String(image.Base64Data);
-            var stream = new MemoryStream(bytes, writable: false);
+            if (!string.IsNullOrWhiteSpace(image.Base64Data))
+            {
+                var bytes = Convert.FromBase64String(image.Base64Data);
+                stream = new MemoryStream(bytes, writable: false);
+                fileName = $"story_cover_{Guid.NewGuid():N}.png";
+                contentType = "image/png";
+            }
+            else if (!string.IsNullOrWhiteSpace(image.Url))
+            {
+                using var downloadResponse = await _httpClient.GetAsync(image.Url, ct);
+                if (!downloadResponse.IsSuccessStatusCode)
+                {
+                    var body = await downloadResponse.Content.ReadAsStringAsync(ct);
+                    throw new InvalidOperationException($"Failed to download generated image: {(int)downloadResponse.StatusCode} {body}");
+                }
+
+                var memory = new MemoryStream();
+                await downloadResponse.Content.CopyToAsync(memory, ct);
+                memory.Position = 0;
+                stream = memory;
+
+                contentType = downloadResponse.Content.Headers.ContentType?.MediaType ?? "image/png";
+                var extension = contentType.Contains("jpeg", StringComparison.OrdinalIgnoreCase) ? "jpg" : "png";
+                fileName = $"story_cover_{Guid.NewGuid():N}.{extension}";
+            }
+            else
+            {
+                throw new InvalidOperationException("OpenAI image generation returned an empty payload.");
+            }
+
             stream.Position = 0;
 
-            var fileName = $"story_cover_{Guid.NewGuid():N}.png";
-            return new OpenAiImageResult(stream, fileName, "image/png");
+            return new OpenAiImageResult(stream, fileName, contentType);
         }
 
         private sealed record ModerationRequest
@@ -137,9 +165,6 @@ namespace Service.Helpers
 
             [JsonPropertyName("size")]
             public string Size { get; init; } = "1024x1024";
-
-            [JsonPropertyName("response_format")]
-            public string ResponseFormat { get; init; } = "b64_json";
         }
 
         private sealed record ImageResponse
@@ -152,6 +177,9 @@ namespace Service.Helpers
         {
             [JsonPropertyName("b64_json")]
             public string? Base64Data { get; init; }
+
+            [JsonPropertyName("url")]
+            public string? Url { get; init; }
         }
     }
 }
