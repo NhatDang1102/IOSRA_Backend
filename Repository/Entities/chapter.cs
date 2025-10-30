@@ -17,12 +17,31 @@ public partial class chapter
 
     public uint chapter_no { get; set; }
 
+    public ushort language_id { get; set; }
+
+    [StringLength(255)]
+    public string title { get; set; } = null!;
+
+    [Column(TypeName = "text")]
+    public string? summary { get; set; }
+
     public uint dias_price { get; set; }
 
     [Column(TypeName = "enum('free','coin','sub_only')")]
     public string access_type { get; set; } = null!;
 
-    [Column(TypeName = "enum('draft','published','locked','removed')")]
+    [StringLength(512)]
+    public string? content_url { get; set; }
+
+    public int word_count { get; set; }
+
+    [Precision(5, 2)]
+    public decimal? ai_score { get; set; }
+
+    [Column(TypeName = "text")]
+    public string? ai_feedback { get; set; }
+
+    [Column(TypeName = "enum('draft','pending','rejected','published','hidden','removed')")]
     public string status { get; set; } = null!;
 
     [Column(TypeName = "datetime")]
@@ -30,6 +49,12 @@ public partial class chapter
 
     [Column(TypeName = "datetime")]
     public DateTime updated_at { get; set; }
+
+    [Column(TypeName = "datetime")]
+    public DateTime? submitted_at { get; set; }
+
+    [Column(TypeName = "datetime")]
+    public DateTime? published_at { get; set; }
 
     [InverseProperty("chapter")]
     public virtual ICollection<chapter_comment> chapter_comments { get; set; } = new List<chapter_comment>();
@@ -49,4 +74,8 @@ public partial class chapter
     [ForeignKey("story_id")]
     [InverseProperty("chapters")]
     public virtual story story { get; set; } = null!;
+
+    [ForeignKey("language_id")]
+    [InverseProperty("chapters")]
+    public virtual language_list language { get; set; } = null!;
 }

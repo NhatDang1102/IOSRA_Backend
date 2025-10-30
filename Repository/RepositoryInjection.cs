@@ -1,4 +1,4 @@
-﻿using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection;
 using Repository.Interfaces;
 using Repository.Repositories;
 
@@ -15,6 +15,7 @@ namespace Repository
             services.AddScoped<IOpRequestRepository, OpRequestRepository>();
             services.AddScoped<ITagRepository, TagRepository>();
             services.AddScoped<IStoryRepository, StoryRepository>();
+            services.AddScoped<IChapterRepository, ChapterRepository>();
 
             return services;
         }
