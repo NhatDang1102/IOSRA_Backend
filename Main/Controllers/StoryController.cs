@@ -5,7 +5,7 @@ using Service.Interfaces;
 
 namespace Main.Controllers
 {
-    [Route("api/stories")]
+    [Route("api/[controller]")]
     [Authorize(Roles = "author,AUTHOR,admin,ADMIN")]
     public class StoryController : AppControllerBase
     {
