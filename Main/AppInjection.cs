@@ -27,6 +27,7 @@ namespace Main
             services.Configure<SmtpSettings>(configuration.GetSection("Smtp"));
             services.Configure<OtpSettings>(configuration.GetSection("Otp"));
             services.Configure<CloudinarySettings>(configuration.GetSection("CloudinarySettings"));
+            services.Configure<OpenAiSettings>(configuration.GetSection("OpenAi"));
 
             // EF Core
             var cs = configuration.GetConnectionString("Default");
