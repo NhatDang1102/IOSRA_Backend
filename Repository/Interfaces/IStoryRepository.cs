@@ -1,4 +1,5 @@
 using Repository.Entities;
+using System;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
@@ -19,7 +20,11 @@ namespace Repository.Interfaces
         Task<content_approve?> GetLatestContentApproveAsync(ulong storyId, string source, CancellationToken ct = default);
         Task<List<content_approve>> GetContentApprovalsForStoryAsync(ulong storyId, CancellationToken ct = default);
         Task<List<story>> GetStoriesPendingHumanReviewAsync(CancellationToken ct = default);
+        Task<bool> AuthorHasPendingStoryAsync(ulong authorId, ulong? excludeStoryId = null, CancellationToken ct = default);
+        Task<bool> AuthorHasUncompletedPublishedStoryAsync(ulong authorId, CancellationToken ct = default);
+        Task<DateTime?> GetLastStoryRejectedAtAsync(ulong storyId, CancellationToken ct = default);
+        Task<int> GetChapterCountAsync(ulong storyId, CancellationToken ct = default);
+        Task<DateTime?> GetStoryPublishedAtAsync(ulong storyId, CancellationToken ct = default);
         Task SaveChangesAsync(CancellationToken ct = default);
     }
 }
-

@@ -85,7 +85,15 @@ namespace Service.Services
 
             var authorRank = story.author.rank?.rank_name;
             story.is_premium = !string.IsNullOrWhiteSpace(authorRank) && !string.Equals(authorRank, "Casual", StringComparison.OrdinalIgnoreCase);
-            story.status = request.Approve ? "published" : "rejected";
+            if (request.Approve)
+            {
+                story.status = "published";
+                story.published_at ??= DateTime.UtcNow;
+            }
+            else
+            {
+                story.status = "rejected";
+            }
             story.updated_at = DateTime.UtcNow;
 
             await _storyRepository.SaveChangesAsync(ct);

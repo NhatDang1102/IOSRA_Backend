@@ -1,9 +1,21 @@
+using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 
 namespace Service.Interfaces
 {
-    public record OpenAiModerationResult(bool IsFlagged, double? Score, string?[] Categories);
+    public record ModerationViolation(
+        string Word,
+        int Count,
+        IReadOnlyList<string> Samples);
+
+    public record OpenAiModerationResult(
+        bool ShouldReject,
+        double Score,
+        IReadOnlyList<ModerationViolation> Violations,
+        string Content,
+        string SanitizedContent,
+        string Explanation);
 
     public interface IOpenAiModerationService
     {

@@ -44,5 +44,12 @@ namespace Main.Controllers
             var story = await _storyService.SubmitForReviewAsync(AccountId, storyId, request, ct);
             return Ok(story);
         }
+
+        [HttpPost("{storyId}/complete")]
+        public async Task<IActionResult> Complete([FromRoute] ulong storyId, CancellationToken ct)
+        {
+            var story = await _storyService.CompleteAsync(AccountId, storyId, ct);
+            return Ok(story);
+        }
     }
 }

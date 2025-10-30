@@ -23,7 +23,7 @@ public partial class story
     [StringLength(512)]
     public string? cover_url { get; set; }
 
-    [Column(TypeName = "enum('draft','pending','rejected','published','hidden','removed')")]
+    [Column(TypeName = "enum('draft','pending','rejected','published','completed','hidden','removed')")]
     public string status { get; set; } = null!;
 
     public bool is_premium { get; set; }
@@ -33,6 +33,9 @@ public partial class story
 
     [Column(TypeName = "datetime")]
     public DateTime updated_at { get; set; }
+
+    [Column(TypeName = "datetime")]
+    public DateTime? published_at { get; set; }
 
     [ForeignKey("author_id")]
     [InverseProperty("stories")]

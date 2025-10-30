@@ -1,8 +1,11 @@
-﻿using Contract.DTOs.Request.Auth;
+using Contract.DTOs.Request.Auth;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Service.Interfaces;
+using System;
 using System.IdentityModel.Tokens.Jwt;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace Main.Controllers;
 
@@ -28,7 +31,6 @@ public class AuthController : AppControllerBase
     [HttpPost("verify")]
     public async Task<IActionResult> Verify([FromBody] VerifyOtpRequest req, CancellationToken ct)
     {
-        // Trả LoginResponse (có AccountId, Token, Roles...)
         var res = await _auth.VerifyRegisterAsync(req, ct);
         return Ok(res);
     }
@@ -62,28 +64,32 @@ public class AuthController : AppControllerBase
         var expStr = User.FindFirst("exp")?.Value;
 
         if (string.IsNullOrEmpty(jti) || string.IsNullOrEmpty(expStr))
-            return BadRequest(new { error = new { code = "InvalidToken", message = "Không tìm thấy thông tin JTI/EXP trong token." } });
+        {
+            return BadRequest(new { error = new { code = "InvalidToken", message = "Token is missing JTI or EXP claims." } });
+        }
 
         if (!long.TryParse(expStr, out var expUnix))
-            return BadRequest(new { error = new { code = "InvalidToken", message = "EXP không hợp lệ." } });
+        {
+            return BadRequest(new { error = new { code = "InvalidToken", message = "EXP claim is not a valid unix timestamp." } });
+        }
 
         var expiresAt = DateTimeOffset.FromUnixTimeSeconds(expUnix);
         await _blacklist.BlacklistAsync(jti, expiresAt, ct);
 
-        return Ok(new { message = "Đăng xuất thành công." });
+        return Ok(new { message = "Logged out successfully." });
     }
 
     [HttpPost("forgot-pass")]
     public async Task<IActionResult> ForgotPassword([FromBody] ForgotPasswordRequest req, CancellationToken ct)
     {
         await _auth.SendForgotOtpAsync(req, ct);
-        return Ok(new { message = "Nếu email tồn tại, OTP đã được gửi." });
+        return Ok(new { message = "If the email exists, an OTP has been sent." });
     }
 
     [HttpPost("forgot-pass/verify")]
     public async Task<IActionResult> VerifyForgotPassword([FromBody] VerifyForgotPasswordRequest req, CancellationToken ct)
     {
         await _auth.VerifyForgotAsync(req, ct);
-        return Ok(new { message = "Đổi mật khẩu thành công." });
+        return Ok(new { message = "Password updated successfully." });
     }
 }

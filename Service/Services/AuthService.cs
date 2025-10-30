@@ -1,4 +1,4 @@
-﻿using BCrypt.Net;
+using BCrypt.Net;
 using Contract.DTOs.Request.Auth;
 using Contract.DTOs.Respond.Auth;
 using Repository.Entities;
@@ -6,7 +6,10 @@ using Repository.Interfaces;
 using Service.Exceptions;
 using Service.Helpers;
 using Service.Interfaces;
+using System.Collections.Generic;
 using System.Security.Cryptography;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace Service.Implementations
 {
@@ -34,14 +37,22 @@ namespace Service.Implementations
 
         public async Task SendRegisterOtpAsync(RegisterRequest req, CancellationToken ct = default)
         {
-            if (string.IsNullOrWhiteSpace(req.Username) || string.IsNullOrWhiteSpace(req.Email) || string.IsNullOrWhiteSpace(req.Password))
-                throw new AppException("InvalidRequest", "ko đủ tt đkí.", 400);
+            if (string.IsNullOrWhiteSpace(req.Username) ||
+                string.IsNullOrWhiteSpace(req.Email) ||
+                string.IsNullOrWhiteSpace(req.Password))
+            {
+                throw new AppException("InvalidRequest", "Registration request is incomplete.", 400);
+            }
 
             if (await _authRepo.ExistsByUsernameOrEmailAsync(req.Username, req.Email, ct))
-                throw new AppException("AccountExists", "email/username đã có.", 409);
+            {
+                throw new AppException("AccountExists", "Email or username already exists.", 409);
+            }
 
             if (!await _otpStore.CanSendAsync(req.Email))
-                throw new AppException("OtpRateLimit", "1 tiếng chỉ đc 1 otp.", 429);
+            {
+                throw new AppException("OtpRateLimit", "OTP request rate limit exceeded.", 429);
+            }
 
             var otp = RandomNumberGenerator.GetInt32(100000, 1000000).ToString();
             var bcrypt = BCrypt.Net.BCrypt.HashPassword(req.Password);
@@ -50,14 +61,19 @@ namespace Service.Implementations
             await _mail.SendOtpEmailAsync(req.Email, otp);
         }
 
-        // Đổi trả về LoginResponse + thêm AccountId
         public async Task<LoginResponse> VerifyRegisterAsync(VerifyOtpRequest req, CancellationToken ct = default)
         {
             var entry = await _otpStore.GetAsync(req.Email);
-            if (entry == null) throw new AppException("InvalidOtp", "otp hết hạn/sai.", 400);
+            if (entry == null)
+            {
+                throw new AppException("InvalidOtp", "OTP is invalid or expired.", 400);
+            }
 
             var (otpStored, pwdHashStored, usernameStored) = entry.Value;
-            if (otpStored != req.Otp) throw new AppException("InvalidOtp", "otp hết hạn/sai.", 400);
+            if (otpStored != req.Otp)
+            {
+                throw new AppException("InvalidOtp", "OTP is invalid or expired.", 400);
+            }
 
             var acc = new account
             {
@@ -92,11 +108,21 @@ namespace Service.Implementations
         public async Task<LoginResponse> LoginAsync(LoginRequest req, CancellationToken ct = default)
         {
             var acc = await _authRepo.FindAccountByIdentifierAsync(req.Identifier, ct);
-            if (acc == null) throw new AppException("AccountNotFound", "acc ko tồn tại.", 401);
-            if (acc.status == "banned") throw new AppException("AccountBanned", "acc bị khóa.", 403);
+            if (acc == null)
+            {
+                throw new AppException("AccountNotFound", "Account was not found.", 401);
+            }
+
+            if (acc.status == "banned")
+            {
+                throw new AppException("AccountBanned", "Account has been banned.", 403);
+            }
 
             var ok = BCrypt.Net.BCrypt.Verify(req.Password, acc.password_hash);
-            if (!ok) throw new AppException("InvalidCredentials", "sai pass.", 401);
+            if (!ok)
+            {
+                throw new AppException("InvalidCredentials", "Incorrect password.", 401);
+            }
 
             var roles = await _authRepo.GetRoleCodesOfAccountAsync(acc.account_id, ct);
             var token = _jwt.CreateToken(acc, roles);
@@ -114,12 +140,25 @@ namespace Service.Implementations
         public async Task<LoginResponse> LoginWithGoogleAsync(GoogleLoginRequest req, CancellationToken ct = default)
         {
             FirebaseUserInfo user;
-            try { user = await _fb.VerifyIdTokenAsync(req.IdToken, ct); }
-            catch { throw new AppException("InvalidGoogleToken", "Token Google không hợp lệ hoặc hết hạn.", 401); }
+            try
+            {
+                user = await _fb.VerifyIdTokenAsync(req.IdToken, ct);
+            }
+            catch
+            {
+                throw new AppException("InvalidGoogleToken", "Google token is invalid or expired.", 401);
+            }
 
             var acc = await _authRepo.FindAccountByIdentifierAsync(user.Email, ct);
-            if (acc == null) throw new AppException("AccountNotRegistered", "chưa đkí tk, hoàn thiện đkí.", 409);
-            if (acc.status == "banned") throw new AppException("AccountBanned", "acc đã bị khóa.", 403);
+            if (acc == null)
+            {
+                throw new AppException("AccountNotRegistered", "Account is not registered. Please complete sign-up.", 409);
+            }
+
+            if (acc.status == "banned")
+            {
+                throw new AppException("AccountBanned", "Account has been banned.", 403);
+            }
 
             var roles = await _authRepo.GetRoleCodesOfAccountAsync(acc.account_id, ct);
             var token = _jwt.CreateToken(acc, roles);
@@ -136,11 +175,19 @@ namespace Service.Implementations
         public async Task<LoginResponse> CompleteGoogleRegisterAsync(CompleteGoogleRegisterRequest req, CancellationToken ct = default)
         {
             FirebaseUserInfo user;
-            try { user = await _fb.VerifyIdTokenAsync(req.IdToken, ct); }
-            catch { throw new AppException("InvalidGoogleToken", "Token Google không hợp lệ hoặc hết hạn.", 401); }
+            try
+            {
+                user = await _fb.VerifyIdTokenAsync(req.IdToken, ct);
+            }
+            catch
+            {
+                throw new AppException("InvalidGoogleToken", "Google token is invalid or expired.", 401);
+            }
 
             if (await _authRepo.ExistsByUsernameOrEmailAsync(req.Username, user.Email, ct))
-                throw new AppException("AccountExists", "email/username đã có tk.", 409);
+            {
+                throw new AppException("AccountExists", "Email or username already exists.", 409);
+            }
 
             var pwdHash = BCrypt.Net.BCrypt.HashPassword(req.Password);
 
@@ -176,10 +223,15 @@ namespace Service.Implementations
         public async Task SendForgotOtpAsync(ForgotPasswordRequest req, CancellationToken ct = default)
         {
             var acc = await _authRepo.FindAccountByEmailAsync(req.Email, ct);
-            if (acc == null) return;
+            if (acc == null)
+            {
+                return;
+            }
 
             if (!await _otpStore.CanSendAsync(req.Email))
-                throw new AppException("OtpRateLimit", "1 tiếng chỉ đc 1 otp.", 429);
+            {
+                throw new AppException("OtpRateLimit", "OTP request rate limit exceeded.", 429);
+            }
 
             var otp = RandomNumberGenerator.GetInt32(100000, 1000000).ToString();
             await _otpStore.SaveForgotAsync(req.Email, otp, newPasswordBcrypt: string.Empty);
@@ -189,13 +241,22 @@ namespace Service.Implementations
         public async Task VerifyForgotAsync(VerifyForgotPasswordRequest req, CancellationToken ct = default)
         {
             var acc = await _authRepo.FindAccountByEmailAsync(req.Email, ct);
-            if (acc == null) throw new AppException("AccountNotFound", "Email không tồn tại.", 404);
+            if (acc == null)
+            {
+                throw new AppException("AccountNotFound", "Email does not exist.", 404);
+            }
 
             var entry = await _otpStore.GetForgotAsync(req.Email);
-            if (entry == null) throw new AppException("InvalidOtp", "otp hết hạn/sai.", 400);
+            if (entry == null)
+            {
+                throw new AppException("InvalidOtp", "OTP is invalid or expired.", 400);
+            }
 
             var (otpStored, _) = entry.Value;
-            if (otpStored != req.Otp) throw new AppException("InvalidOtp", "otp hết hạn/sai.", 400);
+            if (otpStored != req.Otp)
+            {
+                throw new AppException("InvalidOtp", "OTP is invalid or expired.", 400);
+            }
 
             var newHash = BCrypt.Net.BCrypt.HashPassword(req.NewPassword);
             await _authRepo.UpdatePasswordHashAsync(acc.account_id, newHash, ct);

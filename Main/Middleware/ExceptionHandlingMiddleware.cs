@@ -30,12 +30,12 @@ public class ExceptionHandlingMiddleware
         }
         catch (UnauthorizedAccessException ex)
         {
-            await WriteErrorAsync(context, StatusCodes.Status401Unauthorized, ErrorResponse.From("Unauthorized", ex.Message));
+            await WriteErrorAsync(context, StatusCodes.Status401Unauthorized, ErrorResponse.From("UNAUTHORIZED", ex.Message));
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Unhandled exception");
-            await WriteErrorAsync(context, StatusCodes.Status500InternalServerError, ErrorResponse.From("InternalServerError", "Đã xảy ra lỗi không mong muốn."));
+            await WriteErrorAsync(context, StatusCodes.Status500InternalServerError, ErrorResponse.From("INTERNAL_ERROR", "An unexpected error occurred. Please try again later."));
         }
     }
 

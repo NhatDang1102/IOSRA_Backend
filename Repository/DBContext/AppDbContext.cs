@@ -368,6 +368,7 @@ public partial class AppDbContext : DbContext
             entity.Property(e => e.updated_at)
                 .ValueGeneratedOnAddOrUpdate()
                 .HasDefaultValueSql("CURRENT_TIMESTAMP");
+            entity.Property(e => e.published_at);
 
             entity.HasOne(d => d.author).WithMany(p => p.stories)
                 .OnDelete(DeleteBehavior.ClientSetNull)

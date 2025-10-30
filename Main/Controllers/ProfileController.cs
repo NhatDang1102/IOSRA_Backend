@@ -1,12 +1,14 @@
-﻿using Contract.DTOs.Request.Profile;
+using Contract.DTOs.Request.Profile;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Service.Interfaces;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace Main.Controllers;
 
 [Route("api/[controller]")]
-[Authorize] // tất cả endpoint yêu cầu đăng nhập
+[Authorize] // all endpoints require authentication
 public class ProfileController : AppControllerBase
 {
     private readonly IProfileService _profile;
@@ -16,7 +18,6 @@ public class ProfileController : AppControllerBase
         _profile = profile;
     }
 
-    // GET /api/profile
     [HttpGet]
     public async Task<IActionResult> Get(CancellationToken ct)
     {
@@ -24,7 +25,6 @@ public class ProfileController : AppControllerBase
         return Ok(res);
     }
 
-    // PUT /api/profile
     [HttpPut]
     public async Task<IActionResult> Update([FromBody] ProfileUpdateRequest req, CancellationToken ct)
     {
@@ -32,7 +32,6 @@ public class ProfileController : AppControllerBase
         return Ok(res);
     }
 
-    // POST /api/profile/avatar (multipart/form-data)
     [HttpPost("avatar")]
     [Consumes("multipart/form-data")]
     [RequestSizeLimit(10 * 1024 * 1024)] // 10MB
@@ -42,19 +41,17 @@ public class ProfileController : AppControllerBase
         return Ok(new { avatarUrl = url });
     }
 
-    // POST /api/profile/email/otp
     [HttpPost("email/otp")]
     public async Task<IActionResult> SendChangeEmailOtp([FromBody] ChangeEmailRequest req, CancellationToken ct)
     {
         await _profile.SendChangeEmailOtpAsync(AccountId, req, ct);
-        return Ok(new { message = "Nếu email hợp lệ, OTP đã được gửi." });
+        return Ok(new { message = "If the new email is valid, an OTP has been sent." });
     }
 
-    // POST /api/profile/email/verify
     [HttpPost("email/verify")]
     public async Task<IActionResult> VerifyChangeEmail([FromBody] VerifyChangeEmailRequest req, CancellationToken ct)
     {
         await _profile.VerifyChangeEmailAsync(AccountId, req, ct);
-        return Ok(new { message = "Đổi email thành công." });
+        return Ok(new { message = "Email updated successfully." });
     }
 }
