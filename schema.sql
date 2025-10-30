@@ -117,7 +117,7 @@ CREATE TABLE story (
   author_id    BIGINT UNSIGNED NOT NULL,  -- author.account_id
   `desc`       MEDIUMTEXT NULL,
   cover_url    VARCHAR(512) NULL,
-  status       ENUM('draft','published','hidden','removed') NOT NULL DEFAULT 'draft',
+  status       ENUM('draft','pending','rejected','published','hidden','removed') NOT NULL DEFAULT 'draft',
   is_premium   TINYINT(1) NOT NULL DEFAULT 0,
   created_at   DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at   DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -275,9 +275,10 @@ CREATE TABLE content_approve (
   chapter_id    BIGINT UNSIGNED NULL,
   source        ENUM('ai','human') NOT NULL DEFAULT 'human',
   ai_score      DECIMAL(5,2) NULL,
-  status        ENUM('pending','approved','rejected') NOT NULL DEFAULT 'pending',
-  moderator_id  BIGINT UNSIGNED NOT NULL,
-  created_at    DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    status        ENUM('pending','approved','rejected') NOT NULL DEFAULT 'pending',
+    moderator_id  BIGINT UNSIGNED NULL,
+    moderator_note TEXT NULL,
+    created_at    DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (review_id),
   KEY ix_cappr_story (story_id),
   KEY ix_cappr_chapter (chapter_id),
@@ -285,8 +286,8 @@ CREATE TABLE content_approve (
     REFERENCES story(story_id) ON DELETE CASCADE ON UPDATE CASCADE,
   CONSTRAINT fk_cappr_chapter FOREIGN KEY (chapter_id)
     REFERENCES chapters(chapter_id) ON DELETE CASCADE ON UPDATE CASCADE,
-  CONSTRAINT fk_cappr_moderator FOREIGN KEY (moderator_id)
-    REFERENCES ContentMod(account_id) ON DELETE RESTRICT ON UPDATE CASCADE
+    CONSTRAINT fk_cappr_moderator FOREIGN KEY (moderator_id)
+      REFERENCES ContentMod(account_id) ON DELETE SET NULL ON UPDATE CASCADE
 ) ENGINE=InnoDB;
 
 CREATE TABLE op_requests (

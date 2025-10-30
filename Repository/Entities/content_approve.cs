@@ -31,7 +31,10 @@ public partial class content_approve
     [Column(TypeName = "enum('pending','approved','rejected')")]
     public string status { get; set; } = null!;
 
-    public ulong moderator_id { get; set; }
+    public ulong? moderator_id { get; set; }
+
+    [Column(TypeName = "text")]
+    public string? moderator_note { get; set; }
 
     [Column(TypeName = "datetime")]
     public DateTime created_at { get; set; }
@@ -42,7 +45,7 @@ public partial class content_approve
 
     [ForeignKey("moderator_id")]
     [InverseProperty("content_approves")]
-    public virtual ContentMod moderator { get; set; } = null!;
+    public virtual ContentMod? moderator { get; set; }
 
     [ForeignKey("story_id")]
     [InverseProperty("content_approves")]

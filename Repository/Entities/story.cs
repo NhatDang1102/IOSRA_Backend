@@ -23,7 +23,7 @@ public partial class story
     [StringLength(512)]
     public string? cover_url { get; set; }
 
-    [Column(TypeName = "enum('draft','published','hidden','removed')")]
+    [Column(TypeName = "enum('draft','pending','rejected','published','hidden','removed')")]
     public string status { get; set; } = null!;
 
     public bool is_premium { get; set; }

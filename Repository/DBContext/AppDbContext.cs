@@ -231,13 +231,14 @@ public partial class AppDbContext : DbContext
             entity.Property(e => e.created_at).HasDefaultValueSql("CURRENT_TIMESTAMP");
             entity.Property(e => e.source).HasDefaultValueSql("'human'");
             entity.Property(e => e.status).HasDefaultValueSql("'pending'");
+            entity.Property(e => e.moderator_note).HasColumnType("text");
 
             entity.HasOne(d => d.chapter).WithMany(p => p.content_approves)
                 .OnDelete(DeleteBehavior.Cascade)
                 .HasConstraintName("fk_cappr_chapter");
 
             entity.HasOne(d => d.moderator).WithMany(p => p.content_approves)
-                .OnDelete(DeleteBehavior.ClientSetNull)
+                .OnDelete(DeleteBehavior.SetNull)
                 .HasConstraintName("fk_cappr_moderator");
 
             entity.HasOne(d => d.story).WithMany(p => p.content_approves)
