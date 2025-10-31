@@ -37,6 +37,20 @@ namespace Service.Helpers
             "ngu"
         };
 
+        private static readonly ModerationProfile StoryProfile = new(
+            ContentType: "story",
+            PrimaryLabel: "Title",
+            SecondaryLabel: "Description",
+            PenaltyPerViolation: 0.05,
+            RejectThreshold: 0.5);
+
+        private static readonly ModerationProfile ChapterProfile = new(
+            ContentType: "chapter",
+            PrimaryLabel: "Title",
+            SecondaryLabel: "Body",
+            PenaltyPerViolation: 0.02,
+            RejectThreshold: 0.4);
+
         private readonly HttpClient _httpClient;
         private readonly OpenAiSettings _settings;
         private readonly Dictionary<string, string> _normalizedToOriginal;
@@ -61,18 +75,25 @@ namespace Service.Helpers
             };
         }
 
-        public async Task<OpenAiModerationResult> ModerateStoryAsync(string title, string? description, CancellationToken ct = default)
+        public Task<OpenAiModerationResult> ModerateStoryAsync(string title, string? description, CancellationToken ct = default)
+            => ModerateContentAsync(title, description, StoryProfile, ct);
+
+        public Task<OpenAiModerationResult> ModerateChapterAsync(string title, string content, CancellationToken ct = default)
+            => ModerateContentAsync(title, content, ChapterProfile, ct);
+
+        private async Task<OpenAiModerationResult> ModerateContentAsync(string primaryContent, string? secondaryContent, ModerationProfile profile, CancellationToken ct)
         {
-            var content = ComposeContent(title, description);
+            var content = ComposeContent(primaryContent, secondaryContent);
             var scan = ScanContent(content);
 
             var totalViolations = scan.Violations.Sum(v => v.Count);
-            var score = Math.Max(0.0, 1.0 - totalViolations * 0.05);
-            var shouldReject = score < 0.5;
+            var score = Math.Max(0.0, 1.0 - totalViolations * profile.PenaltyPerViolation);
+            var shouldReject = score < profile.RejectThreshold;
 
             var explanation = await RequestExplanationAsync(
-                title,
-                description,
+                profile,
+                primaryContent,
+                secondaryContent,
                 scan.Violations,
                 score,
                 shouldReject,
@@ -150,15 +171,18 @@ namespace Service.Helpers
         }
 
         private async Task<string> RequestExplanationAsync(
-            string title,
-            string? description,
+            ModerationProfile profile,
+            string primaryContent,
+            string? secondaryContent,
             IReadOnlyList<ModerationViolation> violations,
             double score,
             bool shouldReject,
             string sanitizedContent,
             CancellationToken ct)
         {
-            var keywordInstruction = $"You will subtract 0.05 for each following exacts word: {string.Join(", ", BannedKeywords)}.";
+            var penaltyText = profile.PenaltyPerViolation.ToString("0.00", CultureInfo.InvariantCulture);
+            var thresholdText = profile.RejectThreshold.ToString("0.00", CultureInfo.InvariantCulture);
+            var keywordInstruction = $"You will subtract {penaltyText} for each following exacts word: {string.Join(", ", BannedKeywords)}.";
 
             var payload = new ChatCompletionsRequest
             {
@@ -175,7 +199,7 @@ namespace Service.Helpers
                     new ChatMessage
                     {
                         Role = "user",
-                        Content = BuildModerationPrompt(keywordInstruction, title, description, violations, score, shouldReject, sanitizedContent)
+                        Content = BuildModerationPrompt(profile, keywordInstruction, penaltyText, thresholdText, primaryContent, secondaryContent, violations, score, shouldReject, sanitizedContent)
                     }
                 }
             };
@@ -199,7 +223,7 @@ namespace Service.Helpers
 
             if (string.IsNullOrWhiteSpace(content))
             {
-                return BuildFallbackExplanation(violations, score, shouldReject);
+                return BuildFallbackExplanation(profile, violations, score, shouldReject);
             }
 
             content = content.Trim();
@@ -220,13 +244,16 @@ namespace Service.Helpers
                 // Ignore parse failure and fall back.
             }
 
-            return BuildFallbackExplanation(violations, score, shouldReject);
+            return BuildFallbackExplanation(profile, violations, score, shouldReject);
         }
 
         private static string BuildModerationPrompt(
+            ModerationProfile profile,
             string keywordInstruction,
-            string title,
-            string? description,
+            string penaltyText,
+            string thresholdText,
+            string primaryContent,
+            string? secondaryContent,
             IReadOnlyList<ModerationViolation> violations,
             double score,
             bool shouldReject,
@@ -246,10 +273,10 @@ namespace Service.Helpers
 
             var sb = new StringBuilder();
             sb.AppendLine(keywordInstruction);
-            sb.AppendLine("Initial score is 1.00. Each occurrence of a listed word reduces the score by 0.05. The score cannot be lower than 0. The story is rejected if the final score is below 0.50.");
-            sb.AppendLine("Story content:");
-            sb.AppendLine($"Title: {(string.IsNullOrWhiteSpace(title) ? "(empty)" : title)}");
-            sb.AppendLine($"Description: {(string.IsNullOrWhiteSpace(description) ? "(empty)" : description)}");
+            sb.AppendLine($"Initial score is 1.00. Each occurrence of a listed word reduces the score by {penaltyText}. The score cannot be lower than 0. The {profile.ContentType} is rejected if the final score is below {thresholdText}.");
+            sb.AppendLine($"Content type: {profile.ContentType}");
+            sb.AppendLine($"{profile.PrimaryLabel}: {(string.IsNullOrWhiteSpace(primaryContent) ? "(empty)" : primaryContent)}");
+            sb.AppendLine($"{profile.SecondaryLabel}: {(string.IsNullOrWhiteSpace(secondaryContent) ? "(empty)" : secondaryContent)}");
             sb.AppendLine("Summary produced by the rule:");
             sb.AppendLine(JsonSerializer.Serialize(summary, new JsonSerializerOptions { Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping }));
             sb.AppendLine("Sanitized content (detected words masked with asterisks):");
@@ -260,7 +287,7 @@ namespace Service.Helpers
             return sb.ToString();
         }
 
-        private static string BuildFallbackExplanation(IReadOnlyList<ModerationViolation> violations, double score, bool shouldReject)
+        private static string BuildFallbackExplanation(ModerationProfile profile, IReadOnlyList<ModerationViolation> violations, double score, bool shouldReject)
         {
             if (violations.Count == 0)
             {
@@ -269,7 +296,10 @@ namespace Service.Helpers
 
             var words = violations.Select(v => $"{v.Word} (x{v.Count})");
             var summary = string.Join(", ", words);
-            var decision = shouldReject ? "Content is rejected because the score dropped below 0.50." : "Content passes the automated moderation.";
+            var threshold = profile.RejectThreshold.ToString("0.00", CultureInfo.InvariantCulture);
+            var decision = shouldReject
+                ? $"Content is rejected because the score dropped below {threshold}."
+                : "Content passes the automated moderation.";
             return $"Detected banned words: {summary}. Final score is {score:0.00}. {decision}";
         }
 
@@ -396,6 +426,13 @@ namespace Service.Helpers
             return excerpt;
         }
 
+        private sealed record ModerationProfile(
+            string ContentType,
+            string PrimaryLabel,
+            string SecondaryLabel,
+            double PenaltyPerViolation,
+            double RejectThreshold);
+
         private sealed record ScanResult(string Sanitized, IReadOnlyList<ModerationViolation> Violations);
 
         private sealed class KeywordAccumulator
@@ -474,3 +511,5 @@ namespace Service.Helpers
         }
     }
 }
+
+

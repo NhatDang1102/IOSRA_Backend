@@ -243,7 +243,7 @@ namespace Service.Services
                 story.published_at = publishedAt;
             }
 
-            var earliestCompletion = publishedAt.Value.AddDays(30);
+            var earliestCompletion = publishedAt.Value.AddDays(1);
             if (DateTime.UtcNow < earliestCompletion)
             {
                 throw new AppException("StoryCompletionCooldown", "Story must be published for at least 30 days before completion.", 400, new

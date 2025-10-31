@@ -1,4 +1,4 @@
-﻿-- MySQL 8.0+ schema for IOSRA, single-DB
+-- MySQL 8.0+ schema for IOSRA, single-DB
 SET NAMES utf8mb4;
 SET time_zone = '+00:00';
 
@@ -130,26 +130,39 @@ CREATE TABLE story (
 ) ENGINE=InnoDB;
 
 CREATE TABLE chapters (
-  chapter_id   BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
-  story_id     BIGINT UNSIGNED NOT NULL,
-  chapter_no   INT UNSIGNED NOT NULL,
-  dias_price   INT UNSIGNED NOT NULL DEFAULT 0,
-  access_type  ENUM('free','coin','sub_only') NOT NULL DEFAULT 'free',
-  status       ENUM('draft','published','locked','removed') NOT NULL DEFAULT 'draft',
-  created_at   DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  updated_at   DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  chapter_id    BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  story_id      BIGINT UNSIGNED NOT NULL,
+  chapter_no    INT UNSIGNED NOT NULL,
+  language_id   SMALLINT UNSIGNED NOT NULL,
+  title         VARCHAR(255) NOT NULL,
+  summary       TEXT NULL,
+  dias_price    INT UNSIGNED NOT NULL DEFAULT 0,
+  access_type   ENUM('free','coin','sub_only') NOT NULL DEFAULT 'free',
+  content_url   VARCHAR(512) NULL,
+  word_count    INT UNSIGNED NOT NULL DEFAULT 0,
+  ai_score      DECIMAL(5,2) NULL,
+  ai_feedback   TEXT NULL,
+  status        ENUM('draft','pending','rejected','published','hidden','removed') NOT NULL DEFAULT 'draft',
+  created_at    DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at    DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  submitted_at  DATETIME NULL,
+  published_at  DATETIME NULL,
   PRIMARY KEY (chapter_id),
   UNIQUE KEY ux_chapter_story_no (story_id, chapter_no),
   KEY ix_chapter_story (story_id),
   CONSTRAINT fk_chapter_story FOREIGN KEY (story_id)
-    REFERENCES story(story_id) ON DELETE CASCADE ON UPDATE CASCADE
+    REFERENCES story(story_id) ON DELETE CASCADE ON UPDATE CASCADE,
+  CONSTRAINT fk_chapter_language FOREIGN KEY (language_id)
+    REFERENCES language_list(lang_id) ON DELETE RESTRICT ON UPDATE CASCADE
 ) ENGINE=InnoDB;
 
 CREATE TABLE language_list (
   lang_id     SMALLINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  lang_code   VARCHAR(8) NOT NULL,
   lang_name   VARCHAR(64) NOT NULL,
   PRIMARY KEY (lang_id),
-  UNIQUE KEY ux_lang_name (lang_name)
+  UNIQUE KEY ux_lang_name (lang_name),
+  UNIQUE KEY ux_language_code (lang_code)
 ) ENGINE=InnoDB;
 
 CREATE TABLE chapter_localizations (
@@ -393,5 +406,6 @@ CREATE TABLE subcriptions (
   CONSTRAINT fk_sub_plan FOREIGN KEY (plan_code)
     REFERENCES subscription_plan(plan_code) ON DELETE RESTRICT ON UPDATE CASCADE
 ) ENGINE=InnoDB;
+
 
 

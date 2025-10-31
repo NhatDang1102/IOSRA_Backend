@@ -97,6 +97,30 @@ namespace Service.Helpers
             await client.SendMailAsync(message);
         }
 
+        public async Task SendChapterApprovedEmailAsync(string toEmail, string storyTitle, string chapterTitle)
+        {
+            using var message = BuildMessage(
+                "Your Chapter Was Approved",
+                $"Great news! The chapter \"{chapterTitle}\" in story \"{storyTitle}\" has been approved and is now visible to readers.",
+                toEmail);
+            using var client = CreateClient();
+            await client.SendMailAsync(message);
+        }
+
+        public async Task SendChapterRejectedEmailAsync(string toEmail, string storyTitle, string chapterTitle, string? note)
+        {
+            var body = $"The chapter \"{chapterTitle}\" in story \"{storyTitle}\" was rejected by our moderation team.";
+            if (!string.IsNullOrWhiteSpace(note))
+            {
+                body += $"\nModerator note: {note}";
+            }
+            body += "\nPlease adjust the content and submit again when ready.";
+
+            using var message = BuildMessage("Your Chapter Was Rejected", body, toEmail);
+            using var client = CreateClient();
+            await client.SendMailAsync(message);
+        }
+
         private MailMessage BuildMessage(string subject, string body, string toEmail)
         {
             var message = new MailMessage

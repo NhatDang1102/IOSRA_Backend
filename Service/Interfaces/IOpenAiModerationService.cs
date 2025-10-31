@@ -20,5 +20,6 @@ namespace Service.Interfaces
     public interface IOpenAiModerationService
     {
         Task<OpenAiModerationResult> ModerateStoryAsync(string title, string? description, CancellationToken ct = default);
+        Task<OpenAiModerationResult> ModerateChapterAsync(string title, string content, CancellationToken ct = default);
     }
 }

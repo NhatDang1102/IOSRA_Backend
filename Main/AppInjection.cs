@@ -26,6 +26,7 @@ namespace Main
             services.Configure<SmtpSettings>(configuration.GetSection("Smtp"));
             services.Configure<OtpSettings>(configuration.GetSection("Otp"));
             services.Configure<CloudinarySettings>(configuration.GetSection("CloudinarySettings"));
+            services.Configure<CloudflareR2Settings>(configuration.GetSection("CloudflareR2"));
             services.Configure<OpenAiSettings>(configuration.GetSection("OpenAi"));
 
             var connectionString = configuration.GetConnectionString("Default");

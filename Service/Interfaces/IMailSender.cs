@@ -11,6 +11,8 @@ namespace Service.Interfaces
         Task SendChangeEmailSuccessAsync(string oldEmail, string newEmail);
         Task SendStoryApprovedEmailAsync(string toEmail, string storyTitle);
         Task SendStoryRejectedEmailAsync(string toEmail, string storyTitle, string? note);
+        Task SendChapterApprovedEmailAsync(string toEmail, string storyTitle, string chapterTitle);
+        Task SendChapterRejectedEmailAsync(string toEmail, string storyTitle, string chapterTitle, string? note);
     }
 }
 

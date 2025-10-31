@@ -1,3 +1,4 @@
+using Amazon.S3;
 using Contract.DTOs.Settings;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
@@ -18,6 +19,17 @@ namespace Service
             services.AddSingleton<IOtpStore, RedisOtpStore>();
             services.AddSingleton<IJwtBlacklistService, RedisJwtBlacklist>();
             services.AddSingleton<IImageUploader, CloudinaryUploader>();
+            services.AddSingleton<IAmazonS3>(sp =>
+            {
+                var settings = sp.GetRequiredService<IOptions<CloudflareR2Settings>>().Value;
+                var config = new AmazonS3Config
+                {
+                    ServiceURL = settings.Endpoint,
+                    ForcePathStyle = true
+                };
+                return new AmazonS3Client(settings.AccessKeyId, settings.SecretAccessKey, config);
+            });
+            services.AddSingleton<IChapterContentStorage, CloudflareR2ChapterStorage>();
 
             services.AddHttpClient<OpenAiService>((sp, client) =>
             {
@@ -39,6 +51,8 @@ namespace Service
             services.AddScoped<IProfileService, ProfileService>();
             services.AddScoped<ITagService, TagService>();
             services.AddScoped<IStoryService, StoryService>();
+            services.AddScoped<IChapterService, ChapterService>();
+            services.AddScoped<IChapterModerationService, ChapterModerationService>();
             services.AddScoped<IStoryModerationService, StoryModerationService>();
 
             return services;
