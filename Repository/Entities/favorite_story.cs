@@ -12,10 +12,12 @@ namespace Repository.Entities;
 public partial class favorite_story
 {
     [Key]
-    public ulong reader_id { get; set; }
+    [Column(TypeName = "char(36)")]
+    public Guid reader_id { get; set; }
 
     [Key]
-    public ulong story_id { get; set; }
+    [Column(TypeName = "char(36)")]
+    public Guid story_id { get; set; }
 
     [Required]
     public bool? noti_new_chapter { get; set; }

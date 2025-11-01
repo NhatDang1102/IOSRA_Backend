@@ -13,14 +13,17 @@ namespace Repository.Entities;
 public partial class content_approve
 {
     [Key]
-    public ulong review_id { get; set; }
+    [Column(TypeName = "char(36)")]
+    public Guid review_id { get; set; }
 
     [Column(TypeName = "enum('story','chapter')")]
     public string approve_type { get; set; } = null!;
 
-    public ulong? story_id { get; set; }
+    [Column(TypeName = "char(36)")]
+    public Guid? story_id { get; set; }
 
-    public ulong? chapter_id { get; set; }
+    [Column(TypeName = "char(36)")]
+    public Guid? chapter_id { get; set; }
 
     [Column(TypeName = "enum('ai','human')")]
     public string source { get; set; } = null!;
@@ -31,7 +34,8 @@ public partial class content_approve
     [Column(TypeName = "enum('pending','approved','rejected')")]
     public string status { get; set; } = null!;
 
-    public ulong? moderator_id { get; set; }
+    [Column(TypeName = "char(36)")]
+    public Guid? moderator_id { get; set; }
 
     [Column(TypeName = "text")]
     public string? moderator_note { get; set; }

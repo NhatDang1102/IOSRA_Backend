@@ -10,7 +10,8 @@ namespace Repository.Entities;
 public partial class ContentMod
 {
     [Key]
-    public ulong account_id { get; set; }
+    [Column(TypeName = "char(36)")]
+    public Guid account_id { get; set; }
 
     [Column(TypeName = "datetime")]
     public DateTime assigned_date { get; set; }

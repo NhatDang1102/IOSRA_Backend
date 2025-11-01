@@ -11,9 +11,11 @@ namespace Repository.Entities;
 public partial class subcription
 {
     [Key]
-    public ulong sub_id { get; set; }
+    [Column(TypeName = "char(36)")]
+    public Guid sub_id { get; set; }
 
-    public ulong user_id { get; set; }
+    [Column(TypeName = "char(36)")]
+    public Guid user_id { get; set; }
 
     [StringLength(32)]
     public string plan_code { get; set; } = null!;

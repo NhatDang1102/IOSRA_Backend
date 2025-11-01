@@ -12,14 +12,17 @@ namespace Repository.Entities;
 public partial class report
 {
     [Key]
-    public ulong report_id { get; set; }
+    [Column(TypeName = "char(36)")]
+    public Guid report_id { get; set; }
 
     [Column(TypeName = "enum('story','chapter','comment','user')")]
     public string target_type { get; set; } = null!;
 
-    public ulong target_id { get; set; }
+    [Column(TypeName = "char(36)")]
+    public Guid target_id { get; set; }
 
-    public ulong reporter_id { get; set; }
+    [Column(TypeName = "char(36)")]
+    public Guid reporter_id { get; set; }
 
     [StringLength(255)]
     public string reason { get; set; } = null!;
@@ -30,7 +33,8 @@ public partial class report
     [Column(TypeName = "enum('open','in_review','resolved','rejected')")]
     public string status { get; set; } = null!;
 
-    public ulong? moderator_id { get; set; }
+    [Column(TypeName = "char(36)")]
+    public Guid? moderator_id { get; set; }
 
     [Column(TypeName = "datetime")]
     public DateTime? reviewed_at { get; set; }

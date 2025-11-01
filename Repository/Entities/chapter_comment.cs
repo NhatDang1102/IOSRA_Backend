@@ -12,11 +12,14 @@ namespace Repository.Entities;
 public partial class chapter_comment
 {
     [Key]
-    public ulong comment_id { get; set; }
+    [Column(TypeName = "char(36)")]
+    public Guid comment_id { get; set; }
 
-    public ulong reader_id { get; set; }
+    [Column(TypeName = "char(36)")]
+    public Guid reader_id { get; set; }
 
-    public ulong chapter_id { get; set; }
+    [Column(TypeName = "char(36)")]
+    public Guid chapter_id { get; set; }
 
     [Column(TypeName = "text")]
     public string content { get; set; } = null!;

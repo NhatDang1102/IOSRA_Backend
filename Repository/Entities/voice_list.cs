@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
@@ -11,7 +11,8 @@ namespace Repository.Entities;
 public partial class voice_list
 {
     [Key]
-    public ushort voice_id { get; set; }
+    [Column(TypeName = "char(36)")]
+    public Guid voice_id { get; set; }
 
     [StringLength(64)]
     public string voice_name { get; set; } = null!;

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
@@ -12,9 +12,11 @@ namespace Repository.Entities;
 public partial class wallet_payment
 {
     [Key]
-    public ulong trs_id { get; set; }
+    [Column(TypeName = "char(36)")]
+    public Guid trs_id { get; set; }
 
-    public ulong wallet_id { get; set; }
+    [Column(TypeName = "char(36)")]
+    public Guid wallet_id { get; set; }
 
     [Column(TypeName = "enum('purchase','withdraw','topup','adjust')")]
     public string type { get; set; } = null!;
@@ -23,7 +25,8 @@ public partial class wallet_payment
 
     public long coin_after { get; set; }
 
-    public ulong? ref_id { get; set; }
+    [Column(TypeName = "char(36)")]
+    public Guid? ref_id { get; set; }
 
     [Column(TypeName = "datetime")]
     public DateTime created_at { get; set; }

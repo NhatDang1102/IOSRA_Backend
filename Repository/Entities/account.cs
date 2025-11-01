@@ -12,7 +12,8 @@ namespace Repository.Entities;
 public partial class account
 {
     [Key]
-    public ulong account_id { get; set; }
+    [Column(TypeName = "char(36)")]
+    public Guid account_id { get; set; }
 
     [StringLength(50)]
     public string username { get; set; } = null!;

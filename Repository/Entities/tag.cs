@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
@@ -10,7 +10,8 @@ namespace Repository.Entities;
 public partial class tag
 {
     [Key]
-    public uint tag_id { get; set; }
+    [Column(TypeName = "char(36)")]
+    public Guid tag_id { get; set; }
 
     [StringLength(64)]
     public string tag_name { get; set; } = null!;

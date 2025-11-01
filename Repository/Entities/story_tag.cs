@@ -11,10 +11,12 @@ namespace Repository.Entities;
 public partial class story_tag
 {
     [Key]
-    public ulong story_id { get; set; }
+    [Column(TypeName = "char(36)")]
+    public Guid story_id { get; set; }
 
     [Key]
-    public uint tag_id { get; set; }
+    [Column(TypeName = "char(36)")]
+    public Guid tag_id { get; set; }
 
     [Column(TypeName = "datetime")]
     public DateTime created_at { get; set; }

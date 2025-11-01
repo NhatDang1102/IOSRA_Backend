@@ -12,10 +12,12 @@ namespace Repository.Entities;
 public partial class follow
 {
     [Key]
-    public ulong follower_id { get; set; }
+    [Column(TypeName = "char(36)")]
+    public Guid follower_id { get; set; }
 
     [Key]
-    public ulong followee_id { get; set; }
+    [Column(TypeName = "char(36)")]
+    public Guid followee_id { get; set; }
 
     [Required]
     public bool? noti_new_story { get; set; }

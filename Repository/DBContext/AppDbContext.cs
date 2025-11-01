@@ -1,6 +1,7 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Repository.Entities;
 
 namespace Repository.DBContext;
@@ -76,6 +77,19 @@ public partial class AppDbContext : DbContext
             .UseCollation("utf8mb4_0900_ai_ci")
             .HasCharSet("utf8mb4");
 
+        var guidConverter = new GuidToStringConverter();
+        foreach (var entityType in modelBuilder.Model.GetEntityTypes())
+        {
+            foreach (var property in entityType.GetProperties())
+            {
+                if (property.ClrType == typeof(Guid) || property.ClrType == typeof(Guid?))
+                {
+                    property.SetValueConverter(guidConverter);
+                    property.SetColumnType("char(36)");
+                }
+            }
+        }
+
         modelBuilder.Entity<ContentMod>(entity =>
         {
             entity.HasKey(e => e.account_id).HasName("PRIMARY");
@@ -100,7 +114,7 @@ public partial class AppDbContext : DbContext
         {
             entity.HasKey(e => e.account_id).HasName("PRIMARY");
 
-            entity.Property(e => e.account_id).ValueGeneratedNever(); // Snowflake
+            entity.Property(e => e.account_id).ValueGeneratedNever(); 
             entity.Property(e => e.created_at).HasDefaultValueSql("CURRENT_TIMESTAMP");
             entity.Property(e => e.status).HasDefaultValueSql("'unbanned'");
             entity.Property(e => e.updated_at)
@@ -157,7 +171,7 @@ public partial class AppDbContext : DbContext
         {
             entity.HasKey(e => e.chapter_id).HasName("PRIMARY");
 
-            entity.Property(e => e.chapter_id).ValueGeneratedNever(); // Snowflake
+            entity.Property(e => e.chapter_id).ValueGeneratedNever(); 
             entity.Property(e => e.access_type).HasDefaultValueSql("'free'");
             entity.Property(e => e.created_at).HasDefaultValueSql("CURRENT_TIMESTAMP");
             entity.Property(e => e.status).HasDefaultValueSql("'draft'");
@@ -172,7 +186,7 @@ public partial class AppDbContext : DbContext
         {
             entity.HasKey(e => e.comment_id).HasName("PRIMARY");
 
-            entity.Property(e => e.comment_id).ValueGeneratedNever(); // Snowflake
+            entity.Property(e => e.comment_id).ValueGeneratedNever(); 
             entity.Property(e => e.created_at).HasDefaultValueSql("CURRENT_TIMESTAMP");
             entity.Property(e => e.status).HasDefaultValueSql("'visible'");
 
@@ -198,7 +212,7 @@ public partial class AppDbContext : DbContext
         {
             entity.HasKey(e => e.chapter_purchase_id).HasName("PRIMARY");
 
-            entity.Property(e => e.chapter_purchase_id).ValueGeneratedNever(); // Snowflake
+            entity.Property(e => e.chapter_purchase_id).ValueGeneratedNever(); 
             entity.Property(e => e.created_at).HasDefaultValueSql("CURRENT_TIMESTAMP");
 
             entity.HasOne(d => d.account).WithMany(p => p.chapter_purchase_logs)
@@ -227,7 +241,7 @@ public partial class AppDbContext : DbContext
         {
             entity.HasKey(e => e.review_id).HasName("PRIMARY");
 
-            entity.Property(e => e.review_id).ValueGeneratedNever(); // Snowflake
+            entity.Property(e => e.review_id).ValueGeneratedNever(); 
             entity.Property(e => e.created_at).HasDefaultValueSql("CURRENT_TIMESTAMP");
             entity.Property(e => e.source).HasDefaultValueSql("'human'");
             entity.Property(e => e.status).HasDefaultValueSql("'pending'");
@@ -250,7 +264,7 @@ public partial class AppDbContext : DbContext
         {
             entity.HasKey(e => e.topup_id).HasName("PRIMARY");
 
-            entity.Property(e => e.topup_id).ValueGeneratedNever(); // Snowflake
+            entity.Property(e => e.topup_id).ValueGeneratedNever(); 
             entity.Property(e => e.created_at).HasDefaultValueSql("CURRENT_TIMESTAMP");
             entity.Property(e => e.status).HasDefaultValueSql("'pending'");
 
@@ -263,7 +277,7 @@ public partial class AppDbContext : DbContext
         {
             entity.HasKey(e => e.wallet_id).HasName("PRIMARY");
 
-            entity.Property(e => e.wallet_id).ValueGeneratedNever(); // Snowflake
+            entity.Property(e => e.wallet_id).ValueGeneratedNever(); 
             entity.Property(e => e.updated_at)
                 .ValueGeneratedOnAddOrUpdate()
                 .HasDefaultValueSql("CURRENT_TIMESTAMP");
@@ -308,13 +322,13 @@ public partial class AppDbContext : DbContext
         {
             entity.HasKey(e => e.request_id).HasName("PRIMARY");
 
-            entity.Property(e => e.request_id).ValueGeneratedNever(); // Snowflake
+            entity.Property(e => e.request_id).ValueGeneratedNever(); 
             entity.Property(e => e.created_at).HasDefaultValueSql("CURRENT_TIMESTAMP");
             entity.Property(e => e.status).HasDefaultValueSql("'pending'");
 
-            // requester -> account (DUY NHẤT quan hệ này; không quan hệ nào khác tới account)
+            // requester -> account (DUY NH?T quan h? n�y; kh�ng quan h? n�o kh�c t?i account)
             entity.HasOne(d => d.requester)
-                .WithMany(p => p.op_requests_as_requester)   // <-- trỏ đúng collection
+                .WithMany(p => p.op_requests_as_requester)   // <-- tr? d�ng collection
                 .HasForeignKey(d => d.requester_id)
                 .OnDelete(DeleteBehavior.Restrict)
                 .HasConstraintName("fk_opreq_requester");
@@ -340,7 +354,7 @@ public partial class AppDbContext : DbContext
         {
             entity.HasKey(e => e.report_id).HasName("PRIMARY");
 
-            entity.Property(e => e.report_id).ValueGeneratedNever(); // Snowflake
+            entity.Property(e => e.report_id).ValueGeneratedNever(); 
             entity.Property(e => e.created_at).HasDefaultValueSql("CURRENT_TIMESTAMP");
             entity.Property(e => e.status).HasDefaultValueSql("'open'");
 
@@ -360,7 +374,7 @@ public partial class AppDbContext : DbContext
         {
             entity.HasKey(e => e.story_id).HasName("PRIMARY");
 
-            entity.Property(e => e.story_id).ValueGeneratedNever(); // Snowflake
+            entity.Property(e => e.story_id).ValueGeneratedNever(); 
             entity.HasIndex(e => new { e.title, e.desc }, "ft_story_title_desc").HasAnnotation("MySql:FullTextIndex", true);
 
             entity.Property(e => e.created_at).HasDefaultValueSql("CURRENT_TIMESTAMP");
@@ -397,7 +411,7 @@ public partial class AppDbContext : DbContext
         {
             entity.HasKey(e => e.sub_id).HasName("PRIMARY");
 
-            entity.Property(e => e.sub_id).ValueGeneratedNever(); // Snowflake
+            entity.Property(e => e.sub_id).ValueGeneratedNever(); 
             entity.HasOne(d => d.plan_codeNavigation).WithMany(p => p.subcriptions)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("fk_sub_plan");
@@ -424,7 +438,7 @@ public partial class AppDbContext : DbContext
         {
             entity.HasKey(e => e.trs_id).HasName("PRIMARY");
 
-            entity.Property(e => e.trs_id).ValueGeneratedNever(); // Snowflake
+            entity.Property(e => e.trs_id).ValueGeneratedNever(); 
             entity.Property(e => e.created_at).HasDefaultValueSql("CURRENT_TIMESTAMP");
 
             entity.HasOne(d => d.wallet).WithMany(p => p.wallet_payments).HasConstraintName("fk_wpay_wallet");

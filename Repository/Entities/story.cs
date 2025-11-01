@@ -11,11 +11,13 @@ namespace Repository.Entities;
 public partial class story
 {
     [Key]
-    public ulong story_id { get; set; }
+    [Column(TypeName = "char(36)")]
+    public Guid story_id { get; set; }
 
     public string title { get; set; } = null!;
 
-    public ulong author_id { get; set; }
+    [Column(TypeName = "char(36)")]
+    public Guid author_id { get; set; }
 
     [Column(TypeName = "mediumtext")]
     public string? desc { get; set; }

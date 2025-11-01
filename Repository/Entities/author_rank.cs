@@ -11,7 +11,8 @@ namespace Repository.Entities;
 public partial class author_rank
 {
     [Key]
-    public ushort rank_id { get; set; }
+    [Column(TypeName = "char(36)")]
+    public Guid rank_id { get; set; }
 
     [StringLength(50)]
     public string rank_name { get; set; } = null!;

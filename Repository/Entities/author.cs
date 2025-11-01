@@ -11,11 +11,13 @@ namespace Repository.Entities;
 public partial class author
 {
     [Key]
-    public ulong account_id { get; set; }
+    [Column(TypeName = "char(36)")]
+    public Guid account_id { get; set; }
 
     public bool restricted { get; set; }
 
-    public ushort? rank_id { get; set; }
+    [Column(TypeName = "char(36)")]
+    public Guid? rank_id { get; set; }
 
     public bool verified_status { get; set; }
 

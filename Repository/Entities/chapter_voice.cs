@@ -11,10 +11,12 @@ namespace Repository.Entities;
 public partial class chapter_voice
 {
     [Key]
-    public ulong chapter_id { get; set; }
+    [Column(TypeName = "char(36)")]
+    public Guid chapter_id { get; set; }
 
     [Key]
-    public ushort voice_id { get; set; }
+    [Column(TypeName = "char(36)")]
+    public Guid voice_id { get; set; }
 
     [StringLength(512)]
     public string? cloud_url { get; set; }

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
@@ -10,7 +10,8 @@ namespace Repository.Entities;
 public partial class reader
 {
     [Key]
-    public ulong account_id { get; set; }
+    [Column(TypeName = "char(36)")]
+    public Guid account_id { get; set; }
 
     [Column(TypeName = "text")]
     public string? bio { get; set; }

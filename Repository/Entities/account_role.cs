@@ -11,10 +11,12 @@ namespace Repository.Entities;
 public partial class account_role
 {
     [Key]
-    public ulong account_id { get; set; }
+    [Column(TypeName = "char(36)")]
+    public Guid account_id { get; set; }
 
     [Key]
-    public ushort role_id { get; set; }
+    [Column(TypeName = "char(36)")]
+    public Guid role_id { get; set; }
 
     [Column(TypeName = "datetime")]
     public DateTime created_at { get; set; }

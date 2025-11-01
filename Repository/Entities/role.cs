@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
@@ -10,7 +10,8 @@ namespace Repository.Entities;
 public partial class role
 {
     [Key]
-    public ushort role_id { get; set; }
+    [Column(TypeName = "char(36)")]
+    public Guid role_id { get; set; }
 
     [StringLength(32)]
     public string role_code { get; set; } = null!;

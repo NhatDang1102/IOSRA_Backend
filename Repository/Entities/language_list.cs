@@ -12,7 +12,8 @@ namespace Repository.Entities;
 public partial class language_list
 {
     [Key]
-    public ushort lang_id { get; set; }
+    [Column(TypeName = "char(36)")]
+    public Guid lang_id { get; set; }
 
     [StringLength(8)]
     public string lang_code { get; set; } = null!;

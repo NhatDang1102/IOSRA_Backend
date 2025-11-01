@@ -11,13 +11,17 @@ namespace Repository.Entities;
 public partial class chapter
 {
     [Key]
-    public ulong chapter_id { get; set; }
+    [Key]
+    [Column(TypeName = "char(36)")]
+    public Guid chapter_id { get; set; }
 
-    public ulong story_id { get; set; }
+    [Column(TypeName = "char(36)")]
+    public Guid story_id { get; set; }
 
     public uint chapter_no { get; set; }
 
-    public ushort language_id { get; set; }
+    [Column(TypeName = "char(36)")]
+    public Guid language_id { get; set; }
 
     [StringLength(255)]
     public string title { get; set; } = null!;
