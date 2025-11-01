@@ -60,7 +60,7 @@ namespace Service.Implementations
             };
         }
 
-        public async Task<ProfileResponse> GetAsync(ulong accountId, CancellationToken ct = default)
+        public async Task<ProfileResponse> GetAsync(Guid accountId, CancellationToken ct = default)
         {
             var acc = await _profileRepo.GetAccountByIdAsync(accountId, ct)
                       ?? throw new AppException("AccountNotFound", "Account was not found.", 404);
@@ -80,7 +80,7 @@ namespace Service.Implementations
             };
         }
 
-        public async Task<ProfileResponse> UpdateAsync(ulong accountId, ProfileUpdateRequest req, CancellationToken ct = default)
+        public async Task<ProfileResponse> UpdateAsync(Guid accountId, ProfileUpdateRequest req, CancellationToken ct = default)
         {
             if (req.Gender != null && !AllowedGenderInput.Contains(req.Gender))
             {
@@ -93,7 +93,7 @@ namespace Service.Implementations
             return await GetAsync(accountId, ct);
         }
 
-        public async Task<string> UpdateAvatarAsync(ulong accountId, IFormFile file, CancellationToken ct = default)
+        public async Task<string> UpdateAvatarAsync(Guid accountId, IFormFile file, CancellationToken ct = default)
         {
             _ = await _profileRepo.GetAccountByIdAsync(accountId, ct)
                 ?? throw new AppException("AccountNotFound", "Account was not found.", 404);
@@ -103,7 +103,7 @@ namespace Service.Implementations
             return url;
         }
 
-        public async Task SendChangeEmailOtpAsync(ulong accountId, ChangeEmailRequest req, CancellationToken ct = default)
+        public async Task SendChangeEmailOtpAsync(Guid accountId, ChangeEmailRequest req, CancellationToken ct = default)
         {
             var acc = await _profileRepo.GetAccountByIdAsync(accountId, ct)
                       ?? throw new AppException("AccountNotFound", "Account was not found.", 404);
@@ -128,7 +128,7 @@ namespace Service.Implementations
             await _mail.SendChangeEmailOtpAsync(req.NewEmail, otp);
         }
 
-        public async Task VerifyChangeEmailAsync(ulong accountId, VerifyChangeEmailRequest req, CancellationToken ct = default)
+        public async Task VerifyChangeEmailAsync(Guid accountId, VerifyChangeEmailRequest req, CancellationToken ct = default)
         {
             var acc = await _profileRepo.GetAccountByIdAsync(accountId, ct)
                       ?? throw new AppException("AccountNotFound", "Account was not found.", 404);

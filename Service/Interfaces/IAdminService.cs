@@ -11,9 +11,9 @@ namespace Service.Interfaces
     public interface IAdminService
     {
         Task<PagedResult<AccountAdminResponse>> QueryAccountsAsync(AccountQuery q, CancellationToken ct);
-        Task SetRolesAsync(ulong accountId, List<string> roleCodes, CancellationToken ct);
-        Task BanAsync(ulong accountId, string? reason, CancellationToken ct);
-        Task UnbanAsync(ulong accountId, string? reason, CancellationToken ct);
+        Task SetRolesAsync(Guid accountId, List<string> roleCodes, CancellationToken ct);
+        Task BanAsync(Guid accountId, string? reason, CancellationToken ct);
+        Task UnbanAsync(Guid accountId, string? reason, CancellationToken ct);
         Task<AccountAdminResponse> GetAccountByIdentifierAsync(string identifier, CancellationToken ct = default);
     }
 }

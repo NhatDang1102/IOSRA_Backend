@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -8,7 +8,7 @@ namespace Contract.DTOs.Respond.Auth
 {
     public class LoginResponse
     {
-        public ulong AccountId { get; set; }      
+        public Guid AccountId { get; set; }      
         public string Username { get; set; } = null!;
         public string Email { get; set; } = null!;
         public string Token { get; set; } = null!;

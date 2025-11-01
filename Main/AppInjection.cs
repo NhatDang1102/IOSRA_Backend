@@ -15,7 +15,6 @@ using Repository.DBContext;
 using Service.Helpers;
 using Service.Interfaces;
 using StackExchange.Redis;
-using Yitter.IdGenerator;
 
 namespace Main
 {
@@ -117,29 +116,6 @@ namespace Main
 
             var redis = configuration.GetSection("Redis");
             services.AddSingleton<IConnectionMultiplexer>(ConnectionMultiplexer.Connect($"{redis["Host"]}:{redis["Port"]}"));
-
-            var snowflake = configuration.GetSection("Snowflake");
-            int workerId = snowflake.GetValue<int>("WorkerId", 1);
-            int workerBits = snowflake.GetValue<int>("WorkerIdBitLength", 6);
-            int sequenceBits = snowflake.GetValue<int>("SeqBitLength", 6);
-            DateTime baseTimeUtc = snowflake.GetValue<DateTime>("BaseTimeUtc", new DateTime(2024, 1, 1, 0, 0, 0, DateTimeKind.Utc));
-
-            if (workerBits < 1 || workerBits > 20) throw new ArgumentOutOfRangeException(nameof(workerBits));
-            if (sequenceBits < 1 || sequenceBits > 20) throw new ArgumentOutOfRangeException(nameof(sequenceBits));
-
-            int maxWorkerId = (1 << workerBits) - 1;
-            if (workerId < 0 || workerId > maxWorkerId)
-            {
-                throw new ArgumentOutOfRangeException(nameof(workerId), $"WorkerId must be between 0 and {maxWorkerId}.");
-            }
-
-            var idOptions = new IdGeneratorOptions((ushort)workerId)
-            {
-                BaseTime = baseTimeUtc,
-                WorkerIdBitLength = (byte)workerBits,
-                SeqBitLength = (byte)sequenceBits
-            };
-            YitIdHelper.SetIdGenerator(idOptions);
 
             services.AddCors(options =>
             {

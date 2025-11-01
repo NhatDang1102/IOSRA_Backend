@@ -1,3 +1,4 @@
+using System;
 using Contract.DTOs.Request.Tag;
 using Contract.DTOs.Respond.Tag;
 using Repository.Interfaces;
@@ -47,7 +48,7 @@ namespace Service.Implementations
             };
         }
 
-        public async Task<TagResponse> UpdateAsync(uint tagId, TagUpdateRequest req, CancellationToken ct = default)
+        public async Task<TagResponse> UpdateAsync(Guid tagId, TagUpdateRequest req, CancellationToken ct = default)
         {
             var entity = await _tagRepo.GetByIdAsync(tagId, ct)
                          ?? throw new AppException("TagNotFound", "Tag was not found.", 404);
@@ -73,7 +74,7 @@ namespace Service.Implementations
             };
         }
 
-        public async Task DeleteAsync(uint tagId, CancellationToken ct = default)
+        public async Task DeleteAsync(Guid tagId, CancellationToken ct = default)
         {
             var entity = await _tagRepo.GetByIdAsync(tagId, ct)
                          ?? throw new AppException("TagNotFound", "Tag was not found.", 404);

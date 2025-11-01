@@ -1,11 +1,11 @@
-using System;
+﻿using System;
 
 namespace Contract.DTOs.Respond.Chapter
 {
     public class ChapterResponse
     {
-        public ulong ChapterId { get; set; }
-        public ulong StoryId { get; set; }
+        public Guid ChapterId { get; set; }
+        public Guid StoryId { get; set; }
         public int ChapterNo { get; set; }
         public string Title { get; set; } = null!;
         public string? Summary { get; set; }

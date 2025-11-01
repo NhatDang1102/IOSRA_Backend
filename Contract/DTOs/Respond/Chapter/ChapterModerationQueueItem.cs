@@ -1,14 +1,14 @@
-using System;
+﻿using System;
 
 namespace Contract.DTOs.Respond.Chapter
 {
     public class ChapterModerationQueueItem
     {
-        public ulong ChapterId { get; set; }
-        public ulong StoryId { get; set; }
+        public Guid ChapterId { get; set; }
+        public Guid StoryId { get; set; }
         public string StoryTitle { get; set; } = null!;
         public string ChapterTitle { get; set; } = null!;
-        public ulong AuthorId { get; set; }
+        public Guid AuthorId { get; set; }
         public string AuthorUsername { get; set; } = null!;
         public string AuthorEmail { get; set; } = null!;
         public int ChapterNo { get; set; }

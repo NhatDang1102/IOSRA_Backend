@@ -1,7 +1,6 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using Repository.Entities;
 
@@ -15,12 +14,11 @@ namespace Repository.Interfaces
 
         Task<reader> AddReaderAsync(reader entity, CancellationToken ct = default);
 
-        Task<ushort> GetRoleIdByCodeAsync(string roleCode, CancellationToken ct = default);
-        Task<List<string>> GetRoleCodesOfAccountAsync(ulong accountId, CancellationToken ct = default);
+        Task<Guid> GetRoleIdByCodeAsync(string roleCode, CancellationToken ct = default);
+        Task<List<string>> GetRoleCodesOfAccountAsync(Guid accountId, CancellationToken ct = default);
 
-        Task AddAccountRoleAsync(ulong accountId, ushort roleId, CancellationToken ct = default);
+        Task AddAccountRoleAsync(Guid accountId, Guid roleId, CancellationToken ct = default);
         Task<account?> FindAccountByEmailAsync(string email, CancellationToken ct = default);
-        Task UpdatePasswordHashAsync(ulong accountId, string newHash, CancellationToken ct = default);
+        Task UpdatePasswordHashAsync(Guid accountId, string newHash, CancellationToken ct = default);
     }
-
 }

@@ -1,9 +1,11 @@
-﻿namespace Contract.DTOs.Respond.Author
+﻿using System;
+
+namespace Contract.DTOs.Respond.Author
 {
     public class AuthorUpgradeResponse
     {
-        public ulong RequestId { get; set; }
+        public Guid RequestId { get; set; }
         public string Status { get; set; } = "pending";
-        public ulong? AssignedOmodId { get; set; }
+        public Guid? AssignedOmodId { get; set; }
     }
 }

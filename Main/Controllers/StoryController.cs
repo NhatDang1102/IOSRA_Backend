@@ -1,3 +1,6 @@
+﻿using System;
+using System.Threading;
+using System.Threading.Tasks;
 using Contract.DTOs.Request.Story;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -23,8 +26,8 @@ namespace Main.Controllers
             return Ok(stories);
         }
 
-        [HttpGet("{storyId}")]
-        public async Task<IActionResult> Get([FromRoute] ulong storyId, CancellationToken ct)
+        [HttpGet("{storyId:guid}")]
+        public async Task<IActionResult> Get([FromRoute] Guid storyId, CancellationToken ct)
         {
             var story = await _storyService.GetAsync(AccountId, storyId, ct);
             return Ok(story);
@@ -38,15 +41,15 @@ namespace Main.Controllers
             return Ok(story);
         }
 
-        [HttpPost("{storyId}/submit")]
-        public async Task<IActionResult> Submit([FromRoute] ulong storyId, [FromBody] StorySubmitRequest request, CancellationToken ct)
+        [HttpPost("{storyId:guid}/submit")]
+        public async Task<IActionResult> Submit([FromRoute] Guid storyId, [FromBody] StorySubmitRequest request, CancellationToken ct)
         {
             var story = await _storyService.SubmitForReviewAsync(AccountId, storyId, request, ct);
             return Ok(story);
         }
 
-        [HttpPost("{storyId}/complete")]
-        public async Task<IActionResult> Complete([FromRoute] ulong storyId, CancellationToken ct)
+        [HttpPost("{storyId:guid}/complete")]
+        public async Task<IActionResult> Complete([FromRoute] Guid storyId, CancellationToken ct)
         {
             var story = await _storyService.CompleteAsync(AccountId, storyId, ct);
             return Ok(story);

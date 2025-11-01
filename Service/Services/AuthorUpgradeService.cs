@@ -24,7 +24,7 @@ namespace Service.Implementations
             _opRepo = opRepo;
         }
 
-        public async Task<AuthorUpgradeResponse> SubmitAsync(ulong accountId, SubmitAuthorUpgradeRequest req, CancellationToken ct = default)
+        public async Task<AuthorUpgradeResponse> SubmitAsync(Guid accountId, SubmitAuthorUpgradeRequest req, CancellationToken ct = default)
         {
             _ = await _profileRepo.GetAccountByIdAsync(accountId, ct)
                 ?? throw new AppException("AccountNotFound", "Account was not found.", 404);
@@ -67,7 +67,7 @@ namespace Service.Implementations
             };
         }
 
-        public async Task<List<OpRequestItemResponse>> ListMyRequestsAsync(ulong accountId, CancellationToken ct = default)
+        public async Task<List<OpRequestItemResponse>> ListMyRequestsAsync(Guid accountId, CancellationToken ct = default)
         {
             _ = await _profileRepo.GetAccountByIdAsync(accountId, ct)
                 ?? throw new AppException("AccountNotFound", "Account was not found.", 404);

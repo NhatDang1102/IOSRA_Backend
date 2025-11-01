@@ -1,4 +1,9 @@
-﻿using Contract.DTOs.Request.Admin;
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
+using Contract.DTOs.Request.Admin;
 using Contract.DTOs.Respond.Admin;
 using Repository.Interfaces;
 using Service.Exceptions;
@@ -7,7 +12,7 @@ using Service.Interfaces;
 namespace Service.Services
 {
     /// <summary>
-    /// Xử lý logic quản trị: phân trang, validate role, ban/unban.
+    /// Application services for admin account management.
     /// </summary>
     public sealed class AdminService : IAdminService
     {
@@ -23,79 +28,90 @@ namespace Service.Services
         public async Task<PagedResult<AccountAdminResponse>> QueryAccountsAsync(AccountQuery q, CancellationToken ct)
         {
             if (q.Page < 1 || q.PageSize < 1)
-                throw new AppException("ValidationFailed", "Tham số phân trang không hợp lệ.");
+            {
+                throw new AppException("ValidationFailed", "Page and pageSize must be positive integers.", 400);
+            }
 
             var (items, total) = await _adminRepo.QueryAccountsAsync(q, ct);
+            var results = new List<AccountAdminResponse>(items.Count);
 
-            var result = new List<AccountAdminResponse>(items.Count);
-            foreach (var a in items)
+            foreach (var account in items)
             {
-                // Lấy role codes từ AuthRepository
-                var roles = await _authRepo.GetRoleCodesOfAccountAsync(a.account_id, ct);
-
-                result.Add(new AccountAdminResponse
+                var roles = await _authRepo.GetRoleCodesOfAccountAsync(account.account_id, ct);
+                results.Add(new AccountAdminResponse
                 {
-                    AccountId = a.account_id,
-                    Username = a.username,
-                    Email = a.email,
-                    Status = a.status,
-                    Strike = a.strike,
-                    CreatedAt = a.created_at,
-                    UpdatedAt = a.updated_at,
+                    AccountId = account.account_id,
+                    Username = account.username,
+                    Email = account.email,
+                    Status = account.status,
+                    Strike = account.strike,
+                    CreatedAt = account.created_at,
+                    UpdatedAt = account.updated_at,
                     Roles = roles
                 });
             }
 
             return new PagedResult<AccountAdminResponse>
             {
-                Items = result,
+                Items = results,
                 Total = total,
                 Page = q.Page,
                 PageSize = q.PageSize
             };
         }
 
-        public async Task SetRolesAsync(ulong accountId, List<string> roleCodes, CancellationToken ct)
+        public async Task SetRolesAsync(Guid accountId, List<string> roleCodes, CancellationToken ct)
         {
-            if (roleCodes is null || roleCodes.Count == 0)
-                throw new AppException("ValidationFailed", "Cần cung cấp ít nhất 1 role_code.");
-
-            var acc = await _adminRepo.GetAccountAsync(accountId, ct);
-            if (acc is null)
-                throw new AppException("NotFound", "Không tìm thấy tài khoản.", 404);
-
-            // Map code -> id, đảm bảo code hợp lệ
-            var roleIds = new List<ushort>();
-            foreach (var code in roleCodes.Distinct(StringComparer.OrdinalIgnoreCase))
+            if (roleCodes == null || roleCodes.Count == 0)
             {
-                var id = await _authRepo.GetRoleIdByCodeAsync(code, ct);
-                if (id == 0)
-                    throw new AppException("RoleNotFound", $"role_code '{code}' không tồn tại.", 404);
-                roleIds.Add(id);
+                throw new AppException("ValidationFailed", "At least one role code is required.", 400);
             }
 
-            await _adminRepo.ReplaceRolesAsync(accountId, roleIds, ct);
+            var account = await _adminRepo.GetAccountAsync(accountId, ct)
+                          ?? throw new AppException("NotFound", "Account was not found.", 404);
+
+            var resolvedRoleIds = new List<Guid>();
+            foreach (var code in roleCodes.Distinct(StringComparer.OrdinalIgnoreCase))
+            {
+                var roleId = await _authRepo.GetRoleIdByCodeAsync(code, ct);
+                if (roleId == Guid.Empty)
+                {
+                    throw new AppException("RoleNotFound", $"Role code '{code}' does not exist.", 404);
+                }
+                resolvedRoleIds.Add(roleId);
+            }
+
+            await _adminRepo.ReplaceRolesAsync(accountId, resolvedRoleIds, ct);
         }
 
-        public async Task BanAsync(ulong accountId, string? reason, CancellationToken ct)
+        public async Task BanAsync(Guid accountId, string? reason, CancellationToken ct)
         {
-            var acc = await _adminRepo.GetAccountAsync(accountId, ct);
-            if (acc is null) throw new AppException("NotFound", "Không tìm thấy tài khoản.", 404);
-            if (acc.status == "banned") return;
+            var account = await _adminRepo.GetAccountAsync(accountId, ct)
+                           ?? throw new AppException("NotFound", "Account was not found.", 404);
 
-            // Không cho ban ADMIN (chính sách mẫu)
+            if (account.status == "banned")
+            {
+                return;
+            }
+
             var roles = await _authRepo.GetRoleCodesOfAccountAsync(accountId, ct);
             if (roles.Contains("ADMIN", StringComparer.OrdinalIgnoreCase))
-                throw new AppException("Forbidden", "Không thể ban tài khoản ADMIN.", 403, new { reason });
+            {
+                throw new AppException("Forbidden", "Cannot ban an ADMIN account.", 403, new { reason });
+            }
 
             await _adminRepo.SetStatusAsync(accountId, "banned", ct);
         }
 
-        public async Task UnbanAsync(ulong accountId, string? reason, CancellationToken ct)
+        public async Task UnbanAsync(Guid accountId, string? reason, CancellationToken ct)
         {
-            var acc = await _adminRepo.GetAccountAsync(accountId, ct);
-            if (acc is null) throw new AppException("NotFound", "Không tìm thấy tài khoản.", 404);
-            if (acc.status == "unbanned") return;
+            var account = await _adminRepo.GetAccountAsync(accountId, ct)
+                           ?? throw new AppException("NotFound", "Account was not found.", 404);
+
+            if (account.status == "unbanned")
+            {
+                return;
+            }
 
             await _adminRepo.SetStatusAsync(accountId, "unbanned", ct);
         }
@@ -103,23 +119,24 @@ namespace Service.Services
         public async Task<AccountAdminResponse> GetAccountByIdentifierAsync(string identifier, CancellationToken ct = default)
         {
             if (string.IsNullOrWhiteSpace(identifier))
-                throw new AppException("BadRequest", "Thiếu tham số identifier.", 400, new { identifier });
+            {
+                throw new AppException("BadRequest", "Identifier is required.", 400, new { identifier });
+            }
 
-            var acc = await _authRepo.FindAccountByIdentifierAsync(identifier, ct);
-            if (acc is null)
-                throw new AppException("AccountNotFound", "Không tìm thấy tài khoản.", 404, new { identifier });
+            var account = await _authRepo.FindAccountByIdentifierAsync(identifier, ct)
+                          ?? throw new AppException("AccountNotFound", "Account was not found.", 404, new { identifier });
 
-            var roles = await _authRepo.GetRoleCodesOfAccountAsync(acc.account_id, ct);
+            var roles = await _authRepo.GetRoleCodesOfAccountAsync(account.account_id, ct);
 
             return new AccountAdminResponse
             {
-                AccountId = acc.account_id,
-                Username = acc.username,
-                Email = acc.email,
-                Status = acc.status,
-                Strike = acc.strike,
-                CreatedAt = acc.created_at,
-                UpdatedAt = acc.updated_at,
+                AccountId = account.account_id,
+                Username = account.username,
+                Email = account.email,
+                Status = account.status,
+                Strike = account.strike,
+                CreatedAt = account.created_at,
+                UpdatedAt = account.updated_at,
                 Roles = roles
             };
         }

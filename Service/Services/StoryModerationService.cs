@@ -62,7 +62,7 @@ namespace Service.Services
             return response;
         }
 
-        public async Task ModerateAsync(ulong moderatorAccountId, ulong storyId, StoryModerationDecisionRequest request, CancellationToken ct = default)
+        public async Task ModerateAsync(Guid moderatorAccountId, Guid storyId, StoryModerationDecisionRequest request, CancellationToken ct = default)
         {
             var story = await _storyRepository.GetStoryWithDetailsAsync(storyId, ct)
                         ?? throw new AppException("StoryNotFound", "Story was not found.", 404);

@@ -1,15 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Contract.DTOs.Respond.Admin
 {
-    /// <summary>Thông tin tài khoản hiển thị cho trang quản trị</summary>
+    /// <summary>Account summary for the admin panel.</summary>
     public class AccountAdminResponse
     {
-        public ulong AccountId { get; set; }
+        public Guid AccountId { get; set; }
         public string Username { get; set; } = default!;
         public string Email { get; set; } = default!;
         public string Status { get; set; } = default!;

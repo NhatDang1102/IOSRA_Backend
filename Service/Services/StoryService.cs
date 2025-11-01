@@ -33,7 +33,7 @@ namespace Service.Services
             _openAiModerationService = openAiModerationService;
         }
 
-        public async Task<StoryResponse> CreateAsync(ulong authorAccountId, StoryCreateRequest request, CancellationToken ct = default)
+        public async Task<StoryResponse> CreateAsync(Guid authorAccountId, StoryCreateRequest request, CancellationToken ct = default)
         {
             var author = await RequireAuthorAsync(authorAccountId, ct);
 
@@ -87,7 +87,7 @@ namespace Service.Services
             return MapStory(saved, approvals);
         }
 
-        public async Task<StoryResponse> SubmitForReviewAsync(ulong authorAccountId, ulong storyId, StorySubmitRequest request, CancellationToken ct = default)
+        public async Task<StoryResponse> SubmitForReviewAsync(Guid authorAccountId, Guid storyId, StorySubmitRequest request, CancellationToken ct = default)
         {
             var author = await RequireAuthorAsync(authorAccountId, ct);
             if (author.restricted)
@@ -194,7 +194,7 @@ namespace Service.Services
             return MapStory(saved, approvals);
         }
 
-        public async Task<IReadOnlyList<StoryListItemResponse>> ListAsync(ulong authorAccountId, CancellationToken ct = default)
+        public async Task<IReadOnlyList<StoryListItemResponse>> ListAsync(Guid authorAccountId, CancellationToken ct = default)
         {
             var author = await RequireAuthorAsync(authorAccountId, ct);
             var stories = await _storyRepository.GetStoriesByAuthorAsync(author.account_id, ct);
@@ -209,7 +209,7 @@ namespace Service.Services
             return responses;
         }
 
-        public async Task<StoryResponse> GetAsync(ulong authorAccountId, ulong storyId, CancellationToken ct = default)
+        public async Task<StoryResponse> GetAsync(Guid authorAccountId, Guid storyId, CancellationToken ct = default)
         {
             var author = await RequireAuthorAsync(authorAccountId, ct);
             var story = await _storyRepository.GetStoryForAuthorAsync(storyId, author.account_id, ct)
@@ -219,7 +219,7 @@ namespace Service.Services
             return MapStory(story, approvals);
         }
 
-        public async Task<StoryResponse> CompleteAsync(ulong authorAccountId, ulong storyId, CancellationToken ct = default)
+        public async Task<StoryResponse> CompleteAsync(Guid authorAccountId, Guid storyId, CancellationToken ct = default)
         {
             var author = await RequireAuthorAsync(authorAccountId, ct);
             var story = await _storyRepository.GetStoryForAuthorAsync(storyId, author.account_id, ct)
@@ -298,7 +298,7 @@ namespace Service.Services
             }
         }
 
-        private async Task<author> RequireAuthorAsync(ulong accountId, CancellationToken ct)
+        private async Task<author> RequireAuthorAsync(Guid accountId, CancellationToken ct)
         {
             var author = await _storyRepository.GetAuthorAsync(accountId, ct);
             if (author == null)

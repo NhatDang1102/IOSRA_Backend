@@ -1,3 +1,4 @@
+using System;
 using Microsoft.AspNetCore.Http;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
@@ -15,7 +16,7 @@ namespace Contract.DTOs.Request.Story
 
         [Required]
         [MinLength(1, ErrorMessage = "At least one tag is required.")]
-        public List<uint> TagIds { get; set; } = new();
+        public List<Guid> TagIds { get; set; } = new();
 
         [Required]
         [RegularExpression("upload|generate", ErrorMessage = "CoverMode must be 'upload' or 'generate'.")]

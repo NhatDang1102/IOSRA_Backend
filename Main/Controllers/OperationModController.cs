@@ -1,4 +1,7 @@
-﻿using Contract.DTOs.Request.OperationMod;
+﻿using System;
+using System.Threading;
+using System.Threading.Tasks;
+using Contract.DTOs.Request.OperationMod;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Service.Interfaces;
@@ -9,34 +12,31 @@ namespace Main.Controllers
     [Authorize(Roles = "omod,OPERATION_MOD,admin,ADMIN")]
     public class OperationModController : AppControllerBase
     {
-        private readonly IOperationModService _svc;
+        private readonly IOperationModService _service;
 
-        public OperationModController(IOperationModService svc)
+        public OperationModController(IOperationModService service)
         {
-            _svc = svc;
+            _service = service;
         }
 
-        // GET /api/operationmod/requests?status=pending|approved|rejected|null
         [HttpGet("requests")]
         public async Task<IActionResult> List([FromQuery] string? status, CancellationToken ct)
         {
-            var res = await _svc.ListAsync(status, ct);
-            return Ok(res);
+            var result = await _service.ListAsync(status, ct);
+            return Ok(result);
         }
 
-        // POST /api/operationmod/requests/{id}/approve
-        [HttpPost("requests/{requestId}/approve")]
-        public async Task<IActionResult> Approve([FromRoute] ulong requestId, CancellationToken ct)
+        [HttpPost("requests/{requestId:guid}/approve")]
+        public async Task<IActionResult> Approve([FromRoute] Guid requestId, CancellationToken ct)
         {
-            await _svc.ApproveAsync(requestId, AccountId, ct);
+            await _service.ApproveAsync(requestId, AccountId, ct);
             return Ok(new { message = "Approved" });
         }
 
-        // POST /api/operationmod/requests/{id}/reject
-        [HttpPost("requests/{requestId}/reject")]
-        public async Task<IActionResult> Reject([FromRoute] ulong requestId, [FromBody] RejectAuthorUpgradeRequest req, CancellationToken ct)
+        [HttpPost("requests/{requestId:guid}/reject")]
+        public async Task<IActionResult> Reject([FromRoute] Guid requestId, [FromBody] RejectAuthorUpgradeRequest request, CancellationToken ct)
         {
-            await _svc.RejectAsync(requestId, AccountId, req, ct);
+            await _service.RejectAsync(requestId, AccountId, request, ct);
             return Ok(new { message = "Rejected" });
         }
     }

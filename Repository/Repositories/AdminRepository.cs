@@ -6,14 +6,13 @@ using Repository.Interfaces;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace Repository.Repositories
 {
     /// <summary>
-    /// Repository dành riêng cho tác vụ quản trị. 
-    /// Dùng AppDbContext trực tiếp để tránh sửa interface cũ.
+    /// Repository dedicated to admin operations that need full DB access.
     /// </summary>
     public sealed class AdminRepository : IAdminRepository
     {
@@ -51,10 +50,10 @@ namespace Repository.Repositories
             return (items, total);
         }
 
-        public Task<account?> GetAccountAsync(ulong accountId, CancellationToken ct) =>
+        public Task<account?> GetAccountAsync(Guid accountId, CancellationToken ct) =>
             _db.accounts.FirstOrDefaultAsync(a => a.account_id == accountId, ct)!;
 
-        public async Task SetStatusAsync(ulong accountId, string status, CancellationToken ct)
+        public async Task SetStatusAsync(Guid accountId, string status, CancellationToken ct)
         {
             var acc = await _db.accounts.FirstOrDefaultAsync(a => a.account_id == accountId, ct);
             if (acc is null) return;
@@ -63,7 +62,7 @@ namespace Repository.Repositories
             await _db.SaveChangesAsync(ct);
         }
 
-        public async Task<List<string>> GetRoleCodesAsync(ulong accountId, CancellationToken ct)
+        public async Task<List<string>> GetRoleCodesAsync(Guid accountId, CancellationToken ct)
         {
             return await _db.account_roles
                 .Where(ar => ar.account_id == accountId)
@@ -71,13 +70,11 @@ namespace Repository.Repositories
                 .ToListAsync(ct);
         }
 
-        public async Task ReplaceRolesAsync(ulong accountId, IEnumerable<ushort> roleIds, CancellationToken ct)
+        public async Task ReplaceRolesAsync(Guid accountId, IEnumerable<Guid> roleIds, CancellationToken ct)
         {
-            // Xóa role cũ
             var olds = _db.account_roles.Where(r => r.account_id == accountId);
             _db.account_roles.RemoveRange(olds);
 
-            // Thêm role mới
             var now = DateTime.UtcNow;
             foreach (var rid in roleIds.Distinct())
             {

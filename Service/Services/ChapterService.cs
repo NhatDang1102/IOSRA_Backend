@@ -2,7 +2,6 @@ using Contract.DTOs.Request.Chapter;
 using Contract.DTOs.Respond.Chapter;
 using Repository.Entities;
 using Repository.Interfaces;
-using Repository.Repositories;
 using Service.Exceptions;
 using Service.Interfaces;
 using System;
@@ -21,23 +20,20 @@ namespace Service.Services
         private readonly IStoryRepository _storyRepository;
         private readonly IChapterContentStorage _contentStorage;
         private readonly IOpenAiModerationService _openAiModerationService;
-        private readonly ISnowflakeIdGenerator _idGenerator;
 
         public ChapterService(
             IChapterRepository chapterRepository,
             IStoryRepository storyRepository,
             IChapterContentStorage contentStorage,
-            IOpenAiModerationService openAiModerationService,
-            ISnowflakeIdGenerator idGenerator)
+            IOpenAiModerationService openAiModerationService)
         {
             _chapterRepository = chapterRepository;
             _storyRepository = storyRepository;
             _contentStorage = contentStorage;
             _openAiModerationService = openAiModerationService;
-            _idGenerator = idGenerator;
         }
 
-        public async Task<ChapterResponse> CreateAsync(ulong authorAccountId, ulong storyId, ChapterCreateRequest request, CancellationToken ct = default)
+        public async Task<ChapterResponse> CreateAsync(Guid authorAccountId, Guid storyId, ChapterCreateRequest request, CancellationToken ct = default)
         {
             var author = await _storyRepository.GetAuthorAsync(authorAccountId, ct)
                          ?? throw new AppException("AuthorNotFound", "Author profile is not registered.", 404);
@@ -84,7 +80,7 @@ namespace Service.Services
 
             var price = CalculatePrice(wordCount);
             var chapterNumber = await _chapterRepository.GetNextChapterNumberAsync(story.story_id, ct);
-            var chapterId = _idGenerator.NextId();
+            var chapterId = Guid.NewGuid();
             var accessType = story.is_premium ? "coin" : "free";
 
             var chapter = new chapter
@@ -129,7 +125,7 @@ namespace Service.Services
             return MapChapter(chapter, approvals);
         }
 
-        public async Task<IReadOnlyList<ChapterListItemResponse>> ListAsync(ulong authorAccountId, ulong storyId, CancellationToken ct = default)
+        public async Task<IReadOnlyList<ChapterListItemResponse>> ListAsync(Guid authorAccountId, Guid storyId, CancellationToken ct = default)
         {
             var author = await _storyRepository.GetAuthorAsync(authorAccountId, ct)
                          ?? throw new AppException("AuthorNotFound", "Author profile is not registered.", 404);
@@ -141,7 +137,7 @@ namespace Service.Services
             return chapters.Select(ch => MapChapterListItem(ch)).ToArray();
         }
 
-        public async Task<ChapterResponse> GetAsync(ulong authorAccountId, ulong storyId, ulong chapterId, CancellationToken ct = default)
+        public async Task<ChapterResponse> GetAsync(Guid authorAccountId, Guid storyId, Guid chapterId, CancellationToken ct = default)
         {
             var author = await _storyRepository.GetAuthorAsync(authorAccountId, ct)
                          ?? throw new AppException("AuthorNotFound", "Author profile is not registered.", 404);
@@ -153,7 +149,7 @@ namespace Service.Services
             return MapChapter(chapter, approvals);
         }
 
-        public async Task<ChapterResponse> SubmitAsync(ulong authorAccountId, ulong chapterId, ChapterSubmitRequest request, CancellationToken ct = default)
+        public async Task<ChapterResponse> SubmitAsync(Guid authorAccountId, Guid chapterId, ChapterSubmitRequest request, CancellationToken ct = default)
         {
             var author = await _storyRepository.GetAuthorAsync(authorAccountId, ct)
                          ?? throw new AppException("AuthorNotFound", "Author profile is not registered.", 404);

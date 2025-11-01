@@ -1,3 +1,4 @@
+using System;
 using Amazon.S3;
 using Amazon.S3.Model;
 using Contract.DTOs.Settings;
@@ -21,7 +22,7 @@ namespace Service.Helpers
             _settings = options.Value;
         }
 
-        public async Task<string> UploadAsync(ulong storyId, ulong chapterId, string content, CancellationToken ct = default)
+        public async Task<string> UploadAsync(Guid storyId, Guid chapterId, string content, CancellationToken ct = default)
         {
             var key = BuildObjectKey(storyId, chapterId);
             var bytes = Encoding.UTF8.GetBytes(content);
@@ -76,7 +77,7 @@ namespace Service.Helpers
             return $"{_settings.Endpoint.TrimEnd('/')}/{_settings.Bucket}/{key}";
         }
 
-        private static string BuildObjectKey(ulong storyId, ulong chapterId)
+        private static string BuildObjectKey(Guid storyId, Guid chapterId)
             => $"stories/{storyId}/chapters/{chapterId}.txt";
     }
 }

@@ -1,3 +1,6 @@
+﻿using System;
+using System.Threading;
+using System.Threading.Tasks;
 using Contract.DTOs.Request.Story;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -23,12 +26,11 @@ namespace Main.Controllers
             return Ok(pending);
         }
 
-        [HttpPost("{storyId}/decision")]
-        public async Task<IActionResult> Decide([FromRoute] ulong storyId, [FromBody] StoryModerationDecisionRequest request, CancellationToken ct)
+        [HttpPost("{storyId:guid}/decision")]
+        public async Task<IActionResult> Decide([FromRoute] Guid storyId, [FromBody] StoryModerationDecisionRequest request, CancellationToken ct)
         {
             await _storyModerationService.ModerateAsync(AccountId, storyId, request, ct);
             return Ok(new { message = request.Approve ? "Story approved." : "Story rejected." });
         }
     }
 }
-

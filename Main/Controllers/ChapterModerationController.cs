@@ -1,9 +1,10 @@
+﻿using System;
+using System.Threading;
+using System.Threading.Tasks;
 using Contract.DTOs.Request.Chapter;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Service.Interfaces;
-using System.Threading;
-using System.Threading.Tasks;
 
 namespace Main.Controllers
 {
@@ -25,8 +26,8 @@ namespace Main.Controllers
             return Ok(pending);
         }
 
-        [HttpPost("{chapterId}/decision")]
-        public async Task<IActionResult> Decide([FromRoute] ulong chapterId, [FromBody] ChapterModerationDecisionRequest request, CancellationToken ct)
+        [HttpPost("{chapterId:guid}/decision")]
+        public async Task<IActionResult> Decide([FromRoute] Guid chapterId, [FromBody] ChapterModerationDecisionRequest request, CancellationToken ct)
         {
             await _chapterModerationService.ModerateAsync(AccountId, chapterId, request, ct);
             return Ok(new { message = request.Approve ? "Chapter approved." : "Chapter rejected." });

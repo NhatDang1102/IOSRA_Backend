@@ -1,6 +1,9 @@
-﻿using Contract.DTOs.Request.Admin;
+﻿using System;
+using System.Threading;
+using System.Threading.Tasks;
+using Contract.DTOs.Request.Admin;
 using Contract.DTOs.Respond.Admin;
-using Main.Models; // ErrorResponse
+using Main.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Service.Interfaces;
@@ -8,74 +11,68 @@ using Service.Interfaces;
 namespace Main.Controllers
 {
     /// <summary>
-    /// API quản trị tài khoản (route gốc: /admin/accounts)
-    /// Yêu cầu: role ADMIN (Policy: AdminOnly)
+    /// Admin account management endpoints (base route: /admin/accounts).
+    /// Requires the AdminOnly policy.
     /// </summary>
     [ApiController]
     [Route("admin/[controller]")]
     [Authorize(Policy = "AdminOnly")]
     public class AccountsController : ControllerBase
     {
-        private readonly IAdminService _svc;
-        public AccountsController(IAdminService svc) => _svc = svc;
+        private readonly IAdminService _service;
 
-        /// <summary>Danh sách tài khoản (lọc & phân trang)</summary>
+        public AccountsController(IAdminService service)
+        {
+            _service = service;
+        }
+
         [HttpGet]
         [ProducesResponseType(typeof(PagedResult<AccountAdminResponse>), StatusCodes.Status200OK)]
         [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status401Unauthorized)]
         [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status403Forbidden)]
-        public async Task<IActionResult> Get([FromQuery] AccountQuery q, CancellationToken ct)
+        public async Task<IActionResult> Get([FromQuery] AccountQuery query, CancellationToken ct)
         {
-            var res = await _svc.QueryAccountsAsync(q, ct);
-            return Ok(res);
+            var result = await _service.QueryAccountsAsync(query, ct);
+            return Ok(result);
         }
 
-        /// <summary>Tìm 1 tài khoản theo email hoặc username</summary>
         [HttpGet("find")]
         [ProducesResponseType(typeof(AccountAdminResponse), StatusCodes.Status200OK)]
         [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status400BadRequest)]
         [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status404NotFound)]
-        [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status401Unauthorized)]
-        [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status403Forbidden)]
         public async Task<IActionResult> Find([FromQuery] string identifier, CancellationToken ct)
         {
-            var item = await _svc.GetAccountByIdentifierAsync(identifier, ct);
+            var item = await _service.GetAccountByIdentifierAsync(identifier, ct);
             return Ok(item);
         }
 
-        /// <summary>Gán/cập nhật role theo role_code</summary>
-        /// <remarks>Body: { "roleCodes": ["ADMIN","READER"] }</remarks>
-        [HttpPost("roles/{accountId:long}")] // ✅ gắn dưới /admin/accounts
+        [HttpPost("roles/{accountId:guid}")]
         [ProducesResponseType(StatusCodes.Status204NoContent)]
         [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status400BadRequest)]
         [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status404NotFound)]
-        public async Task<IActionResult> SetRoles([FromRoute] ulong accountId, [FromBody] UpdateRolesRequest req, CancellationToken ct)
+        public async Task<IActionResult> SetRoles([FromRoute] Guid accountId, [FromBody] UpdateRolesRequest request, CancellationToken ct)
         {
-            await _svc.SetRolesAsync(accountId, req.RoleCodes, ct);
+            await _service.SetRolesAsync(accountId, request.RoleCodes, ct);
             return NoContent();
         }
 
-        /// <summary>Ban tài khoản</summary>
-        /// <remarks>Body: { "reason": "vi phạm ..." }</remarks>
-        [HttpPost("ban/{accountId:long}")]
+        [HttpPost("ban/{accountId:guid}")]
         [ProducesResponseType(StatusCodes.Status204NoContent)]
         [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status400BadRequest)]
         [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status404NotFound)]
-        public async Task<IActionResult> Ban([FromRoute] ulong accountId, [FromBody] BanUnbanRequest req, CancellationToken ct)
+        public async Task<IActionResult> Ban([FromRoute] Guid accountId, [FromBody] BanUnbanRequest request, CancellationToken ct)
         {
-            await _svc.BanAsync(accountId, req.Reason, ct);
+            await _service.BanAsync(accountId, request.Reason, ct);
             return NoContent();
         }
 
-        /// <summary>Unban tài khoản</summary>
-        /// <remarks>Body: { "reason": "đã xem xét ..." } (tuỳ dùng hay không)</remarks>
-        [HttpPost("unban/{accountId:long}")] // ✅
+        [HttpPost("unban/{accountId:guid}")]
         [ProducesResponseType(StatusCodes.Status204NoContent)]
         [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status400BadRequest)]
         [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status404NotFound)]
-        public async Task<IActionResult> Unban([FromRoute] ulong accountId, [FromBody] BanUnbanRequest req, CancellationToken ct)
+        public async Task<IActionResult> Unban([FromRoute] Guid accountId, [FromBody] BanUnbanRequest request, CancellationToken ct)
         {
-            await _svc.UnbanAsync(accountId, req.Reason, ct);
+            await _service.UnbanAsync(accountId, request.Reason, ct);
             return NoContent();
         }
     }

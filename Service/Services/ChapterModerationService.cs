@@ -29,7 +29,7 @@ namespace Service.Services
             return chapters.Select(MapQueueItem).ToArray();
         }
 
-        public async Task ModerateAsync(ulong moderatorAccountId, ulong chapterId, ChapterModerationDecisionRequest request, CancellationToken ct = default)
+        public async Task ModerateAsync(Guid moderatorAccountId, Guid chapterId, ChapterModerationDecisionRequest request, CancellationToken ct = default)
         {
             var chapter = await _chapterRepository.GetByIdAsync(chapterId, ct)
                           ?? throw new AppException("ChapterNotFound", "Chapter was not found.", 404);

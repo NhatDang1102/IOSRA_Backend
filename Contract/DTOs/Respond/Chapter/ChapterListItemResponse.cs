@@ -4,7 +4,7 @@ namespace Contract.DTOs.Respond.Chapter
 {
     public class ChapterListItemResponse
     {
-        public ulong ChapterId { get; set; }
+        public Guid ChapterId { get; set; }
         public int ChapterNo { get; set; }
         public string Title { get; set; } = null!;
         public int WordCount { get; set; }
@@ -18,3 +18,4 @@ namespace Contract.DTOs.Respond.Chapter
         public DateTime? PublishedAt { get; set; }
     }
 }
+

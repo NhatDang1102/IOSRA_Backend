@@ -23,7 +23,6 @@ namespace Repository.Base
             {
                 null => true,
                 Guid guid => guid == Guid.Empty,
-                Guid? guid => !guid.HasValue || guid.Value == Guid.Empty,
                 _ => false
             };
 

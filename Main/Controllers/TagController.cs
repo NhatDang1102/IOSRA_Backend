@@ -1,4 +1,5 @@
-﻿using Contract.DTOs.Request.Tag;
+using System;
+using Contract.DTOs.Request.Tag;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Service.Interfaces;
@@ -31,17 +32,17 @@ public class TagController : AppControllerBase
         return Ok(result);
     }
 
-    [HttpPut("{tagId}")]
+    [HttpPut("{tagId:guid}")]
     [Authorize(Roles = "cmod,CONTENT_MOD,admin,ADMIN")]
-    public async Task<IActionResult> Update([FromRoute] uint tagId, [FromBody] TagUpdateRequest req, CancellationToken ct)
+    public async Task<IActionResult> Update([FromRoute] Guid tagId, [FromBody] TagUpdateRequest req, CancellationToken ct)
     {
         var result = await _tag.UpdateAsync(tagId, req, ct);
         return Ok(result);
     }
 
-    [HttpDelete("{tagId}")]
+    [HttpDelete("{tagId:guid}")]
     [Authorize(Roles = "cmod,CONTENT_MOD,admin,ADMIN")]
-    public async Task<IActionResult> Delete([FromRoute] uint tagId, CancellationToken ct)
+    public async Task<IActionResult> Delete([FromRoute] Guid tagId, CancellationToken ct)
     {
         await _tag.DeleteAsync(tagId, ct);
         return NoContent();

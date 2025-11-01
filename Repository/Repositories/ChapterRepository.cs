@@ -13,31 +13,31 @@ namespace Repository.Repositories
 {
     public class ChapterRepository : BaseRepository, IChapterRepository
     {
-        public ChapterRepository(AppDbContext db, ISnowflakeIdGenerator ids) : base(db, ids)
+        public ChapterRepository(AppDbContext db) : base(db)
         {
         }
 
         public async Task<chapter> AddAsync(chapter entity, CancellationToken ct = default)
         {
-            EnsureId<chapter, ulong>(entity, nameof(chapter.chapter_id), () => NewId());
+            EnsureId(entity, nameof(chapter.chapter_id));
             _db.chapters.Add(entity);
             await _db.SaveChangesAsync(ct);
             return entity;
         }
 
-        public Task<chapter?> GetByIdAsync(ulong chapterId, CancellationToken ct = default)
+        public Task<chapter?> GetByIdAsync(Guid chapterId, CancellationToken ct = default)
             => _db.chapters
                   .Include(c => c.story).ThenInclude(s => s.author).ThenInclude(a => a.account)
                   .Include(c => c.language)
                   .FirstOrDefaultAsync(c => c.chapter_id == chapterId, ct);
 
-        public Task<chapter?> GetForAuthorAsync(ulong storyId, ulong chapterId, ulong authorId, CancellationToken ct = default)
+        public Task<chapter?> GetForAuthorAsync(Guid storyId, Guid chapterId, Guid authorId, CancellationToken ct = default)
             => _db.chapters
                   .Include(c => c.story).ThenInclude(s => s.author).ThenInclude(a => a.account)
                   .Include(c => c.language)
                   .FirstOrDefaultAsync(c => c.chapter_id == chapterId && c.story_id == storyId && c.story.author_id == authorId, ct);
 
-        public async Task<IReadOnlyList<chapter>> GetByStoryAsync(ulong storyId, CancellationToken ct = default)
+        public async Task<IReadOnlyList<chapter>> GetByStoryAsync(Guid storyId, CancellationToken ct = default)
         {
             return await _db.chapters
                 .Where(c => c.story_id == storyId)
@@ -63,10 +63,10 @@ namespace Repository.Repositories
             return _db.language_lists.FirstOrDefaultAsync(l => l.lang_code == normalized, ct);
         }
 
-        public Task<bool> StoryHasPendingChapterAsync(ulong storyId, CancellationToken ct = default)
+        public Task<bool> StoryHasPendingChapterAsync(Guid storyId, CancellationToken ct = default)
             => _db.chapters.AnyAsync(c => c.story_id == storyId && c.status == "pending", ct);
 
-        public async Task<int> GetNextChapterNumberAsync(ulong storyId, CancellationToken ct = default)
+        public async Task<int> GetNextChapterNumberAsync(Guid storyId, CancellationToken ct = default)
         {
             var max = await _db.chapters
                 .Where(c => c.story_id == storyId)
@@ -76,13 +76,13 @@ namespace Repository.Repositories
 
         public async Task AddContentApproveAsync(content_approve entity, CancellationToken ct = default)
         {
-            EnsureId<content_approve, ulong>(entity, nameof(content_approve.review_id), () => NewId());
+            EnsureId(entity, nameof(content_approve.review_id));
             entity.created_at = DateTime.UtcNow;
             _db.content_approves.Add(entity);
             await _db.SaveChangesAsync(ct);
         }
 
-        public async Task<IReadOnlyList<content_approve>> GetContentApprovalsForChapterAsync(ulong chapterId, CancellationToken ct = default)
+        public async Task<IReadOnlyList<content_approve>> GetContentApprovalsForChapterAsync(Guid chapterId, CancellationToken ct = default)
         {
             return await _db.content_approves
                 .Where(c => c.chapter_id == chapterId && c.approve_type == "chapter")
@@ -96,7 +96,7 @@ namespace Repository.Repositories
             await _db.SaveChangesAsync(ct);
         }
 
-        public Task<DateTime?> GetLastRejectedAtAsync(ulong chapterId, CancellationToken ct = default)
+        public Task<DateTime?> GetLastRejectedAtAsync(Guid chapterId, CancellationToken ct = default)
             => _db.content_approves
                   .Where(c => c.chapter_id == chapterId && c.approve_type == "chapter" && c.status == "rejected")
                   .OrderByDescending(c => c.created_at)

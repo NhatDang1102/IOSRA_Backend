@@ -1,13 +1,13 @@
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 using Contract.DTOs.Request.OperationMod;
 using Contract.DTOs.Respond.OperationMod;
 using Repository.Interfaces;
 using Service.Exceptions;
 using Service.Interfaces;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading;
-using System.Threading.Tasks;
 
 namespace Service.Implementations
 {
@@ -34,36 +34,35 @@ namespace Service.Implementations
             }).ToList();
         }
 
-        public async Task ApproveAsync(ulong requestId, ulong omodAccountId, CancellationToken ct = default)
+        public async Task ApproveAsync(Guid requestId, Guid omodAccountId, CancellationToken ct = default)
         {
-            var req = await _opRepo.GetRequestAsync(requestId, ct)
-                      ?? throw new AppException("RequestNotFound", "Upgrade request was not found.", 404);
+            var request = await _opRepo.GetRequestAsync(requestId, ct)
+                          ?? throw new AppException("RequestNotFound", "Upgrade request was not found.", 404);
 
-            if (!string.Equals(req.status, "pending", StringComparison.OrdinalIgnoreCase))
+            if (!string.Equals(request.status, "pending", StringComparison.OrdinalIgnoreCase))
             {
                 throw new AppException("InvalidState", "Only pending requests can be approved.", 400);
             }
 
-            var rankId = await _opRepo.GetRankIdByNameAsync("Casual", ct);
-            if (rankId == 0)
+            var casualRankId = await _opRepo.GetRankIdByNameAsync("Casual", ct);
+            if (casualRankId is null || casualRankId == Guid.Empty)
             {
                 throw new AppException("SeedMissing", "Author rank 'Casual' has not been seeded.", 500);
             }
 
-            await _opRepo.EnsureAuthorUpgradedAsync(req.requester_id, rankId, ct);
+            await _opRepo.EnsureAuthorUpgradedAsync(request.requester_id, casualRankId.Value, ct);
 
             var authorRoleId = await _opRepo.GetRoleIdByCodeAsync("author", ct);
-            if (authorRoleId == 0)
+            if (authorRoleId is null || authorRoleId == Guid.Empty)
             {
                 throw new AppException("SeedMissing", "Role 'author' has not been seeded.", 500);
             }
 
-            await _opRepo.AddAccountRoleIfNotExistsAsync(req.requester_id, authorRoleId, ct);
-
-            await _opRepo.SetRequestApprovedAsync(req.request_id, omodAccountId, ct);
+            await _opRepo.AddAccountRoleIfNotExistsAsync(request.requester_id, authorRoleId.Value, ct);
+            await _opRepo.SetRequestApprovedAsync(request.request_id, omodAccountId, ct);
         }
 
-        public async Task RejectAsync(ulong requestId, ulong omodAccountId, RejectAuthorUpgradeRequest req, CancellationToken ct = default)
+        public async Task RejectAsync(Guid requestId, Guid omodAccountId, RejectAuthorUpgradeRequest req, CancellationToken ct = default)
         {
             var entity = await _opRepo.GetRequestAsync(requestId, ct)
                          ?? throw new AppException("RequestNotFound", "Upgrade request was not found.", 404);

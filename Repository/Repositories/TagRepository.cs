@@ -2,6 +2,11 @@ using Microsoft.EntityFrameworkCore;
 using Repository.DBContext;
 using Repository.Entities;
 using Repository.Interfaces;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace Repository.Repositories
 {
@@ -19,10 +24,10 @@ namespace Repository.Repositories
                   .OrderBy(t => t.tag_name)
                   .ToListAsync(ct);
 
-        public Task<tag?> GetByIdAsync(uint tagId, CancellationToken ct = default)
+        public Task<tag?> GetByIdAsync(Guid tagId, CancellationToken ct = default)
             => _db.tags.FirstOrDefaultAsync(t => t.tag_id == tagId, ct);
 
-        public Task<bool> ExistsByNameAsync(string name, uint? excludeId = null, CancellationToken ct = default)
+        public Task<bool> ExistsByNameAsync(string name, Guid? excludeId = null, CancellationToken ct = default)
         {
             var query = _db.tags.AsQueryable();
             if (excludeId.HasValue)
@@ -36,6 +41,7 @@ namespace Repository.Repositories
         {
             var entity = new tag
             {
+                tag_id = Guid.NewGuid(),
                 tag_name = name
             };
             _db.tags.Add(entity);
@@ -49,7 +55,7 @@ namespace Repository.Repositories
             await _db.SaveChangesAsync(ct);
         }
 
-        public Task<bool> HasStoriesAsync(uint tagId, CancellationToken ct = default)
+        public Task<bool> HasStoriesAsync(Guid tagId, CancellationToken ct = default)
             => _db.story_tags.AnyAsync(st => st.tag_id == tagId, ct);
 
         public async Task DeleteAsync(tag entity, CancellationToken ct = default)
