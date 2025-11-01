@@ -12,10 +12,10 @@ namespace Repository.Entities;
 public partial class wallet_payment
 {
     [Key]
-    [Column(TypeName = "char(36)")]
+    
     public Guid trs_id { get; set; }
 
-    [Column(TypeName = "char(36)")]
+    
     public Guid wallet_id { get; set; }
 
     [Column(TypeName = "enum('purchase','withdraw','topup','adjust')")]
@@ -25,7 +25,7 @@ public partial class wallet_payment
 
     public long coin_after { get; set; }
 
-    [Column(TypeName = "char(36)")]
+    
     public Guid? ref_id { get; set; }
 
     [Column(TypeName = "datetime")]

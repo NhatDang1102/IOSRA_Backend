@@ -6,21 +6,18 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Repository.Entities;
 
+[Table("chapters")]
 [Index("story_id", Name = "ix_chapter_story")]
 [Index("story_id", "chapter_no", Name = "ux_chapter_story_no", IsUnique = true)]
 public partial class chapter
 {
     [Key]
-    [Key]
-    [Column(TypeName = "char(36)")]
     public Guid chapter_id { get; set; }
 
-    [Column(TypeName = "char(36)")]
     public Guid story_id { get; set; }
 
     public uint chapter_no { get; set; }
 
-    [Column(TypeName = "char(36)")]
     public Guid language_id { get; set; }
 
     [StringLength(255)]

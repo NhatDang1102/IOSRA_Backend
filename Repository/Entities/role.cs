@@ -6,11 +6,11 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Repository.Entities;
 
+[Table("roles")]
 [Index("role_code", Name = "ux_roles_code", IsUnique = true)]
 public partial class role
 {
     [Key]
-    [Column(TypeName = "char(36)")]
     public Guid role_id { get; set; }
 
     [StringLength(32)]

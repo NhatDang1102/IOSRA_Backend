@@ -6,15 +6,16 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Repository.Entities;
 
+[Table("subcriptions")]
 [Index("plan_code", Name = "ix_sub_plan")]
 [Index("user_id", Name = "ix_sub_user")]
 public partial class subcription
 {
     [Key]
-    [Column(TypeName = "char(36)")]
+    
     public Guid sub_id { get; set; }
 
-    [Column(TypeName = "char(36)")]
+    
     public Guid user_id { get; set; }
 
     [StringLength(32)]

@@ -6,16 +6,17 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Repository.Entities;
 
+[Table("chapter_voices")]
 [PrimaryKey("chapter_id", "voice_id")]
 [Index("voice_id", Name = "fk_chvoice_voice")]
 public partial class chapter_voice
 {
     [Key]
-    [Column(TypeName = "char(36)")]
+    
     public Guid chapter_id { get; set; }
 
     [Key]
-    [Column(TypeName = "char(36)")]
+    
     public Guid voice_id { get; set; }
 
     [StringLength(512)]

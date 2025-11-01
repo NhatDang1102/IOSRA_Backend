@@ -11,12 +11,12 @@ namespace Repository.Entities;
 public partial class author
 {
     [Key]
-    [Column(TypeName = "char(36)")]
+    
     public Guid account_id { get; set; }
 
     public bool restricted { get; set; }
 
-    [Column(TypeName = "char(36)")]
+    
     public Guid? rank_id { get; set; }
 
     public bool verified_status { get; set; }
@@ -31,8 +31,6 @@ public partial class author
 
     [InverseProperty("followee")]
     public virtual ICollection<follow> follows { get; set; } = new List<follow>();
-
-
 
     [ForeignKey("rank_id")]
     [InverseProperty("authors")]

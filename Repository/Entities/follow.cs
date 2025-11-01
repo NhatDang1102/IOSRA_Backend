@@ -12,11 +12,11 @@ namespace Repository.Entities;
 public partial class follow
 {
     [Key]
-    [Column(TypeName = "char(36)")]
+    
     public Guid follower_id { get; set; }
 
     [Key]
-    [Column(TypeName = "char(36)")]
+    
     public Guid followee_id { get; set; }
 
     [Required]

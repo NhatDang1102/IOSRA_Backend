@@ -10,7 +10,7 @@ namespace Repository.Entities;
 public partial class admin
 {
     [Key]
-    [Column(TypeName = "char(36)")]
+    
     public Guid account_id { get; set; }
 
     [StringLength(100)]

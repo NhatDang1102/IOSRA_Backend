@@ -1,6 +1,7 @@
-using System;
+ï»¿using System;
 using System.Collections.Generic;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Metadata;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Repository.Entities;
 
@@ -77,18 +78,6 @@ public partial class AppDbContext : DbContext
             .UseCollation("utf8mb4_0900_ai_ci")
             .HasCharSet("utf8mb4");
 
-        var guidConverter = new GuidToStringConverter();
-        foreach (var entityType in modelBuilder.Model.GetEntityTypes())
-        {
-            foreach (var property in entityType.GetProperties())
-            {
-                if (property.ClrType == typeof(Guid) || property.ClrType == typeof(Guid?))
-                {
-                    property.SetValueConverter(guidConverter);
-                    property.SetColumnType("char(36)");
-                }
-            }
-        }
 
         modelBuilder.Entity<ContentMod>(entity =>
         {
@@ -326,9 +315,9 @@ public partial class AppDbContext : DbContext
             entity.Property(e => e.created_at).HasDefaultValueSql("CURRENT_TIMESTAMP");
             entity.Property(e => e.status).HasDefaultValueSql("'pending'");
 
-            // requester -> account (DUY NH?T quan h? này; không quan h? nào khác t?i account)
+            // requester -> account (DUY NH?T quan h? nÃ y; khÃ´ng quan h? nÃ o khÃ¡c t?i account)
             entity.HasOne(d => d.requester)
-                .WithMany(p => p.op_requests_as_requester)   // <-- tr? dúng collection
+                .WithMany(p => p.op_requests_as_requester)   // <-- tr? dÃºng collection
                 .HasForeignKey(d => d.requester_id)
                 .OnDelete(DeleteBehavior.Restrict)
                 .HasConstraintName("fk_opreq_requester");
@@ -444,8 +433,11 @@ public partial class AppDbContext : DbContext
             entity.HasOne(d => d.wallet).WithMany(p => p.wallet_payments).HasConstraintName("fk_wpay_wallet");
         });
 
+
         OnModelCreatingPartial(modelBuilder);
     }
 
     partial void OnModelCreatingPartial(ModelBuilder modelBuilder);
 }
+
+

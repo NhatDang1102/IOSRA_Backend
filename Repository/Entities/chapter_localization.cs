@@ -6,16 +6,17 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Repository.Entities;
 
+[Table("chapter_localizations")]
 [PrimaryKey("chapter_id", "lang_id")]
 [Index("lang_id", Name = "fk_chloc_lang")]
 public partial class chapter_localization
 {
     [Key]
-    [Column(TypeName = "char(36)")]
+    
     public Guid chapter_id { get; set; }
 
     [Key]
-    [Column(TypeName = "char(36)")]
+    
     public Guid lang_id { get; set; }
 
     public string content { get; set; } = null!;

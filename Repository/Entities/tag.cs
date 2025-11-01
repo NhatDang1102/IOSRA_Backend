@@ -6,11 +6,12 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Repository.Entities;
 
+[Table("tags")]
 [Index("tag_name", Name = "ux_tag_name", IsUnique = true)]
 public partial class tag
 {
     [Key]
-    [Column(TypeName = "char(36)")]
+    
     public Guid tag_id { get; set; }
 
     [StringLength(64)]

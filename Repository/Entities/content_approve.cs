@@ -13,16 +13,16 @@ namespace Repository.Entities;
 public partial class content_approve
 {
     [Key]
-    [Column(TypeName = "char(36)")]
+    
     public Guid review_id { get; set; }
 
     [Column(TypeName = "enum('story','chapter')")]
     public string approve_type { get; set; } = null!;
 
-    [Column(TypeName = "char(36)")]
+    
     public Guid? story_id { get; set; }
 
-    [Column(TypeName = "char(36)")]
+    
     public Guid? chapter_id { get; set; }
 
     [Column(TypeName = "enum('ai','human')")]
@@ -34,7 +34,7 @@ public partial class content_approve
     [Column(TypeName = "enum('pending','approved','rejected')")]
     public string status { get; set; } = null!;
 
-    [Column(TypeName = "char(36)")]
+    
     public Guid? moderator_id { get; set; }
 
     [Column(TypeName = "text")]

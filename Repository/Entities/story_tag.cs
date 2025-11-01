@@ -6,16 +6,17 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Repository.Entities;
 
+[Table("story_tags")]
 [PrimaryKey("story_id", "tag_id")]
 [Index("tag_id", Name = "ix_story_tags_tag")]
 public partial class story_tag
 {
     [Key]
-    [Column(TypeName = "char(36)")]
+    
     public Guid story_id { get; set; }
 
     [Key]
-    [Column(TypeName = "char(36)")]
+    
     public Guid tag_id { get; set; }
 
     [Column(TypeName = "datetime")]

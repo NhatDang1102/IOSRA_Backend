@@ -5,15 +5,16 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Repository.Entities;
 
+[Table("op_requests")]
 [Index(nameof(requester_id), Name = "ix_opreq_requester")]
 [Index(nameof(omod_id), Name = "ix_opreq_omod")]
 public partial class op_request
 {
     [Key]
-    [Column(TypeName = "char(36)")]
+    
     public Guid request_id { get; set; }
 
-    [Column(TypeName = "char(36)")]
+    
     public Guid requester_id { get; set; }
 
     [Column(TypeName = "enum('withdraw','rank_up','become_author')")]
@@ -24,7 +25,7 @@ public partial class op_request
 
     public ulong? withdraw_amount { get; set; }
 
-    [Column(TypeName = "char(36)")]
+    
     public Guid? omod_id { get; set; }
 
     [Column(TypeName = "enum('pending','approved','rejected')")]

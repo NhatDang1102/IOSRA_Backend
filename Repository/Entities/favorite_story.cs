@@ -12,11 +12,11 @@ namespace Repository.Entities;
 public partial class favorite_story
 {
     [Key]
-    [Column(TypeName = "char(36)")]
+    
     public Guid reader_id { get; set; }
 
     [Key]
-    [Column(TypeName = "char(36)")]
+    
     public Guid story_id { get; set; }
 
     [Required]

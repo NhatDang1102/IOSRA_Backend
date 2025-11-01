@@ -6,16 +6,17 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Repository.Entities;
 
+[Table("account_roles")]
 [PrimaryKey("account_id", "role_id")]
 [Index("role_id", Name = "fk_account_roles_role")]
 public partial class account_role
 {
     [Key]
-    [Column(TypeName = "char(36)")]
+    
     public Guid account_id { get; set; }
 
     [Key]
-    [Column(TypeName = "char(36)")]
+    
     public Guid role_id { get; set; }
 
     [Column(TypeName = "datetime")]

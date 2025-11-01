@@ -11,7 +11,7 @@ namespace Repository.Entities;
 public partial class voice_list
 {
     [Key]
-    [Column(TypeName = "char(36)")]
+    
     public Guid voice_id { get; set; }
 
     [StringLength(64)]

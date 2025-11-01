@@ -12,13 +12,13 @@ namespace Repository.Entities;
 public partial class chapter_purchase_log
 {
     [Key]
-    [Column(TypeName = "char(36)")]
+    
     public Guid chapter_purchase_id { get; set; }
 
-    [Column(TypeName = "char(36)")]
+    
     public Guid chapter_id { get; set; }
 
-    [Column(TypeName = "char(36)")]
+    
     public Guid account_id { get; set; }
 
     public uint dia_price { get; set; }

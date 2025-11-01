@@ -12,7 +12,7 @@ namespace Repository.Entities;
 public partial class language_list
 {
     [Key]
-    [Column(TypeName = "char(36)")]
+    
     public Guid lang_id { get; set; }
 
     [StringLength(8)]

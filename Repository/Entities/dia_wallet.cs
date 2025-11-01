@@ -11,10 +11,10 @@ namespace Repository.Entities;
 public partial class dia_wallet
 {
     [Key]
-    [Column(TypeName = "char(36)")]
+    
     public Guid wallet_id { get; set; }
 
-    [Column(TypeName = "char(36)")]
+    
     public Guid account_id { get; set; }
 
     public long balance_coin { get; set; }

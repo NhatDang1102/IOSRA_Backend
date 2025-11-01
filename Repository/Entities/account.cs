@@ -12,7 +12,6 @@ namespace Repository.Entities;
 public partial class account
 {
     [Key]
-    [Column(TypeName = "char(36)")]
     public Guid account_id { get; set; }
 
     [StringLength(50)]
@@ -67,6 +66,4 @@ public partial class account
     [InverseProperty("user")]
     public virtual ICollection<subcription> subcriptions { get; set; } = new List<subcription>();
     public virtual ICollection<op_request> op_requests_as_requester { get; set; } = new List<op_request>();
-
-
 }
