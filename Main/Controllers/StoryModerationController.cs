@@ -19,17 +19,24 @@ namespace Main.Controllers
             _storyModerationService = storyModerationService;
         }
 
-        [HttpGet("pending")]
-        public async Task<IActionResult> ListPending(CancellationToken ct)
+        [HttpGet]
+        public async Task<IActionResult> List([FromQuery] string? status, CancellationToken ct)
         {
-            var pending = await _storyModerationService.ListPendingAsync(ct);
-            return Ok(pending);
+            var items = await _storyModerationService.ListAsync(status, ct);
+            return Ok(items);
         }
 
-        [HttpPost("{storyId:guid}/decision")]
-        public async Task<IActionResult> Decide([FromRoute] Guid storyId, [FromBody] StoryModerationDecisionRequest request, CancellationToken ct)
+        [HttpGet("{reviewId:guid}")]
+        public async Task<IActionResult> Get([FromRoute] Guid reviewId, CancellationToken ct)
         {
-            await _storyModerationService.ModerateAsync(AccountId, storyId, request, ct);
+            var item = await _storyModerationService.GetAsync(reviewId, ct);
+            return Ok(item);
+        }
+
+        [HttpPost("{reviewId:guid}/decision")]
+        public async Task<IActionResult> Decide([FromRoute] Guid reviewId, [FromBody] StoryModerationDecisionRequest request, CancellationToken ct)
+        {
+            await _storyModerationService.ModerateAsync(AccountId, reviewId, request, ct);
             return Ok(new { message = request.Approve ? "Story approved." : "Story rejected." });
         }
     }

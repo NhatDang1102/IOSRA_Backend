@@ -25,11 +25,11 @@ public partial class content_approve
     
     public Guid? chapter_id { get; set; }
 
-    [Column(TypeName = "enum('ai','human')")]
-    public string source { get; set; } = null!;
-
     [Precision(5, 2)]
     public decimal? ai_score { get; set; }
+
+    [Column(TypeName = "text")]
+    public string? ai_note { get; set; }
 
     [Column(TypeName = "enum('pending','approved','rejected')")]
     public string status { get; set; } = null!;

@@ -1,4 +1,4 @@
-using Contract.DTOs.Request.Story;
+﻿using Contract.DTOs.Request.Story;
 using Contract.DTOs.Respond.Story;
 using Repository.Entities;
 using Repository.Interfaces;
@@ -20,6 +20,7 @@ namespace Service.Services
         private readonly IOpenAiModerationService _openAiModerationService;
 
         private static readonly string[] AllowedCoverModes = { "upload", "generate" };
+        private static readonly string[] AuthorListAllowedStatuses = { "draft", "pending", "rejected", "published", "completed", "hidden", "removed" };
 
         public StoryService(
             IStoryRepository storyRepository,
@@ -135,25 +136,21 @@ namespace Service.Services
             var aiResult = await _openAiModerationService.ModerateStoryAsync(story.title, story.desc, ct);
             var aiScore = (decimal)Math.Round(aiResult.Score, 2, MidpointRounding.AwayFromZero);
             var aiNote = aiResult.Explanation;
+            var now = DateTime.UtcNow;
 
-            story.updated_at = DateTime.UtcNow;
+            story.updated_at = now;
+            content_approve approvalRecord;
 
-            if (aiResult.ShouldReject)
+            if (aiResult.ShouldReject || aiScore < 0.50m)
             {
                 story.status = "rejected";
+                story.published_at = null;
 
-                await _storyRepository.AddContentApproveAsync(new content_approve
-                {
-                    approve_type = "story",
-                    story_id = story.story_id,
-                    source = "ai",
-                    status = "rejected",
-                    ai_score = aiScore,
-                    moderator_note = aiNote
-                }, ct);
+                var rejectionApproval = await UpsertStoryApprovalAsync(story.story_id, "rejected", aiScore, aiNote, null, ct);
 
                 throw new AppException("StoryRejectedByAi", "Story was rejected by automated moderation.", 400, new
                 {
+                    reviewId = rejectionApproval.review_id,
                     score = Math.Round(aiResult.Score, 2),
                     sanitizedContent = aiResult.SanitizedContent,
                     explanation = aiResult.Explanation,
@@ -166,26 +163,24 @@ namespace Service.Services
                 });
             }
 
-            story.status = "pending";
-
-            await _storyRepository.AddContentApproveAsync(new content_approve
+            if (aiScore >= 0.70m)
             {
-                approve_type = "story",
-                story_id = story.story_id,
-                source = "ai",
-                status = "approved",
-                ai_score = aiScore,
-                moderator_note = aiNote
-            }, ct);
+                story.status = "published";
+                story.published_at ??= DateTime.UtcNow;
 
-            await _storyRepository.AddContentApproveAsync(new content_approve
+                var authorRankName = author.rank?.rank_name;
+                story.is_premium = !string.IsNullOrWhiteSpace(authorRankName) &&
+                                   !string.Equals(authorRankName, "Casual", StringComparison.OrdinalIgnoreCase);
+
+                approvalRecord = await UpsertStoryApprovalAsync(story.story_id, "approved", aiScore, aiNote, null, ct);
+            }
+            else
             {
-                approve_type = "story",
-                story_id = story.story_id,
-                source = "human",
-                status = "pending",
-                moderator_note = submitNote
-            }, ct);
+                story.status = "pending";
+                story.published_at = null;
+
+                approvalRecord = await UpsertStoryApprovalAsync(story.story_id, "pending", aiScore, aiNote, submitNote, ct);
+            }
 
             var saved = await _storyRepository.GetStoryForAuthorAsync(story.story_id, author.account_id, ct)
                         ?? throw new InvalidOperationException("Failed to load story after submission.");
@@ -194,16 +189,16 @@ namespace Service.Services
             return MapStory(saved, approvals);
         }
 
-        public async Task<IReadOnlyList<StoryListItemResponse>> ListAsync(Guid authorAccountId, CancellationToken ct = default)
+        public async Task<IReadOnlyList<StoryListItemResponse>> ListAsync(Guid authorAccountId, string? status, CancellationToken ct = default)
         {
             var author = await RequireAuthorAsync(authorAccountId, ct);
-            var stories = await _storyRepository.GetStoriesByAuthorAsync(author.account_id, ct);
+            var filterStatuses = NormalizeAuthorStatuses(status);
+            var stories = await _storyRepository.GetStoriesByAuthorAsync(author.account_id, filterStatuses, ct);
 
             var responses = new List<StoryListItemResponse>(stories.Count);
             foreach (var story in stories)
             {
-                var approvals = await _storyRepository.GetContentApprovalsForStoryAsync(story.story_id, ct);
-                responses.Add(MapStoryListItem(story, approvals));
+                responses.Add(MapStoryListItem(story));
             }
 
             return responses;
@@ -298,6 +293,22 @@ namespace Service.Services
             }
         }
 
+        private static IReadOnlyList<string>? NormalizeAuthorStatuses(string? status)
+        {
+            if (string.IsNullOrWhiteSpace(status))
+            {
+                return null;
+            }
+
+            var normalized = status.Trim();
+            if (!AuthorListAllowedStatuses.Contains(normalized, StringComparer.OrdinalIgnoreCase))
+            {
+                throw new AppException("InvalidStatus", $"Unsupported status '{status}'. Allowed values are: {string.Join(", ", AuthorListAllowedStatuses)}.", 400);
+            }
+
+            return new[] { normalized.ToLowerInvariant() };
+        }
+
         private async Task<author> RequireAuthorAsync(Guid accountId, CancellationToken ct)
         {
             var author = await _storyRepository.GetAuthorAsync(accountId, ct);
@@ -306,6 +317,42 @@ namespace Service.Services
                 throw new AppException("AuthorNotFound", "Author profile is not registered.", 404);
             }
             return author;
+        }
+
+        private async Task<content_approve> UpsertStoryApprovalAsync(Guid storyId, string status, decimal aiScore, string? aiNote, string? submitNote, CancellationToken ct)
+        {
+            var approval = await _storyRepository.GetContentApprovalForStoryAsync(storyId, ct);
+            var timestamp = DateTime.UtcNow;
+
+            if (approval == null)
+            {
+                approval = new content_approve
+                {
+                    approve_type = "story",
+                    story_id = storyId,
+                    status = status,
+                    ai_score = aiScore,
+                    ai_note = aiNote,
+                    moderator_note = submitNote,
+                    moderator_id = null,
+                    created_at = timestamp
+                };
+
+                await _storyRepository.AddContentApproveAsync(approval, ct);
+            }
+            else
+            {
+                approval.status = status;
+                approval.ai_score = aiScore;
+                approval.ai_note = aiNote;
+                approval.moderator_note = submitNote;
+                approval.moderator_id = null;
+                approval.created_at = timestamp;
+
+                await _storyRepository.SaveChangesAsync(ct);
+            }
+
+            return approval;
         }
 
         private static StoryResponse MapStory(story story, IEnumerable<content_approve> approvals)
@@ -320,8 +367,12 @@ namespace Service.Services
                 .OrderBy(t => t.TagName, StringComparer.OrdinalIgnoreCase)
                 .ToArray() ?? Array.Empty<StoryTagResponse>();
 
-            var latestAi = approvals.FirstOrDefault(a => a.source == "ai");
-            var latestHuman = approvals.FirstOrDefault(a => a.source == "human");
+            var approval = approvals
+                .OrderByDescending(a => a.created_at)
+                .FirstOrDefault();
+
+            var moderatorStatus = approval?.moderator_id.HasValue == true ? approval.status : null;
+            var moderatorNote = approval?.moderator_id.HasValue == true ? approval.moderator_note : null;
 
             return new StoryResponse
             {
@@ -331,10 +382,11 @@ namespace Service.Services
                 Status = story.status,
                 IsPremium = story.is_premium,
                 CoverUrl = story.cover_url,
-                AiScore = latestAi?.ai_score,
-                AiResult = latestAi?.status,
-                ModeratorStatus = latestHuman?.status,
-                ModeratorNote = latestHuman?.moderator_note,
+                AiScore = approval?.ai_score,
+                AiResult = ResolveAiDecision(approval),
+                AiNote = approval?.ai_note,
+                ModeratorStatus = moderatorStatus,
+                ModeratorNote = moderatorNote,
                 CreatedAt = story.created_at,
                 UpdatedAt = story.updated_at,
                 PublishedAt = story.published_at,
@@ -342,7 +394,7 @@ namespace Service.Services
             };
         }
 
-        private static StoryListItemResponse MapStoryListItem(story story, IEnumerable<content_approve> approvals)
+        private static StoryListItemResponse MapStoryListItem(story story)
         {
             var tags = story.story_tags?
                 .Where(st => st.tag != null)
@@ -367,7 +419,34 @@ namespace Service.Services
                 Tags = tags
             };
         }
+
+        private static string? ResolveAiDecision(content_approve? approval)
+        {
+            if (approval == null)
+            {
+                return null;
+            }
+
+            if (approval.ai_score is not decimal score)
+            {
+                return null;
+            }
+
+            if (score < 0.50m)
+            {
+                return "rejected";
+            }
+
+            if (score >= 0.70m)
+            {
+                return "approved";
+            }
+
+            return "flagged";
+        }
     }
 }
+
+
 
 

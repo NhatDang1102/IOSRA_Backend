@@ -1,4 +1,4 @@
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using Repository.Base;
 using Repository.DBContext;
 using Repository.Entities;
@@ -51,11 +51,34 @@ namespace Repository.Repositories
             return entity;
         }
 
-        public Task<List<story>> GetStoriesByAuthorAsync(Guid authorId, CancellationToken ct = default)
-            => _db.stories
-                  .Include(s => s.story_tags).ThenInclude(st => st.tag)
-                  .Where(s => s.author_id == authorId)
-                  .ToListAsync(ct);
+        public Task<List<story>> GetStoriesByAuthorAsync(Guid authorId, IEnumerable<string>? statuses = null, CancellationToken ct = default)
+        {
+            var query = _db.stories
+                .Include(s => s.story_tags).ThenInclude(st => st.tag)
+                .Where(s => s.author_id == authorId);
+
+            if (statuses is not null)
+            {
+                var statusList = statuses
+                    .Where(s => !string.IsNullOrWhiteSpace(s))
+                    .Select(s => s.Trim().ToLowerInvariant())
+                    .Distinct()
+                    .ToArray();
+
+                if (statusList.Length > 0)
+                {
+                    query = query.Where(s => statusList.Contains(s.status.ToLower()));
+                }
+                else
+                {
+                    return Task.FromResult(new List<story>());
+                }
+            }
+
+            return query
+                .OrderByDescending(s => s.updated_at)
+                .ToListAsync(ct);
+        }
 
         public Task<story?> GetStoryWithDetailsAsync(Guid storyId, CancellationToken ct = default)
             => _db.stories
@@ -100,15 +123,29 @@ namespace Repository.Repositories
         public async Task AddContentApproveAsync(content_approve entity, CancellationToken ct = default)
         {
             EnsureId(entity, nameof(content_approve.review_id));
+            entity.created_at = entity.created_at == default ? DateTime.UtcNow : entity.created_at;
             _db.content_approves.Add(entity);
             await _db.SaveChangesAsync(ct);
         }
 
-        public Task<content_approve?> GetLatestContentApproveAsync(Guid storyId, string source, CancellationToken ct = default)
+        public Task<content_approve?> GetContentApprovalForStoryAsync(Guid storyId, CancellationToken ct = default)
             => _db.content_approves
-                  .Where(c => c.story_id == storyId && c.approve_type == "story" && c.source == source)
+                  .Where(c => c.story_id == storyId && c.approve_type == "story")
                   .OrderByDescending(c => c.created_at)
                   .FirstOrDefaultAsync(ct);
+
+        public Task<content_approve?> GetContentApprovalByIdAsync(Guid reviewId, CancellationToken ct = default)
+            => _db.content_approves
+                  .Include(c => c.story!)
+                      .ThenInclude(s => s.author!)
+                      .ThenInclude(a => a.account)
+                  .Include(c => c.story!)
+                      .ThenInclude(s => s.author!)
+                      .ThenInclude(a => a.rank)
+                  .Include(c => c.story!)
+                      .ThenInclude(s => s.story_tags)
+                      .ThenInclude(st => st.tag)
+                  .FirstOrDefaultAsync(c => c.review_id == reviewId, ct);
 
         public Task<List<content_approve>> GetContentApprovalsForStoryAsync(Guid storyId, CancellationToken ct = default)
             => _db.content_approves
@@ -116,14 +153,28 @@ namespace Repository.Repositories
                   .OrderByDescending(c => c.created_at)
                   .ToListAsync(ct);
 
-        public Task<List<story>> GetStoriesPendingHumanReviewAsync(CancellationToken ct = default)
-            => _db.stories
-                  .Include(s => s.author).ThenInclude(a => a.account)
-                  .Include(s => s.author).ThenInclude(a => a.rank)
-                  .Include(s => s.story_tags).ThenInclude(st => st.tag)
-                  .Where(s => s.status == "pending")
-                  .OrderBy(s => s.created_at)
-                  .ToListAsync(ct);
+        public Task<List<story>> GetStoriesForModerationAsync(IEnumerable<string> statuses, CancellationToken ct = default)
+        {
+            var statusList = statuses?
+                .Where(s => !string.IsNullOrWhiteSpace(s))
+                .Select(s => s.Trim().ToLowerInvariant())
+                .Distinct()
+                .ToArray() ?? Array.Empty<string>();
+
+            if (statusList.Length == 0)
+            {
+                return Task.FromResult(new List<story>());
+            }
+
+            return _db.stories
+                .Include(s => s.author).ThenInclude(a => a.account)
+                .Include(s => s.author).ThenInclude(a => a.rank)
+                .Include(s => s.story_tags).ThenInclude(st => st.tag)
+                .Include(s => s.content_approves)
+                .Where(s => statusList.Contains(s.status.ToLower()))
+                .OrderByDescending(s => s.updated_at)
+                .ToListAsync(ct);
+        }
 
         public Task<bool> AuthorHasPendingStoryAsync(Guid authorId, Guid? excludeStoryId = null, CancellationToken ct = default)
         {
@@ -160,3 +211,5 @@ namespace Repository.Repositories
             => _db.SaveChangesAsync(ct);
     }
 }
+
+

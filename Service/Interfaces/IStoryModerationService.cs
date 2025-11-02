@@ -9,7 +9,8 @@ namespace Service.Interfaces
 {
     public interface IStoryModerationService
     {
-        Task<IReadOnlyList<StoryModerationQueueItem>> ListPendingAsync(CancellationToken ct = default);
-        Task ModerateAsync(Guid moderatorAccountId, Guid storyId, StoryModerationDecisionRequest request, CancellationToken ct = default);
+        Task<IReadOnlyList<StoryModerationQueueItem>> ListAsync(string? status = null, CancellationToken ct = default);
+        Task<StoryModerationQueueItem> GetAsync(Guid reviewId, CancellationToken ct = default);
+        Task ModerateAsync(Guid moderatorAccountId, Guid reviewId, StoryModerationDecisionRequest request, CancellationToken ct = default);
     }
 }

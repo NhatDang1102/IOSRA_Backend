@@ -20,9 +20,9 @@ namespace Main.Controllers
         }
 
         [HttpGet("{storyId:guid}")]
-        public async Task<IActionResult> List([FromRoute] Guid storyId, CancellationToken ct)
+        public async Task<IActionResult> List([FromRoute] Guid storyId, [FromQuery] string? status, CancellationToken ct)
         {
-            var chapters = await _chapterService.ListAsync(AccountId, storyId, ct);
+            var chapters = await _chapterService.ListAsync(AccountId, storyId, status, ct);
             return Ok(chapters);
         }
 
@@ -40,15 +40,8 @@ namespace Main.Controllers
             return Ok(chapter);
         }
 
-        [HttpPost("{storyId:guid}/{chapterId:guid}/submit")]
-        public Task<IActionResult> SubmitWithStory([FromRoute] Guid storyId, [FromRoute] Guid chapterId, [FromBody] ChapterSubmitRequest request, CancellationToken ct)
-            => SubmitInternalAsync(chapterId, request, ct);
-
-        [HttpPost("submit/{chapterId:guid}")]
-        public Task<IActionResult> Submit([FromRoute] Guid chapterId, [FromBody] ChapterSubmitRequest request, CancellationToken ct)
-            => SubmitInternalAsync(chapterId, request, ct);
-
-        private async Task<IActionResult> SubmitInternalAsync(Guid chapterId, ChapterSubmitRequest request, CancellationToken ct)
+        [HttpPost("{chapterId:guid}/submit")]
+        public async Task<IActionResult> Submit([FromRoute] Guid chapterId, [FromBody] ChapterSubmitRequest request, CancellationToken ct)
         {
             var chapter = await _chapterService.SubmitAsync(AccountId, chapterId, request, ct);
             return Ok(chapter);

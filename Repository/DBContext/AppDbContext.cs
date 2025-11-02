@@ -232,7 +232,6 @@ public partial class AppDbContext : DbContext
 
             entity.Property(e => e.review_id).ValueGeneratedNever(); 
             entity.Property(e => e.created_at).HasDefaultValueSql("CURRENT_TIMESTAMP");
-            entity.Property(e => e.source).HasDefaultValueSql("'human'");
             entity.Property(e => e.status).HasDefaultValueSql("'pending'");
             entity.Property(e => e.moderator_note).HasColumnType("text");
 

@@ -1,5 +1,6 @@
-using Contract.DTOs.Request.Story;
+﻿using Contract.DTOs.Request.Story;
 using Contract.DTOs.Respond.Story;
+using Repository.Entities;
 using Repository.Interfaces;
 using Service.Exceptions;
 using Service.Interfaces;
@@ -22,77 +23,83 @@ namespace Service.Services
             _mailSender = mailSender;
         }
 
-        public async Task<IReadOnlyList<StoryModerationQueueItem>> ListPendingAsync(CancellationToken ct = default)
+        private static readonly string[] AllowedStatuses = { "pending", "published", "rejected" };
+
+        public async Task<IReadOnlyList<StoryModerationQueueItem>> ListAsync(string? status, CancellationToken ct = default)
         {
-            var stories = await _storyRepository.GetStoriesPendingHumanReviewAsync(ct);
+            var statuses = NormalizeStatuses(status);
+            var stories = await _storyRepository.GetStoriesForModerationAsync(statuses, ct);
             var response = new List<StoryModerationQueueItem>(stories.Count);
 
             foreach (var story in stories)
             {
-                var approvals = await _storyRepository.GetContentApprovalsForStoryAsync(story.story_id, ct);
-                var aiReview = approvals.FirstOrDefault(a => a.source == "ai");
-                var pending = approvals.FirstOrDefault(a => a.source == "human" && a.status == "pending");
+                var approval = story.content_approves?
+                    .OrderByDescending(c => c.created_at)
+                    .FirstOrDefault();
 
-                var tags = story.story_tags?
-                    .Where(st => st.tag != null)
-                    .Select(st => new StoryTagResponse
-                    {
-                        TagId = st.tag_id,
-                        TagName = st.tag.tag_name
-                    })
-                    .OrderBy(t => t.TagName, StringComparer.OrdinalIgnoreCase)
-                    .ToArray() ?? Array.Empty<StoryTagResponse>();
-
-                response.Add(new StoryModerationQueueItem
+                if (approval == null)
                 {
-                    StoryId = story.story_id,
-                    Title = story.title,
-                    Description = story.desc,
-                    AuthorId = story.author_id,
-                    AuthorUsername = story.author.account.username,
-                    CoverUrl = story.cover_url,
-                    AiScore = aiReview?.ai_score,
-                    AiResult = aiReview?.status,
-                    SubmittedAt = pending?.created_at ?? story.updated_at,
-                    PendingNote = pending?.moderator_note,
-                    Tags = tags
-                });
+                    continue;
+                }
+
+                response.Add(MapQueueItem(story, approval));
             }
 
             return response;
         }
 
-        public async Task ModerateAsync(Guid moderatorAccountId, Guid storyId, StoryModerationDecisionRequest request, CancellationToken ct = default)
+        public async Task<StoryModerationQueueItem> GetAsync(Guid reviewId, CancellationToken ct = default)
         {
-            var story = await _storyRepository.GetStoryWithDetailsAsync(storyId, ct)
-                        ?? throw new AppException("StoryNotFound", "Story was not found.", 404);
+            var approval = await _storyRepository.GetContentApprovalByIdAsync(reviewId, ct)
+                           ?? throw new AppException("ModerationRequestNotFound", "Moderation request was not found.", 404);
 
+            if (!string.Equals(approval.approve_type, "story", StringComparison.OrdinalIgnoreCase))
+            {
+                throw new AppException("InvalidModerationType", "Moderation request is not associated with a story.", 400);
+            }
+
+            var story = approval.story ?? throw new InvalidOperationException("Story navigation was not loaded for moderation entry.");
+            return MapQueueItem(story, approval);
+        }
+
+        public async Task ModerateAsync(Guid moderatorAccountId, Guid reviewId, StoryModerationDecisionRequest request, CancellationToken ct = default)
+        {
+            var approval = await _storyRepository.GetContentApprovalByIdAsync(reviewId, ct)
+                           ?? throw new AppException("ModerationRequestNotFound", "Moderation request was not found.", 404);
+
+            if (!string.Equals(approval.approve_type, "story", StringComparison.OrdinalIgnoreCase))
+            {
+                throw new AppException("InvalidModerationType", "Moderation request is not associated with a story.", 400);
+            }
+
+            if (!string.Equals(approval.status, "pending", StringComparison.OrdinalIgnoreCase))
+            {
+                throw new AppException("ModerationAlreadyHandled", "This moderation request has already been processed.", 400);
+            }
+
+            var story = approval.story ?? throw new InvalidOperationException("Story navigation was not loaded for moderation entry.");
             if (story.status != "pending")
             {
                 throw new AppException("StoryNotPending", "Story is not awaiting moderation.", 400);
             }
 
-            var approvals = await _storyRepository.GetContentApprovalsForStoryAsync(story.story_id, ct);
-            var pending = approvals.FirstOrDefault(a => a.source == "human" && a.status == "pending");
-            if (pending == null)
-            {
-                throw new AppException("PendingEntryMissing", "No pending moderation entry was found for this story.", 400);
-            }
+            approval.status = request.Approve ? "approved" : "rejected";
+            var humanNote = string.IsNullOrWhiteSpace(request.ModeratorNote) ? null : request.ModeratorNote.Trim();
+            approval.moderator_note = humanNote;
+            approval.moderator_id = moderatorAccountId;
+            approval.created_at = DateTime.UtcNow;
 
-            pending.status = request.Approve ? "approved" : "rejected";
-            pending.moderator_id = moderatorAccountId;
-            pending.moderator_note = string.IsNullOrWhiteSpace(request.ModeratorNote) ? null : request.ModeratorNote.Trim();
-
-            var authorRank = story.author.rank?.rank_name;
-            story.is_premium = !string.IsNullOrWhiteSpace(authorRank) && !string.Equals(authorRank, "Casual", StringComparison.OrdinalIgnoreCase);
             if (request.Approve)
             {
                 story.status = "published";
                 story.published_at ??= DateTime.UtcNow;
+                var authorRank = story.author.rank?.rank_name;
+                story.is_premium = !string.IsNullOrWhiteSpace(authorRank) && !string.Equals(authorRank, "Casual", StringComparison.OrdinalIgnoreCase);
             }
             else
             {
                 story.status = "rejected";
+                story.published_at = null;
             }
             story.updated_at = DateTime.UtcNow;
 
@@ -105,9 +112,92 @@ namespace Service.Services
             }
             else
             {
-                await _mailSender.SendStoryRejectedEmailAsync(authorEmail, story.title, pending.moderator_note);
+                await _mailSender.SendStoryRejectedEmailAsync(authorEmail, story.title, approval.moderator_note);
             }
+        }
+
+        private static IReadOnlyList<string> NormalizeStatuses(string? status)
+        {
+            if (string.IsNullOrWhiteSpace(status))
+            {
+                return AllowedStatuses;
+            }
+
+            var normalized = status.Trim();
+            if (!AllowedStatuses.Contains(normalized, StringComparer.OrdinalIgnoreCase))
+            {
+                throw new AppException("InvalidStatus", $"Unsupported status '{status}'. Allowed values are: {string.Join(", ", AllowedStatuses)}.", 400);
+            }
+
+            return new[] { normalized.ToLowerInvariant() };
+        }
+
+        private static StoryModerationQueueItem MapQueueItem(story story, content_approve approval)
+        {
+            var tags = story.story_tags?
+                .Where(st => st.tag != null)
+                .Select(st => new StoryTagResponse
+                {
+                    TagId = st.tag_id,
+                    TagName = st.tag.tag_name
+                })
+                .OrderBy(t => t.TagName, StringComparer.OrdinalIgnoreCase)
+                .ToArray() ?? Array.Empty<StoryTagResponse>();
+
+            return new StoryModerationQueueItem
+            {
+                ReviewId = approval.review_id,
+                StoryId = story.story_id,
+                Title = story.title,
+                Description = story.desc,
+                AuthorId = story.author_id,
+                AuthorUsername = story.author.account.username,
+                CoverUrl = story.cover_url,
+                AiScore = approval.ai_score,
+                AiResult = ResolveAiDecision(approval),
+                Status = story.status,
+                SubmittedAt = approval.created_at,
+                PendingNote = approval.moderator_note,
+                Tags = tags
+            };
+        }
+
+        private static string? ResolveAiDecision(content_approve? approval)
+        {
+            if (approval == null)
+            {
+                return null;
+            }
+
+            if (approval.ai_score is not decimal score)
+            {
+                return null;
+            }
+
+            if (score < 0.50m)
+            {
+                return "rejected";
+            }
+
+            if (score >= 0.70m)
+            {
+                return "approved";
+            }
+
+            return "flagged";
         }
     }
 }
+
+
+
+
+
+
+
+
+
+
+
+
 

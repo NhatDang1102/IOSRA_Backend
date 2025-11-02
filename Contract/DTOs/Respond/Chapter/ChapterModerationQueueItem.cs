@@ -4,6 +4,7 @@ namespace Contract.DTOs.Respond.Chapter
 {
     public class ChapterModerationQueueItem
     {
+        public Guid ReviewId { get; set; }
         public Guid ChapterId { get; set; }
         public Guid StoryId { get; set; }
         public string StoryTitle { get; set; } = null!;

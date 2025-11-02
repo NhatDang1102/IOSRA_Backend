@@ -1,4 +1,4 @@
-using Contract.DTOs.Request.Chapter;
+﻿using Contract.DTOs.Request.Chapter;
 using Contract.DTOs.Respond.Chapter;
 using Repository.Entities;
 using Repository.Interfaces;
@@ -20,6 +20,8 @@ namespace Service.Services
         private readonly IStoryRepository _storyRepository;
         private readonly IChapterContentStorage _contentStorage;
         private readonly IOpenAiModerationService _openAiModerationService;
+
+        private static readonly string[] AuthorChapterAllowedStatuses = { "draft", "pending", "rejected", "published", "hidden", "removed" };
 
         public ChapterService(
             IChapterRepository chapterRepository,
@@ -125,7 +127,7 @@ namespace Service.Services
             return MapChapter(chapter, approvals);
         }
 
-        public async Task<IReadOnlyList<ChapterListItemResponse>> ListAsync(Guid authorAccountId, Guid storyId, CancellationToken ct = default)
+        public async Task<IReadOnlyList<ChapterListItemResponse>> ListAsync(Guid authorAccountId, Guid storyId, string? status, CancellationToken ct = default)
         {
             var author = await _storyRepository.GetAuthorAsync(authorAccountId, ct)
                          ?? throw new AppException("AuthorNotFound", "Author profile is not registered.", 404);
@@ -133,8 +135,9 @@ namespace Service.Services
             var story = await _storyRepository.GetStoryForAuthorAsync(storyId, author.account_id, ct)
                         ?? throw new AppException("StoryNotFound", "Story was not found.", 404);
 
-            var chapters = await _chapterRepository.GetByStoryAsync(story.story_id, ct);
-            return chapters.Select(ch => MapChapterListItem(ch)).ToArray();
+            var filterStatuses = NormalizeChapterStatuses(status);
+            var chapters = await _chapterRepository.GetByStoryAsync(story.story_id, filterStatuses, ct);
+            return chapters.Select(MapChapterListItem).ToArray();
         }
 
         public async Task<ChapterResponse> GetAsync(Guid authorAccountId, Guid storyId, Guid chapterId, CancellationToken ct = default)
@@ -183,62 +186,66 @@ namespace Service.Services
             var content = await _contentStorage.DownloadAsync(chapter.content_url, ct);
             var moderation = await _openAiModerationService.ModerateChapterAsync(chapter.title, content, ct);
             var aiScoreDecimal = (decimal)Math.Round(moderation.Score, 2, MidpointRounding.AwayFromZero);
+            var submitNote = string.IsNullOrWhiteSpace(request?.Notes) ? null : request!.Notes!.Trim();
+            var timestamp = DateTime.UtcNow;
 
-            chapter.updated_at = DateTime.UtcNow;
+            chapter.updated_at = timestamp;
             chapter.ai_score = aiScoreDecimal;
             chapter.ai_feedback = moderation.Explanation;
-            chapter.submitted_at = DateTime.UtcNow;
+            chapter.submitted_at = timestamp;
 
-            if (moderation.ShouldReject)
+            var shouldReject = moderation.ShouldReject || aiScoreDecimal < 0.50m;
+            var autoApprove = !shouldReject && aiScoreDecimal >= 0.70m;
+
+            if (shouldReject)
             {
                 chapter.status = "rejected";
-                await _chapterRepository.UpdateAsync(chapter, ct);
+                chapter.published_at = null;
 
-                await _chapterRepository.AddContentApproveAsync(new content_approve
-                {
-                    approve_type = "chapter",
-                    story_id = chapter.story_id,
-                    chapter_id = chapter.chapter_id,
-                    source = "ai",
-                    status = "rejected",
-                    ai_score = aiScoreDecimal,
-                    moderator_note = moderation.Explanation
-                }, ct);
+                var rejectionApproval = await UpsertChapterApprovalAsync(chapter, "rejected", aiScoreDecimal, moderation.Explanation, null, ct);
 
                 throw new AppException("ChapterRejectedByAi", "Chapter was rejected by automated moderation.", 400, new
                 {
+                    reviewId = rejectionApproval.review_id,
                     score = Math.Round(moderation.Score, 2),
                     explanation = moderation.Explanation,
                     violations = moderation.Violations.Select(v => new { v.Word, v.Count, v.Samples })
                 });
             }
 
-            chapter.status = "pending";
-            await _chapterRepository.UpdateAsync(chapter, ct);
-
-            await _chapterRepository.AddContentApproveAsync(new content_approve
+            if (autoApprove)
             {
-                approve_type = "chapter",
-                story_id = chapter.story_id,
-                chapter_id = chapter.chapter_id,
-                source = "ai",
-                status = "approved",
-                ai_score = aiScoreDecimal,
-                moderator_note = moderation.Explanation
-            }, ct);
-
-            await _chapterRepository.AddContentApproveAsync(new content_approve
+                chapter.status = "published";
+                chapter.published_at ??= DateTime.UtcNow;
+                await UpsertChapterApprovalAsync(chapter, "approved", aiScoreDecimal, moderation.Explanation, null, ct);
+            }
+            else
             {
-                approve_type = "chapter",
-                story_id = chapter.story_id,
-                chapter_id = chapter.chapter_id,
-                source = "human",
-                status = "pending",
-                moderator_note = string.IsNullOrWhiteSpace(request.Notes) ? null : request.Notes.Trim()
-            }, ct);
+                chapter.status = "pending";
+                chapter.published_at = null;
+                chapter.ai_feedback = CombineNotes(moderation.Explanation, submitNote);
+
+                await UpsertChapterApprovalAsync(chapter, "pending", aiScoreDecimal, moderation.Explanation, submitNote, ct);
+            }
 
             var approvals = await _chapterRepository.GetContentApprovalsForChapterAsync(chapter.chapter_id, ct);
             return MapChapter(chapter, approvals);
+        }
+
+        private static IReadOnlyList<string>? NormalizeChapterStatuses(string? status)
+        {
+            if (string.IsNullOrWhiteSpace(status))
+            {
+                return null;
+            }
+
+            var normalized = status.Trim();
+            if (!AuthorChapterAllowedStatuses.Contains(normalized, StringComparer.OrdinalIgnoreCase))
+            {
+                throw new AppException("InvalidStatus", $"Unsupported status '{status}'. Allowed values are: {string.Join(", ", AuthorChapterAllowedStatuses)}.", 400);
+            }
+
+            return new[] { normalized.ToLowerInvariant() };
         }
 
         private static ChapterResponse MapChapter(chapter chapter, IReadOnlyList<content_approve> approvals)
@@ -289,6 +296,62 @@ namespace Service.Services
             };
         }
 
+        private async Task<content_approve> UpsertChapterApprovalAsync(chapter chapter, string status, decimal aiScore, string? aiNote, string? moderatorNote, CancellationToken ct)
+        {
+            var approval = await _chapterRepository.GetContentApprovalForChapterAsync(chapter.chapter_id, ct);
+            var timestamp = DateTime.UtcNow;
+
+            if (approval == null)
+            {
+                approval = new content_approve
+                {
+                    approve_type = "chapter",
+                    story_id = chapter.story_id,
+                    chapter_id = chapter.chapter_id,
+                    status = status,
+                    ai_score = aiScore,
+                    ai_note = aiNote,
+                    moderator_note = moderatorNote,
+                    moderator_id = null,
+                    created_at = timestamp
+                };
+
+                await _chapterRepository.AddContentApproveAsync(approval, ct);
+            }
+            else
+            {
+                approval.status = status;
+                approval.ai_score = aiScore;
+                approval.ai_note = aiNote;
+                approval.moderator_note = moderatorNote;
+                approval.moderator_id = null;
+                approval.created_at = timestamp;
+
+                await _chapterRepository.SaveChangesAsync(ct);
+            }
+
+            return approval;
+        }
+
+        private static string? CombineNotes(params string?[] notes)
+        {
+            if (notes is null || notes.Length == 0)
+            {
+                return null;
+            }
+
+            var parts = notes
+                .Where(n => !string.IsNullOrWhiteSpace(n))
+                .Select(n => n!.Trim())
+                .Where(n => n.Length > 0)
+                .Distinct(StringComparer.Ordinal)
+                .ToArray();
+
+            return parts.Length == 0
+                ? null
+                : string.Join(Environment.NewLine + Environment.NewLine, parts);
+        }
+
         private static int CountWords(string content)
         {
             var matches = Regex.Matches(content, @"[\p{L}\p{N}']+");
@@ -306,6 +369,9 @@ namespace Service.Services
         }
     }
 }
+
+
+
 
 
 

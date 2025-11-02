@@ -19,17 +19,24 @@ namespace Main.Controllers
             _chapterModerationService = chapterModerationService;
         }
 
-        [HttpGet("pending")]
-        public async Task<IActionResult> ListPending(CancellationToken ct)
+        [HttpGet]
+        public async Task<IActionResult> List([FromQuery] string? status, CancellationToken ct)
         {
-            var pending = await _chapterModerationService.ListPendingAsync(ct);
-            return Ok(pending);
+            var items = await _chapterModerationService.ListAsync(status, ct);
+            return Ok(items);
         }
 
-        [HttpPost("{chapterId:guid}/decision")]
-        public async Task<IActionResult> Decide([FromRoute] Guid chapterId, [FromBody] ChapterModerationDecisionRequest request, CancellationToken ct)
+        [HttpGet("{reviewId:guid}")]
+        public async Task<IActionResult> Get([FromRoute] Guid reviewId, CancellationToken ct)
         {
-            await _chapterModerationService.ModerateAsync(AccountId, chapterId, request, ct);
+            var item = await _chapterModerationService.GetAsync(reviewId, ct);
+            return Ok(item);
+        }
+
+        [HttpPost("{reviewId:guid}/decision")]
+        public async Task<IActionResult> Decide([FromRoute] Guid reviewId, [FromBody] ChapterModerationDecisionRequest request, CancellationToken ct)
+        {
+            await _chapterModerationService.ModerateAsync(AccountId, reviewId, request, ct);
             return Ok(new { message = request.Approve ? "Chapter approved." : "Chapter rejected." });
         }
     }

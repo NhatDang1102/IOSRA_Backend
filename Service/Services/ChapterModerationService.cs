@@ -1,4 +1,4 @@
-using Contract.DTOs.Request.Chapter;
+﻿using Contract.DTOs.Request.Chapter;
 using Contract.DTOs.Respond.Chapter;
 using Repository.Entities;
 using Repository.Interfaces;
@@ -23,29 +23,70 @@ namespace Service.Services
             _mailSender = mailSender;
         }
 
-        public async Task<IReadOnlyList<ChapterModerationQueueItem>> ListPendingAsync(CancellationToken ct = default)
+        private static readonly string[] AllowedStatuses = { "pending", "published", "rejected" };
+
+        public async Task<IReadOnlyList<ChapterModerationQueueItem>> ListAsync(string? status, CancellationToken ct = default)
         {
-            var chapters = await _chapterRepository.GetPendingForModerationAsync(ct);
-            return chapters.Select(MapQueueItem).ToArray();
+            var statuses = NormalizeStatuses(status);
+            var chapters = await _chapterRepository.GetForModerationAsync(statuses, ct);
+            var response = new List<ChapterModerationQueueItem>(chapters.Count);
+
+            foreach (var chapter in chapters)
+            {
+                var review = chapter.content_approves?
+                    .OrderByDescending(c => c.created_at)
+                    .FirstOrDefault();
+                if (review == null)
+                {
+                    continue;
+                }
+
+                response.Add(MapQueueItem(chapter, review));
+            }
+
+            return response;
         }
 
-        public async Task ModerateAsync(Guid moderatorAccountId, Guid chapterId, ChapterModerationDecisionRequest request, CancellationToken ct = default)
+        public async Task<ChapterModerationQueueItem> GetAsync(Guid reviewId, CancellationToken ct = default)
         {
-            var chapter = await _chapterRepository.GetByIdAsync(chapterId, ct)
-                          ?? throw new AppException("ChapterNotFound", "Chapter was not found.", 404);
+            var approval = await _chapterRepository.GetContentApprovalByIdAsync(reviewId, ct)
+                           ?? throw new AppException("ModerationRequestNotFound", "Moderation request was not found.", 404);
 
+            if (!string.Equals(approval.approve_type, "chapter", StringComparison.OrdinalIgnoreCase))
+            {
+                throw new AppException("InvalidModerationType", "Moderation request is not associated with a chapter.", 400);
+            }
+
+            var chapter = approval.chapter ?? throw new InvalidOperationException("Chapter navigation was not loaded for moderation entry.");
+            return MapQueueItem(chapter, approval);
+        }
+
+        public async Task ModerateAsync(Guid moderatorAccountId, Guid reviewId, ChapterModerationDecisionRequest request, CancellationToken ct = default)
+        {
+            var approval = await _chapterRepository.GetContentApprovalByIdAsync(reviewId, ct)
+                           ?? throw new AppException("ModerationRequestNotFound", "Moderation request was not found.", 404);
+
+            if (!string.Equals(approval.approve_type, "chapter", StringComparison.OrdinalIgnoreCase))
+            {
+                throw new AppException("InvalidModerationType", "Moderation request is not associated with a chapter.", 400);
+            }
+
+            if (!string.Equals(approval.status, "pending", StringComparison.OrdinalIgnoreCase))
+            {
+                throw new AppException("ModerationAlreadyHandled", "This moderation request has already been processed.", 400);
+            }
+
+            var chapter = approval.chapter ?? throw new InvalidOperationException("Chapter navigation was not loaded for moderation entry.");
             if (!string.Equals(chapter.status, "pending", StringComparison.OrdinalIgnoreCase))
             {
                 throw new AppException("ChapterNotPending", "Chapter is not awaiting moderation.", 400);
             }
 
-            var approvals = await _chapterRepository.GetContentApprovalsForChapterAsync(chapter.chapter_id, ct);
-            var pending = approvals.FirstOrDefault(a => a.source == "human" && a.status == "pending")
-                          ?? throw new AppException("PendingEntryMissing", "No pending moderation entry was found for this chapter.", 400);
-
-            pending.status = request.Approve ? "approved" : "rejected";
-            pending.moderator_id = moderatorAccountId;
-            pending.moderator_note = string.IsNullOrWhiteSpace(request.ModeratorNote) ? pending.moderator_note : request.ModeratorNote!.Trim();
+            approval.status = request.Approve ? "approved" : "rejected";
+            var humanNote = string.IsNullOrWhiteSpace(request.ModeratorNote) ? null : request.ModeratorNote.Trim();
+            approval.moderator_note = humanNote;
+            approval.moderator_id = moderatorAccountId;
+            approval.created_at = DateTime.UtcNow;
 
             if (request.Approve)
             {
@@ -55,12 +96,16 @@ namespace Service.Services
             else
             {
                 chapter.status = "rejected";
-                chapter.ai_feedback = string.IsNullOrWhiteSpace(request.ModeratorNote) ? chapter.ai_feedback : request.ModeratorNote!.Trim();
+                chapter.published_at = null;
+                if (!string.IsNullOrWhiteSpace(humanNote))
+                {
+                    chapter.ai_feedback = humanNote;
+                }
             }
 
             chapter.updated_at = DateTime.UtcNow;
 
-            await _chapterRepository.UpdateAsync(chapter, ct);
+            await _chapterRepository.SaveChangesAsync(ct);
 
             var story = chapter.story ?? throw new InvalidOperationException("Chapter story navigation was not loaded.");
             var author = story.author ?? throw new InvalidOperationException("Story author navigation was not loaded.");
@@ -72,19 +117,40 @@ namespace Service.Services
             }
             else
             {
-                await _mailSender.SendChapterRejectedEmailAsync(authorAccount.email, story.title, chapter.title, request.ModeratorNote);
+                await _mailSender.SendChapterRejectedEmailAsync(authorAccount.email, story.title, chapter.title, approval.moderator_note);
             }
         }
 
-        private static ChapterModerationQueueItem MapQueueItem(chapter chapter)
+        private static IReadOnlyList<string> NormalizeStatuses(string? status)
+        {
+            if (string.IsNullOrWhiteSpace(status))
+            {
+                return AllowedStatuses;
+            }
+
+            var normalized = status.Trim();
+            if (!AllowedStatuses.Contains(normalized, StringComparer.OrdinalIgnoreCase))
+            {
+                throw new AppException("InvalidStatus", $"Unsupported status '{status}'. Allowed values are: {string.Join(", ", AllowedStatuses)}.", 400);
+            }
+
+            return new[] { normalized.ToLowerInvariant() };
+        }
+
+        private static ChapterModerationQueueItem MapQueueItem(chapter chapter, content_approve review)
         {
             var story = chapter.story ?? throw new InvalidOperationException("Chapter story navigation was not loaded.");
             var author = story.author ?? throw new InvalidOperationException("Story author navigation was not loaded.");
             var account = author.account ?? throw new InvalidOperationException("Author account navigation was not loaded.");
             var language = chapter.language ?? throw new InvalidOperationException("Chapter language navigation was not loaded.");
+            var aiScore = review.ai_score ?? chapter.ai_score;
+            var aiFeedback = review.ai_note ?? chapter.ai_feedback;
+
+            var submittedAt = chapter.submitted_at ?? (review.created_at == default ? chapter.updated_at : review.created_at);
 
             return new ChapterModerationQueueItem
             {
+                ReviewId = review.review_id,
                 ChapterId = chapter.chapter_id,
                 StoryId = chapter.story_id,
                 StoryTitle = story.title,
@@ -97,12 +163,14 @@ namespace Service.Services
                 LanguageCode = language.lang_code,
                 LanguageName = language.lang_name,
                 PriceDias = (int)chapter.dias_price,
-                AiScore = chapter.ai_score,
-                AiFeedback = chapter.ai_feedback,
+                AiScore = aiScore,
+                AiFeedback = aiFeedback,
                 Status = chapter.status,
-                SubmittedAt = chapter.submitted_at ?? chapter.updated_at,
+                SubmittedAt = submittedAt,
                 CreatedAt = chapter.created_at
             };
         }
     }
 }
+
+

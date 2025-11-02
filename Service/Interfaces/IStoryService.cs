@@ -11,7 +11,7 @@ namespace Service.Interfaces
     {
         Task<StoryResponse> CreateAsync(Guid authorAccountId, StoryCreateRequest request, CancellationToken ct = default);
         Task<StoryResponse> SubmitForReviewAsync(Guid authorAccountId, Guid storyId, StorySubmitRequest request, CancellationToken ct = default);
-        Task<IReadOnlyList<StoryListItemResponse>> ListAsync(Guid authorAccountId, CancellationToken ct = default);
+        Task<IReadOnlyList<StoryListItemResponse>> ListAsync(Guid authorAccountId, string? status = null, CancellationToken ct = default);
         Task<StoryResponse> GetAsync(Guid authorAccountId, Guid storyId, CancellationToken ct = default);
         Task<StoryResponse> CompleteAsync(Guid authorAccountId, Guid storyId, CancellationToken ct = default);
     }

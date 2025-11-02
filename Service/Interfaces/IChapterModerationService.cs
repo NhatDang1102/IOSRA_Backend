@@ -9,7 +9,8 @@ namespace Service.Interfaces
 {
     public interface IChapterModerationService
     {
-        Task<IReadOnlyList<ChapterModerationQueueItem>> ListPendingAsync(CancellationToken ct = default);
-        Task ModerateAsync(Guid moderatorAccountId, Guid chapterId, ChapterModerationDecisionRequest request, CancellationToken ct = default);
+        Task<IReadOnlyList<ChapterModerationQueueItem>> ListAsync(string? status = null, CancellationToken ct = default);
+        Task<ChapterModerationQueueItem> GetAsync(Guid reviewId, CancellationToken ct = default);
+        Task ModerateAsync(Guid moderatorAccountId, Guid reviewId, ChapterModerationDecisionRequest request, CancellationToken ct = default);
     }
 }

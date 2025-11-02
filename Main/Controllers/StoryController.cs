@@ -20,9 +20,9 @@ namespace Main.Controllers
         }
 
         [HttpGet]
-        public async Task<IActionResult> List(CancellationToken ct)
+        public async Task<IActionResult> List([FromQuery] string? status, CancellationToken ct)
         {
-            var stories = await _storyService.ListAsync(AccountId, ct);
+            var stories = await _storyService.ListAsync(AccountId, status, ct);
             return Ok(stories);
         }
 
