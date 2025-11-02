@@ -194,7 +194,6 @@ namespace Service.Services
             var content = await _contentStorage.DownloadAsync(chapter.content_url, ct);
             var moderation = await _openAiModerationService.ModerateChapterAsync(chapter.title, content, ct);
             var aiScoreDecimal = (decimal)Math.Round(moderation.Score, 2, MidpointRounding.AwayFromZero);
-            var submitNote = string.IsNullOrWhiteSpace(request?.Notes) ? null : request!.Notes!.Trim();
             var timestamp = DateTime.UtcNow;
 
             chapter.updated_at = timestamp;
@@ -233,10 +232,10 @@ namespace Service.Services
             {
                 chapter.status = "pending";
                 chapter.published_at = null;
-                chapter.ai_feedback = CombineNotes(moderation.Explanation, submitNote);
+                chapter.ai_feedback = moderation.Explanation;
                 await _chapterRepository.UpdateAsync(chapter, ct);
 
-                await UpsertChapterApprovalAsync(chapter, "pending", aiScoreDecimal, moderation.Explanation, submitNote, ct);
+                await UpsertChapterApprovalAsync(chapter, "pending", aiScoreDecimal, moderation.Explanation, null, ct);
             }
 
             var approvals = await _chapterRepository.GetContentApprovalsForChapterAsync(chapter.chapter_id, ct);
@@ -342,25 +341,6 @@ namespace Service.Services
             }
 
             return approval;
-        }
-
-        private static string? CombineNotes(params string?[] notes)
-        {
-            if (notes is null || notes.Length == 0)
-            {
-                return null;
-            }
-
-            var parts = notes
-                .Where(n => !string.IsNullOrWhiteSpace(n))
-                .Select(n => n!.Trim())
-                .Where(n => n.Length > 0)
-                .Distinct(StringComparer.Ordinal)
-                .ToArray();
-
-            return parts.Length == 0
-                ? null
-                : string.Join(Environment.NewLine + Environment.NewLine, parts);
         }
 
         private static int CountWords(string content)

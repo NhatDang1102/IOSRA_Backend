@@ -109,8 +109,6 @@ namespace Service.Services
             var story = await _storyRepository.GetStoryForAuthorAsync(storyId, author.account_id, ct)
                         ?? throw new AppException("StoryNotFound", "Story was not found.", 404);
 
-            var submitNote = string.IsNullOrWhiteSpace(request?.Notes) ? null : request.Notes!.Trim();
-
             if (story.status == "pending")
             {
                 throw new AppException("StoryPending", "Story is already pending moderation.", 400);
@@ -184,7 +182,7 @@ namespace Service.Services
                 story.published_at = null;
                 await _storyRepository.UpdateStoryAsync(story, ct);
 
-                await UpsertStoryApprovalAsync(story.story_id, "pending", aiScore, aiNote, submitNote, ct);
+                await UpsertStoryApprovalAsync(story.story_id, "pending", aiScore, aiNote, null, ct);
             }
 
             var saved = await _storyRepository.GetStoryForAuthorAsync(story.story_id, author.account_id, ct)
