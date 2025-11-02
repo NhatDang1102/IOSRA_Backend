@@ -157,6 +157,17 @@ namespace Repository.Repositories
                   .Select(c => (DateTime?)c.created_at)
                   .FirstOrDefaultAsync(ct);
 
+        public Task<DateTime?> GetLastAuthorChapterRejectedAtAsync(Guid authorId, CancellationToken ct = default)
+            => _db.content_approves
+                  .Where(c => c.approve_type == "chapter" &&
+                              c.status == "rejected" &&
+                              c.chapter != null &&
+                              c.chapter.story != null &&
+                              c.chapter.story.author_id == authorId)
+                  .OrderByDescending(c => c.created_at)
+                  .Select(c => (DateTime?)c.created_at)
+                  .FirstOrDefaultAsync(ct);
+
         public Task SaveChangesAsync(CancellationToken ct = default)
             => _db.SaveChangesAsync(ct);
     }

@@ -22,6 +22,7 @@ namespace Repository.Interfaces
         Task<content_approve?> GetContentApprovalByIdAsync(Guid reviewId, CancellationToken ct = default);
         Task UpdateAsync(chapter entity, CancellationToken ct = default);
         Task<DateTime?> GetLastRejectedAtAsync(Guid chapterId, CancellationToken ct = default);
+        Task<DateTime?> GetLastAuthorChapterRejectedAtAsync(Guid authorId, CancellationToken ct = default);
         Task SaveChangesAsync(CancellationToken ct = default);
     }
 }

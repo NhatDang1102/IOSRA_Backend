@@ -4,6 +4,7 @@ using Repository.Entities;
 using Repository.Interfaces;
 using Service.Exceptions;
 using Service.Interfaces;
+using Microsoft.AspNetCore.Http;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -41,6 +42,15 @@ namespace Service.Services
             if (author.restricted)
             {
                 throw new AppException("AuthorRestricted", "Your author account is restricted.", 403);
+            }
+
+            var lastRejectedAt = await _storyRepository.GetLastAuthorStoryRejectedAtAsync(author.account_id, ct);
+            if (lastRejectedAt.HasValue && lastRejectedAt.Value > DateTime.UtcNow.AddHours(-24))
+            {
+                throw new AppException("StoryCreationCooldown", "You must wait 24 hours after a rejection before creating a new story.", 400, new
+                {
+                    availableAtUtc = lastRejectedAt.Value.AddHours(24)
+                });
             }
 
             if (await _storyRepository.AuthorHasPendingStoryAsync(author.account_id, null, ct))
@@ -111,6 +121,11 @@ namespace Service.Services
                 throw new AppException("StoryPublished", "Published stories cannot be resubmitted.", 400);
             }
 
+            if (story.status == "rejected")
+            {
+                throw new AppException("StoryRejectedLocked", "Rejected stories cannot be resubmitted. Please create a new story.", 400);
+            }
+
             if (await _storyRepository.AuthorHasPendingStoryAsync(author.account_id, story.story_id, ct))
             {
                 throw new AppException("PendingStoryLimit", "You already have another story waiting for moderation.", 400);
@@ -121,30 +136,18 @@ namespace Service.Services
                 throw new AppException("PublishedStoryIncomplete", "Please complete your published story before submitting a new one.", 400);
             }
 
-            if (story.status == "rejected")
-            {
-                var lastRejectedAt = await _storyRepository.GetLastStoryRejectedAtAsync(story.story_id, ct);
-                if (lastRejectedAt.HasValue && lastRejectedAt.Value > DateTime.UtcNow.AddDays(-7))
-                {
-                    throw new AppException("StoryRejectedCooldown", "Please wait 7 days before resubmitting this story.", 400, new
-                    {
-                        availableAtUtc = lastRejectedAt.Value.AddDays(7)
-                    });
-                }
-            }
-
             var aiResult = await _openAiModerationService.ModerateStoryAsync(story.title, story.desc, ct);
             var aiScore = (decimal)Math.Round(aiResult.Score, 2, MidpointRounding.AwayFromZero);
             var aiNote = aiResult.Explanation;
             var now = DateTime.UtcNow;
 
             story.updated_at = now;
-            content_approve approvalRecord;
 
             if (aiResult.ShouldReject || aiScore < 0.50m)
             {
                 story.status = "rejected";
                 story.published_at = null;
+                await _storyRepository.UpdateStoryAsync(story, ct);
 
                 var rejectionApproval = await UpsertStoryApprovalAsync(story.story_id, "rejected", aiScore, aiNote, null, ct);
 
@@ -171,15 +174,17 @@ namespace Service.Services
                 var authorRankName = author.rank?.rank_name;
                 story.is_premium = !string.IsNullOrWhiteSpace(authorRankName) &&
                                    !string.Equals(authorRankName, "Casual", StringComparison.OrdinalIgnoreCase);
+                await _storyRepository.UpdateStoryAsync(story, ct);
 
-                approvalRecord = await UpsertStoryApprovalAsync(story.story_id, "approved", aiScore, aiNote, null, ct);
+                await UpsertStoryApprovalAsync(story.story_id, "approved", aiScore, aiNote, null, ct);
             }
             else
             {
                 story.status = "pending";
                 story.published_at = null;
+                await _storyRepository.UpdateStoryAsync(story, ct);
 
-                approvalRecord = await UpsertStoryApprovalAsync(story.story_id, "pending", aiScore, aiNote, submitNote, ct);
+                await UpsertStoryApprovalAsync(story.story_id, "pending", aiScore, aiNote, submitNote, ct);
             }
 
             var saved = await _storyRepository.GetStoryForAuthorAsync(story.story_id, author.account_id, ct)
@@ -248,6 +253,39 @@ namespace Service.Services
             }
 
             story.status = "completed";
+            story.updated_at = DateTime.UtcNow;
+
+            await _storyRepository.UpdateStoryAsync(story, ct);
+
+            var approvals = await _storyRepository.GetContentApprovalsForStoryAsync(story.story_id, ct);
+            return MapStory(story, approvals);
+        }
+
+        public async Task<StoryResponse> UpdateCoverAsync(Guid authorAccountId, Guid storyId, IFormFile coverFile, CancellationToken ct = default)
+        {
+            if (coverFile == null || coverFile.Length == 0)
+            {
+                throw new AppException("CoverFileRequired", "Cover file must be provided.", 400);
+            }
+
+            var author = await RequireAuthorAsync(authorAccountId, ct);
+            if (author.restricted)
+            {
+                throw new AppException("AuthorRestricted", "Your author account is restricted.", 403);
+            }
+
+            var story = await _storyRepository.GetStoryForAuthorAsync(storyId, author.account_id, ct)
+                        ?? throw new AppException("StoryNotFound", "Story was not found.", 404);
+
+            if (!string.Equals(story.status, "draft", StringComparison.OrdinalIgnoreCase))
+            {
+                throw new AppException("StoryCoverUpdateNotAllowed", "Cover can only be replaced while the story is in draft status.", 400);
+            }
+
+            await using var stream = coverFile.OpenReadStream();
+            var coverUrl = await _imageUploader.UploadStoryCoverAsync(stream, coverFile.FileName, ct);
+
+            story.cover_url = coverUrl;
             story.updated_at = DateTime.UtcNow;
 
             await _storyRepository.UpdateStoryAsync(story, ct);

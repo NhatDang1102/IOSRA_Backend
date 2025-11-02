@@ -48,6 +48,15 @@ namespace Service.Services
                 throw new AppException("StoryNotPublished", "Chapters can only be created for published stories.", 400);
             }
 
+            var lastRejectedAt = await _chapterRepository.GetLastAuthorChapterRejectedAtAsync(author.account_id, ct);
+            if (lastRejectedAt.HasValue && lastRejectedAt.Value > DateTime.UtcNow.AddHours(-24))
+            {
+                throw new AppException("ChapterCreationCooldown", "You must wait 24 hours after a chapter rejection before creating a new chapter.", 400, new
+                {
+                    availableAtUtc = lastRejectedAt.Value.AddHours(24)
+                });
+            }
+
             if (await _chapterRepository.StoryHasPendingChapterAsync(story.story_id, ct))
             {
                 throw new AppException("ChapterPendingExists", "A chapter is already awaiting moderation for this story.", 400);
@@ -172,10 +181,9 @@ namespace Service.Services
                 throw new AppException("ChapterPendingExists", "Another chapter is already awaiting moderation.", 400);
             }
 
-            if (!string.Equals(chapter.status, "draft", StringComparison.OrdinalIgnoreCase) &&
-                !string.Equals(chapter.status, "rejected", StringComparison.OrdinalIgnoreCase))
+            if (!string.Equals(chapter.status, "draft", StringComparison.OrdinalIgnoreCase))
             {
-                throw new AppException("InvalidChapterState", "Only draft or rejected chapters can be submitted.", 400);
+                throw new AppException("InvalidChapterState", "Only draft chapters can be submitted. Create a new chapter if the previous one was rejected.", 400);
             }
 
             if (string.IsNullOrWhiteSpace(chapter.content_url))
@@ -201,6 +209,7 @@ namespace Service.Services
             {
                 chapter.status = "rejected";
                 chapter.published_at = null;
+                await _chapterRepository.UpdateAsync(chapter, ct);
 
                 var rejectionApproval = await UpsertChapterApprovalAsync(chapter, "rejected", aiScoreDecimal, moderation.Explanation, null, ct);
 
@@ -217,6 +226,7 @@ namespace Service.Services
             {
                 chapter.status = "published";
                 chapter.published_at ??= DateTime.UtcNow;
+                await _chapterRepository.UpdateAsync(chapter, ct);
                 await UpsertChapterApprovalAsync(chapter, "approved", aiScoreDecimal, moderation.Explanation, null, ct);
             }
             else
@@ -224,6 +234,7 @@ namespace Service.Services
                 chapter.status = "pending";
                 chapter.published_at = null;
                 chapter.ai_feedback = CombineNotes(moderation.Explanation, submitNote);
+                await _chapterRepository.UpdateAsync(chapter, ct);
 
                 await UpsertChapterApprovalAsync(chapter, "pending", aiScoreDecimal, moderation.Explanation, submitNote, ct);
             }

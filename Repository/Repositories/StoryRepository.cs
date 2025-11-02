@@ -198,6 +198,13 @@ namespace Repository.Repositories
                   .Select(c => (DateTime?)c.created_at)
                   .FirstOrDefaultAsync(ct);
 
+        public Task<DateTime?> GetLastAuthorStoryRejectedAtAsync(Guid authorId, CancellationToken ct = default)
+            => _db.content_approves
+                  .Where(c => c.approve_type == "story" && c.status == "rejected" && c.story != null && c.story.author_id == authorId)
+                  .OrderByDescending(c => c.created_at)
+                  .Select(c => (DateTime?)c.created_at)
+                  .FirstOrDefaultAsync(ct);
+
         public Task<int> GetChapterCountAsync(Guid storyId, CancellationToken ct = default)
             => _db.chapters.CountAsync(c => c.story_id == storyId, ct);
 

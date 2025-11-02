@@ -24,6 +24,7 @@ namespace Repository.Interfaces
         Task<bool> AuthorHasPendingStoryAsync(Guid authorId, Guid? excludeStoryId = null, CancellationToken ct = default);
         Task<bool> AuthorHasUncompletedPublishedStoryAsync(Guid authorId, CancellationToken ct = default);
         Task<DateTime?> GetLastStoryRejectedAtAsync(Guid storyId, CancellationToken ct = default);
+        Task<DateTime?> GetLastAuthorStoryRejectedAtAsync(Guid authorId, CancellationToken ct = default);
         Task<int> GetChapterCountAsync(Guid storyId, CancellationToken ct = default);
         Task<DateTime?> GetStoryPublishedAtAsync(Guid storyId, CancellationToken ct = default);
         Task SaveChangesAsync(CancellationToken ct = default);
