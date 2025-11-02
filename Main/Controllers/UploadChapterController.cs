@@ -10,11 +10,11 @@ namespace Main.Controllers
 {
     [Route("api/[controller]")]
     [Authorize(Roles = "author,AUTHOR")]
-    public class ChapterController : AppControllerBase
+    public class UploadChapterController : AppControllerBase
     {
         private readonly IChapterService _chapterService;
 
-        public ChapterController(IChapterService chapterService)
+        public UploadChapterController(IChapterService chapterService)
         {
             _chapterService = chapterService;
         }

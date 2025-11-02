@@ -10,11 +10,11 @@ namespace Main.Controllers
 {
     [Route("api/[controller]")]
     [Authorize(Roles = "author,AUTHOR")]
-    public class StoryController : AppControllerBase
+    public class UploadStoryController : AppControllerBase
     {
         private readonly IStoryService _storyService;
 
-        public StoryController(IStoryService storyService)
+        public UploadStoryController(IStoryService storyService)
         {
             _storyService = storyService;
         }
