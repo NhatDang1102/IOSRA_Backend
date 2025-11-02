@@ -1,4 +1,4 @@
-﻿using Contract.DTOs.Request.Chapter;
+using Contract.DTOs.Request.Chapter;
 using Contract.DTOs.Respond.Chapter;
 using Repository.Entities;
 using Repository.Interfaces;
@@ -68,7 +68,6 @@ namespace Service.Services
                 throw new AppException("InvalidChapterTitle", "Chapter title must not be empty.", 400);
             }
 
-            var summary = string.IsNullOrWhiteSpace(request.Summary) ? null : request.Summary!.Trim();
             var languageCode = (request.LanguageCode ?? string.Empty).Trim();
             if (string.IsNullOrWhiteSpace(languageCode))
             {
@@ -101,7 +100,7 @@ namespace Service.Services
                 chapter_no = (uint)chapterNumber,
                 language_id = language.lang_id,
                 title = title,
-                summary = summary,
+                summary = null,
                 dias_price = (uint)price,
                 access_type = accessType,
                 content_url = null,
@@ -210,7 +209,7 @@ namespace Service.Services
                 chapter.published_at = null;
                 await _chapterRepository.UpdateAsync(chapter, ct);
 
-                var rejectionApproval = await UpsertChapterApprovalAsync(chapter, "rejected", aiScoreDecimal, moderation.Explanation, null, ct);
+                var rejectionApproval = await UpsertChapterApprovalAsync(chapter, "rejected", aiScoreDecimal, moderation.Explanation, ct);
 
                 throw new AppException("ChapterRejectedByAi", "Chapter was rejected by automated moderation.", 400, new
                 {
@@ -226,7 +225,7 @@ namespace Service.Services
                 chapter.status = "published";
                 chapter.published_at ??= DateTime.UtcNow;
                 await _chapterRepository.UpdateAsync(chapter, ct);
-                await UpsertChapterApprovalAsync(chapter, "approved", aiScoreDecimal, moderation.Explanation, null, ct);
+                await UpsertChapterApprovalAsync(chapter, "approved", aiScoreDecimal, moderation.Explanation, ct);
             }
             else
             {
@@ -235,7 +234,7 @@ namespace Service.Services
                 chapter.ai_feedback = moderation.Explanation;
                 await _chapterRepository.UpdateAsync(chapter, ct);
 
-                await UpsertChapterApprovalAsync(chapter, "pending", aiScoreDecimal, moderation.Explanation, null, ct);
+                await UpsertChapterApprovalAsync(chapter, "pending", aiScoreDecimal, moderation.Explanation, ct);
             }
 
             var approvals = await _chapterRepository.GetContentApprovalsForChapterAsync(chapter.chapter_id, ct);
@@ -306,7 +305,7 @@ namespace Service.Services
             };
         }
 
-        private async Task<content_approve> UpsertChapterApprovalAsync(chapter chapter, string status, decimal aiScore, string? aiNote, string? moderatorNote, CancellationToken ct)
+        private async Task<content_approve> UpsertChapterApprovalAsync(chapter chapter, string status, decimal aiScore, string? aiNote, CancellationToken ct)
         {
             var approval = await _chapterRepository.GetContentApprovalForChapterAsync(chapter.chapter_id, ct);
             var timestamp = DateTime.UtcNow;
@@ -321,7 +320,7 @@ namespace Service.Services
                     status = status,
                     ai_score = aiScore,
                     ai_note = aiNote,
-                    moderator_note = moderatorNote,
+                    moderator_note = null,
                     moderator_id = null,
                     created_at = timestamp
                 };
@@ -333,7 +332,7 @@ namespace Service.Services
                 approval.status = status;
                 approval.ai_score = aiScore;
                 approval.ai_note = aiNote;
-                approval.moderator_note = moderatorNote;
+                approval.moderator_note = null;
                 approval.moderator_id = null;
                 approval.created_at = timestamp;
 

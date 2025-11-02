@@ -194,7 +194,7 @@ namespace Service.Helpers
                     new ChatMessage
                     {
                         Role = "system",
-                        Content = "You are an assistant that explains automated content moderation decisions in English. Be concise, factual, and cite the detected words."
+                        Content = "You are an assistant that explains automated content moderation decisions. Reply with a JSON object that contains two string properties named 'english' and 'vietnamese'. The English field must give a concise factual explanation mentioning every detected word. The Vietnamese field must be a natural translation of the same explanation."
                     },
                     new ChatMessage
                     {
@@ -223,20 +223,20 @@ namespace Service.Helpers
 
             if (string.IsNullOrWhiteSpace(content))
             {
-                return BuildFallbackExplanation(profile, violations, score, shouldReject);
+                return BuildBilingualFallbackExplanation(profile, violations, score, shouldReject);
             }
 
             content = content.Trim();
             try
             {
                 using var doc = JsonDocument.Parse(content);
-                if (doc.RootElement.TryGetProperty("explanation", out var explanationProp))
+                var hasEnglish = doc.RootElement.TryGetProperty("english", out var englishProp);
+                var hasVietnamese = doc.RootElement.TryGetProperty("vietnamese", out var vietnameseProp);
+                if (hasEnglish || hasVietnamese)
                 {
-                    var explanation = explanationProp.GetString();
-                    if (!string.IsNullOrWhiteSpace(explanation))
-                    {
-                        return explanation.Trim();
-                    }
+                    var english = hasEnglish && englishProp.ValueKind != JsonValueKind.Null ? englishProp.GetString() : null;
+                    var vietnamese = hasVietnamese && vietnameseProp.ValueKind != JsonValueKind.Null ? vietnameseProp.GetString() : null;
+                    return BuildBilingualExplanation(english, vietnamese);
                 }
             }
             catch (JsonException)
@@ -244,7 +244,7 @@ namespace Service.Helpers
                 // Ignore parse failure and fall back.
             }
 
-            return BuildFallbackExplanation(profile, violations, score, shouldReject);
+            return BuildBilingualFallbackExplanation(profile, violations, score, shouldReject);
         }
 
         private static string BuildModerationPrompt(
@@ -281,13 +281,20 @@ namespace Service.Helpers
             sb.AppendLine(JsonSerializer.Serialize(summary, new JsonSerializerOptions { Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping }));
             sb.AppendLine("Sanitized content (detected words masked with asterisks):");
             sb.AppendLine(string.IsNullOrWhiteSpace(sanitizedContent) ? "(empty)" : sanitizedContent);
-            sb.AppendLine("Explain the decision to the author in English. Mention every detected word. If no words were detected, say that the content is clean.");
+            sb.AppendLine("Explain the decision to the author in English and Vietnamese. Mention every detected word. If no words were detected, say that the content is clean.");
             sb.AppendLine("Respond ONLY in JSON with this shape:");
-            sb.Append("{\"score\":0.95,\"shouldReject\":false,\"explanation\":\"Short English explanation\",\"violations\":[{\"word\":\"example\",\"count\":1,\"summary\":\"Describe why it was flagged.\"}]}");
+            sb.Append("{\"english\":\"Short English explanation\",\"vietnamese\":\"Short Vietnamese explanation\"}");
             return sb.ToString();
         }
 
-        private static string BuildFallbackExplanation(ModerationProfile profile, IReadOnlyList<ModerationViolation> violations, double score, bool shouldReject)
+        private static string BuildBilingualExplanation(string? english, string? vietnamese)
+        {
+            var englishText = string.IsNullOrWhiteSpace(english) ? "No explanation provided." : english.Trim();
+            var vietnameseText = string.IsNullOrWhiteSpace(vietnamese) ? "Không có diễn giải bằng tiếng Việt." : vietnamese.Trim();
+            return $"English:\n{englishText}\n\nTiếng Việt:\n{vietnameseText}";
+        }
+
+        private static string BuildFallbackExplanationEnglish(ModerationProfile profile, IReadOnlyList<ModerationViolation> violations, double score, bool shouldReject)
         {
             if (violations.Count == 0)
             {
@@ -301,6 +308,29 @@ namespace Service.Helpers
                 ? $"Content is rejected because the score dropped below {threshold}."
                 : "Content passes the automated moderation.";
             return $"Detected banned words: {summary}. Final score is {score:0.00}. {decision}";
+        }
+
+        private static string BuildFallbackExplanationVietnamese(ModerationProfile profile, IReadOnlyList<ModerationViolation> violations, double score, bool shouldReject)
+        {
+            if (violations.Count == 0)
+            {
+                return $"Không phát hiện từ bị cấm. Điểm cuối cùng vẫn là {score:0.00}.";
+            }
+
+            var words = violations.Select(v => $"{v.Word} (x{v.Count})");
+            var summary = string.Join(", ", words);
+            var threshold = profile.RejectThreshold.ToString("0.00", CultureInfo.InvariantCulture);
+            var decision = shouldReject
+                ? $"Nội dung bị từ chối vì điểm số thấp hơn ngưỡng {threshold}."
+                : "Nội dung vượt qua kiểm duyệt tự động.";
+            return $"Phát hiện các từ bị cấm: {summary}. Điểm cuối cùng là {score:0.00}. {decision}";
+        }
+
+        private static string BuildBilingualFallbackExplanation(ModerationProfile profile, IReadOnlyList<ModerationViolation> violations, double score, bool shouldReject)
+        {
+            var english = BuildFallbackExplanationEnglish(profile, violations, score, shouldReject);
+            var vietnamese = BuildFallbackExplanationVietnamese(profile, violations, score, shouldReject);
+            return BuildBilingualExplanation(english, vietnamese);
         }
 
         private ScanResult ScanContent(string content)

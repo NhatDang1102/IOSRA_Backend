@@ -1,4 +1,4 @@
-﻿using Contract.DTOs.Request.Story;
+using Contract.DTOs.Request.Story;
 using Contract.DTOs.Respond.Story;
 using Repository.Entities;
 using Repository.Interfaces;
@@ -147,7 +147,7 @@ namespace Service.Services
                 story.published_at = null;
                 await _storyRepository.UpdateStoryAsync(story, ct);
 
-                var rejectionApproval = await UpsertStoryApprovalAsync(story.story_id, "rejected", aiScore, aiNote, null, ct);
+                var rejectionApproval = await UpsertStoryApprovalAsync(story.story_id, "rejected", aiScore, aiNote, ct);
 
                 throw new AppException("StoryRejectedByAi", "Story was rejected by automated moderation.", 400, new
                 {
@@ -174,7 +174,7 @@ namespace Service.Services
                                    !string.Equals(authorRankName, "Casual", StringComparison.OrdinalIgnoreCase);
                 await _storyRepository.UpdateStoryAsync(story, ct);
 
-                await UpsertStoryApprovalAsync(story.story_id, "approved", aiScore, aiNote, null, ct);
+                await UpsertStoryApprovalAsync(story.story_id, "approved", aiScore, aiNote, ct);
             }
             else
             {
@@ -182,7 +182,7 @@ namespace Service.Services
                 story.published_at = null;
                 await _storyRepository.UpdateStoryAsync(story, ct);
 
-                await UpsertStoryApprovalAsync(story.story_id, "pending", aiScore, aiNote, null, ct);
+                await UpsertStoryApprovalAsync(story.story_id, "pending", aiScore, aiNote, ct);
             }
 
             var saved = await _storyRepository.GetStoryForAuthorAsync(story.story_id, author.account_id, ct)
@@ -355,7 +355,7 @@ namespace Service.Services
             return author;
         }
 
-        private async Task<content_approve> UpsertStoryApprovalAsync(Guid storyId, string status, decimal aiScore, string? aiNote, string? submitNote, CancellationToken ct)
+        private async Task<content_approve> UpsertStoryApprovalAsync(Guid storyId, string status, decimal aiScore, string? aiNote, CancellationToken ct)
         {
             var approval = await _storyRepository.GetContentApprovalForStoryAsync(storyId, ct);
             var timestamp = DateTime.UtcNow;
@@ -369,7 +369,7 @@ namespace Service.Services
                     status = status,
                     ai_score = aiScore,
                     ai_note = aiNote,
-                    moderator_note = submitNote,
+                    moderator_note = null,
                     moderator_id = null,
                     created_at = timestamp
                 };
@@ -381,7 +381,7 @@ namespace Service.Services
                 approval.status = status;
                 approval.ai_score = aiScore;
                 approval.ai_note = aiNote;
-                approval.moderator_note = submitNote;
+                approval.moderator_note = null;
                 approval.moderator_id = null;
                 approval.created_at = timestamp;
 

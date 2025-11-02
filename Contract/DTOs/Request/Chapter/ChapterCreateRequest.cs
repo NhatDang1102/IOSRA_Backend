@@ -12,9 +12,6 @@ namespace Contract.DTOs.Request.Chapter
         [StringLength(8, ErrorMessage = "Language code must not exceed 8 characters.")]
         public string LanguageCode { get; set; } = null!;
 
-        [StringLength(500, ErrorMessage = "Summary must not exceed 500 characters.")]
-        public string? Summary { get; set; }
-
         [Required(ErrorMessage = "Content is required.")]
         public string Content { get; set; } = null!;
     }
