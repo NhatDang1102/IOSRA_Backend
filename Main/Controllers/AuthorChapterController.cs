@@ -10,40 +10,40 @@ namespace Main.Controllers
 {
     [Route("api/[controller]")]
     [Authorize(Roles = "author,AUTHOR")]
-    public class UploadChapterController : AppControllerBase
+    public class AuthorChapterController : AppControllerBase
     {
-        private readonly IChapterService _chapterService;
+        private readonly IAuthorChapterService _authorChapterService;
 
-        public UploadChapterController(IChapterService chapterService)
+        public AuthorChapterController(IAuthorChapterService authorChapterService)
         {
-            _chapterService = chapterService;
+            _authorChapterService = authorChapterService;
         }
 
         [HttpGet("{storyId:guid}")]
         public async Task<IActionResult> List([FromRoute] Guid storyId, [FromQuery] string? status, CancellationToken ct)
         {
-            var chapters = await _chapterService.ListAsync(AccountId, storyId, status, ct);
+            var chapters = await _authorChapterService.ListAsync(AccountId, storyId, status, ct);
             return Ok(chapters);
         }
 
         [HttpGet("{storyId:guid}/{chapterId:guid}")]
         public async Task<IActionResult> Get([FromRoute] Guid storyId, [FromRoute] Guid chapterId, CancellationToken ct)
         {
-            var chapter = await _chapterService.GetAsync(AccountId, storyId, chapterId, ct);
+            var chapter = await _authorChapterService.GetAsync(AccountId, storyId, chapterId, ct);
             return Ok(chapter);
         }
 
         [HttpPost("{storyId:guid}")]
         public async Task<IActionResult> Create([FromRoute] Guid storyId, [FromBody] ChapterCreateRequest request, CancellationToken ct)
         {
-            var chapter = await _chapterService.CreateAsync(AccountId, storyId, request, ct);
+            var chapter = await _authorChapterService.CreateAsync(AccountId, storyId, request, ct);
             return Ok(chapter);
         }
 
         [HttpPost("{chapterId:guid}/submit")]
         public async Task<IActionResult> Submit([FromRoute] Guid chapterId, [FromBody] ChapterSubmitRequest request, CancellationToken ct)
         {
-            var chapter = await _chapterService.SubmitAsync(AccountId, chapterId, request, ct);
+            var chapter = await _authorChapterService.SubmitAsync(AccountId, chapterId, request, ct);
             return Ok(chapter);
         }
     }

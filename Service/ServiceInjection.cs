@@ -50,8 +50,10 @@ namespace Service
             services.AddScoped<IOperationModService, OperationModService>();
             services.AddScoped<IProfileService, ProfileService>();
             services.AddScoped<ITagService, TagService>();
-            services.AddScoped<IStoryService, StoryService>();
-            services.AddScoped<IChapterService, ChapterService>();
+            services.AddScoped<IAuthorStoryService, AuthorStoryService>();
+            services.AddScoped<IStoryCatalogService, StoryCatalogService>();
+            services.AddScoped<IAuthorChapterService, AuthorChapterService>();
+            services.AddScoped<IChapterCatalogService, ChapterCatalogService>();
             services.AddScoped<IChapterModerationService, ChapterModerationService>();
             services.AddScoped<IStoryModerationService, StoryModerationService>();
 

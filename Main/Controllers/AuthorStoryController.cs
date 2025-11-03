@@ -10,26 +10,26 @@ namespace Main.Controllers
 {
     [Route("api/[controller]")]
     [Authorize(Roles = "author,AUTHOR")]
-    public class UploadStoryController : AppControllerBase
+    public class AuthorStoryController : AppControllerBase
     {
-        private readonly IStoryService _storyService;
+        private readonly IAuthorStoryService _authorStoryService;
 
-        public UploadStoryController(IStoryService storyService)
+        public AuthorStoryController(IAuthorStoryService authorStoryService)
         {
-            _storyService = storyService;
+            _authorStoryService = authorStoryService;
         }
 
         [HttpGet]
         public async Task<IActionResult> List([FromQuery] string? status, CancellationToken ct)
         {
-            var stories = await _storyService.ListAsync(AccountId, status, ct);
+            var stories = await _authorStoryService.ListAsync(AccountId, status, ct);
             return Ok(stories);
         }
 
         [HttpGet("{storyId:guid}")]
         public async Task<IActionResult> Get([FromRoute] Guid storyId, CancellationToken ct)
         {
-            var story = await _storyService.GetAsync(AccountId, storyId, ct);
+            var story = await _authorStoryService.GetAsync(AccountId, storyId, ct);
             return Ok(story);
         }
 
@@ -37,7 +37,7 @@ namespace Main.Controllers
         [RequestSizeLimit(10 * 1024 * 1024)]
         public async Task<IActionResult> Create([FromForm] StoryCreateRequest request, CancellationToken ct)
         {
-            var story = await _storyService.CreateAsync(AccountId, request, ct);
+            var story = await _authorStoryService.CreateAsync(AccountId, request, ct);
             return Ok(story);
         }
 
@@ -45,21 +45,21 @@ namespace Main.Controllers
         [RequestSizeLimit(10 * 1024 * 1024)]
         public async Task<IActionResult> ReplaceCover([FromRoute] Guid storyId, [FromForm] StoryCoverUploadRequest request, CancellationToken ct)
         {
-            var story = await _storyService.UpdateCoverAsync(AccountId, storyId, request.CoverFile, ct);
+            var story = await _authorStoryService.UpdateCoverAsync(AccountId, storyId, request.CoverFile, ct);
             return Ok(story);
         }
 
         [HttpPost("{storyId:guid}/submit")]
         public async Task<IActionResult> Submit([FromRoute] Guid storyId, [FromBody] StorySubmitRequest request, CancellationToken ct)
         {
-            var story = await _storyService.SubmitForReviewAsync(AccountId, storyId, request, ct);
+            var story = await _authorStoryService.SubmitForReviewAsync(AccountId, storyId, request, ct);
             return Ok(story);
         }
 
         [HttpPost("{storyId:guid}/complete")]
         public async Task<IActionResult> Complete([FromRoute] Guid storyId, CancellationToken ct)
         {
-            var story = await _storyService.CompleteAsync(AccountId, storyId, ct);
+            var story = await _authorStoryService.CompleteAsync(AccountId, storyId, ct);
             return Ok(story);
         }
     }

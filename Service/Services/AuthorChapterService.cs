@@ -13,7 +13,7 @@ using System.Threading.Tasks;
 
 namespace Service.Services
 {
-    public class ChapterService : IChapterService
+    public class AuthorChapterService : IAuthorChapterService
     {
         private const int MinContentLength = 50;
         private readonly IChapterRepository _chapterRepository;
@@ -23,7 +23,7 @@ namespace Service.Services
 
         private static readonly string[] AuthorChapterAllowedStatuses = { "draft", "pending", "rejected", "published", "hidden", "removed" };
 
-        public ChapterService(
+        public AuthorChapterService(
             IChapterRepository chapterRepository,
             IStoryRepository storyRepository,
             IChapterContentStorage contentStorage,

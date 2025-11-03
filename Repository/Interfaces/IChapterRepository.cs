@@ -20,6 +20,10 @@ namespace Repository.Interfaces
         Task<IReadOnlyList<content_approve>> GetContentApprovalsForChapterAsync(Guid chapterId, CancellationToken ct = default);
         Task<content_approve?> GetContentApprovalForChapterAsync(Guid chapterId, CancellationToken ct = default);
         Task<content_approve?> GetContentApprovalByIdAsync(Guid reviewId, CancellationToken ct = default);
+        Task<Dictionary<Guid, int>> GetPublishedChapterCountsByStoryIdsAsync(IEnumerable<Guid> storyIds, CancellationToken ct = default);
+        Task<int> GetPublishedChapterCountAsync(Guid storyId, CancellationToken ct = default);
+        Task<(List<chapter> Items, int Total)> GetPublishedChaptersByStoryAsync(Guid storyId, int page, int pageSize, CancellationToken ct = default);
+        Task<chapter?> GetPublishedChapterByIdAsync(Guid chapterId, CancellationToken ct = default);
         Task UpdateAsync(chapter entity, CancellationToken ct = default);
         Task<DateTime?> GetLastRejectedAtAsync(Guid chapterId, CancellationToken ct = default);
         Task<DateTime?> GetLastAuthorChapterRejectedAtAsync(Guid authorId, CancellationToken ct = default);

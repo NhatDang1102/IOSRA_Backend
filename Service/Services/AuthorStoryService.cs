@@ -13,7 +13,7 @@ using System.Threading.Tasks;
 
 namespace Service.Services
 {
-    public class StoryService : IStoryService
+    public class AuthorStoryService : IAuthorStoryService
     {
         private readonly IStoryRepository _storyRepository;
         private readonly IImageUploader _imageUploader;
@@ -23,7 +23,7 @@ namespace Service.Services
         private static readonly string[] AllowedCoverModes = { "upload", "generate" };
         private static readonly string[] AuthorListAllowedStatuses = { "draft", "pending", "rejected", "published", "completed", "hidden", "removed" };
 
-        public StoryService(
+        public AuthorStoryService(
             IStoryRepository storyRepository,
             IImageUploader imageUploader,
             IOpenAiImageService openAiImageService,

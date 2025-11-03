@@ -13,6 +13,8 @@ namespace Repository.Repositories
 {
     public class StoryRepository : BaseRepository, IStoryRepository
     {
+        private static readonly string[] PublicStoryStatuses = { "published", "completed" };
+
         public StoryRepository(AppDbContext db) : base(db)
         {
         }
@@ -175,6 +177,51 @@ namespace Repository.Repositories
                 .OrderByDescending(s => s.updated_at)
                 .ToListAsync(ct);
         }
+
+        public async Task<(List<story> Items, int Total)> SearchPublishedStoriesAsync(string? query, Guid? tagId, int page, int pageSize, CancellationToken ct = default)
+        {
+            if (page < 1) page = 1;
+            if (pageSize < 1) pageSize = 20;
+
+            var storiesQuery = _db.stories
+                .AsNoTracking()
+                .Include(s => s.author).ThenInclude(a => a.account)
+                .Include(s => s.story_tags).ThenInclude(st => st.tag)
+                .Where(s => PublicStoryStatuses.Contains(s.status));
+
+            if (!string.IsNullOrWhiteSpace(query))
+            {
+                var term = query.Trim();
+                var likeTerm = $"%{term}%";
+                storiesQuery = storiesQuery.Where(s =>
+                    EF.Functions.Like(s.title, likeTerm) ||
+                    (s.desc != null && EF.Functions.Like(s.desc, likeTerm)) ||
+                    EF.Functions.Like(s.author.account.username, likeTerm));
+            }
+
+            if (tagId.HasValue)
+            {
+                storiesQuery = storiesQuery.Where(s => s.story_tags.Any(st => st.tag_id == tagId.Value));
+            }
+
+            var total = await storiesQuery.CountAsync(ct);
+            var skip = (page - 1) * pageSize;
+
+            var items = await storiesQuery
+                .OrderByDescending(s => s.published_at ?? s.updated_at)
+                .Skip(skip)
+                .Take(pageSize)
+                .ToListAsync(ct);
+
+            return (items, total);
+        }
+
+        public Task<story?> GetPublishedStoryByIdAsync(Guid storyId, CancellationToken ct = default)
+            => _db.stories
+                  .AsNoTracking()
+                  .Include(s => s.author).ThenInclude(a => a.account)
+                  .Include(s => s.story_tags).ThenInclude(st => st.tag)
+                  .FirstOrDefaultAsync(s => s.story_id == storyId && PublicStoryStatuses.Contains(s.status), ct);
 
         public Task<bool> AuthorHasPendingStoryAsync(Guid authorId, Guid? excludeStoryId = null, CancellationToken ct = default)
         {

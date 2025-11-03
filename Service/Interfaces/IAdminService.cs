@@ -1,5 +1,6 @@
 ﻿using Contract.DTOs.Request.Admin;
 using Contract.DTOs.Respond.Admin;
+using Contract.DTOs.Respond.Common;
 using System;
 using System.Collections.Generic;
 using System.Linq;

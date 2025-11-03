@@ -39,10 +39,14 @@ namespace Repository.Repositories
 
         public async Task<List<op_request>> ListRequestsAsync(string? status, CancellationToken ct = default)
         {
-            var query = _db.op_requests.AsQueryable();
+            var query = _db.op_requests
+                            .Include(r => r.requester)
+                            .AsNoTracking()
+                            .AsQueryable();
             if (!string.IsNullOrWhiteSpace(status))
             {
-                query = query.Where(r => r.status == status);
+                var normalized = status.Trim().ToLowerInvariant();
+                query = query.Where(r => r.status == normalized);
             }
             return await query.OrderByDescending(r => r.created_at).ToListAsync(ct);
         }
