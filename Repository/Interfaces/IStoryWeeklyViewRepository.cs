@@ -10,6 +10,5 @@ namespace Repository.Interfaces
     {
         Task UpsertWeeklyViewsAsync(DateTime weekStartUtc, IReadOnlyCollection<StoryViewCount> items, CancellationToken ct = default);
         Task<IReadOnlyList<StoryViewCount>> GetTopWeeklyViewsAsync(DateTime weekStartUtc, int limit, CancellationToken ct = default);
-        Task<bool> HasWeekSnapshotAsync(DateTime weekStartUtc, CancellationToken ct = default);
     }
 }

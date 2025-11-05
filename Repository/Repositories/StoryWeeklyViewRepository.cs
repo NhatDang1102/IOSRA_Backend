@@ -77,11 +77,6 @@ namespace Repository.Repositories
             return data;
         }
 
-        public Task<bool> HasWeekSnapshotAsync(DateTime weekStartUtc, CancellationToken ct = default)
-        {
-            var normalizedWeekStart = weekStartUtc.TrimToMinute();
-            return _db.story_weekly_views.AnyAsync(x => x.week_start_utc == normalizedWeekStart, ct);
-        }
     }
 
     internal static class DateTimeExtensions
