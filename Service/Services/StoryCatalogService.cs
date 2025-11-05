@@ -8,16 +8,17 @@ using Contract.DTOs.Respond.Common;
 using Contract.DTOs.Respond.Story;
 using Repository.Interfaces;
 using Service.Exceptions;
+using Service.Helpers;
 using Service.Interfaces;
 
 namespace Service.Services
 {
     public class StoryCatalogService : IStoryCatalogService
     {
-        private readonly IStoryRepository _storyRepository;
-        private readonly IChapterRepository _chapterRepository;
+        private readonly IStoryCatalogRepository _storyRepository;
+        private readonly IChapterCatalogRepository _chapterRepository;
 
-        public StoryCatalogService(IStoryRepository storyRepository, IChapterRepository chapterRepository)
+        public StoryCatalogService(IStoryCatalogRepository storyRepository, IChapterCatalogRepository chapterRepository)
         {
             _storyRepository = storyRepository;
             _chapterRepository = chapterRepository;
@@ -46,31 +47,9 @@ namespace Service.Services
             var storyIds = stories.Select(s => s.story_id).ToArray();
             var chapterCounts = await _chapterRepository.GetPublishedChapterCountsByStoryIdsAsync(storyIds, ct);
 
-            var responses = new List<StoryCatalogListItemResponse>(stories.Count);
-            foreach (var story in stories)
-            {
-                var tags = story.story_tags?
-                    .Where(st => st.tag != null)
-                    .Select(st => new StoryTagResponse { TagId = st.tag_id, TagName = st.tag!.tag_name })
-                    .OrderBy(t => t.TagName, StringComparer.OrdinalIgnoreCase)
-                    .ToArray() ?? Array.Empty<StoryTagResponse>();
-
-                chapterCounts.TryGetValue(story.story_id, out var chapterCount);
-
-                responses.Add(new StoryCatalogListItemResponse
-                {
-                    StoryId = story.story_id,
-                    Title = story.title,
-                    AuthorId = story.author_id,
-                    AuthorUsername = story.author.account.username,
-                    CoverUrl = story.cover_url,
-                    IsPremium = story.is_premium,
-                    TotalChapters = chapterCount,
-                    PublishedAt = story.published_at,
-                    ShortDescription = BuildShortDescription(story.desc),
-                    Tags = tags
-                });
-            }
+            var responses = stories
+                .Select(story => StoryCatalogMapper.ToListItemResponse(story, chapterCounts))
+                .ToList();
 
             return new PagedResult<StoryCatalogListItemResponse>
             {
@@ -109,20 +88,5 @@ namespace Service.Services
             };
         }
 
-        private static string? BuildShortDescription(string? desc)
-        {
-            if (string.IsNullOrWhiteSpace(desc))
-            {
-                return null;
-            }
-
-            var trimmed = desc.Trim();
-            if (trimmed.Length <= 200)
-            {
-                return trimmed;
-            }
-
-            return trimmed.Substring(0, 200).TrimEnd() + "...";
-        }
     }
 }

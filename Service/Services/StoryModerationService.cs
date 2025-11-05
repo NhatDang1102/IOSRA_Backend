@@ -14,10 +14,10 @@ namespace Service.Services
 {
     public class StoryModerationService : IStoryModerationService
     {
-        private readonly IStoryRepository _storyRepository;
+        private readonly IStoryModerationRepository _storyRepository;
         private readonly IMailSender _mailSender;
 
-        public StoryModerationService(IStoryRepository storyRepository, IMailSender mailSender)
+        public StoryModerationService(IStoryModerationRepository storyRepository, IMailSender mailSender)
         {
             _storyRepository = storyRepository;
             _mailSender = mailSender;

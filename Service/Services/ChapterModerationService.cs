@@ -14,10 +14,10 @@ namespace Service.Services
 {
     public class ChapterModerationService : IChapterModerationService
     {
-        private readonly IChapterRepository _chapterRepository;
+        private readonly IChapterModerationRepository _chapterRepository;
         private readonly IMailSender _mailSender;
 
-        public ChapterModerationService(IChapterRepository chapterRepository, IMailSender mailSender)
+        public ChapterModerationService(IChapterModerationRepository chapterRepository, IMailSender mailSender)
         {
             _chapterRepository = chapterRepository;
             _mailSender = mailSender;

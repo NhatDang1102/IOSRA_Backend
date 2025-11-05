@@ -16,10 +16,12 @@ namespace Main.Controllers
     public class ChapterCatalogController : AppControllerBase
     {
         private readonly IChapterCatalogService _chapterCatalogService;
+        private readonly IStoryViewTracker _storyViewTracker;
 
-        public ChapterCatalogController(IChapterCatalogService chapterCatalogService)
+        public ChapterCatalogController(IChapterCatalogService chapterCatalogService, IStoryViewTracker storyViewTracker)
         {
             _chapterCatalogService = chapterCatalogService;
+            _storyViewTracker = storyViewTracker;
         }
 
         [HttpGet]
@@ -38,8 +40,12 @@ namespace Main.Controllers
         public async Task<ActionResult<ChapterCatalogDetailResponse>> Get(Guid chapterId, CancellationToken ct)
         {
             var chapter = await _chapterCatalogService.GetChapterAsync(chapterId, ct);
+
+            var viewerAccountId = TryGetAccountId();
+            var fingerprint = HttpContext.Connection.RemoteIpAddress?.ToString();
+            await _storyViewTracker.RecordViewAsync(chapter.StoryId, viewerAccountId, fingerprint, ct);
+
             return Ok(chapter);
         }
     }
 }
-

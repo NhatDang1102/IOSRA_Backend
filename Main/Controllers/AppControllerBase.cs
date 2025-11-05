@@ -8,4 +8,21 @@ namespace Main.Controllers;
 public abstract class AppControllerBase : ControllerBase
 {
     protected Guid AccountId => User.GetAccountId();
+
+    protected Guid? TryGetAccountId()
+    {
+        if (User?.Identity?.IsAuthenticated != true)
+        {
+            return null;
+        }
+
+        try
+        {
+            return User.GetAccountId();
+        }
+        catch (UnauthorizedAccessException)
+        {
+            return null;
+        }
+    }
 }

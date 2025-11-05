@@ -26,14 +26,14 @@ namespace Main.Controllers
         [HttpGet("{accountId:guid}")]
         public async Task<IActionResult> GetProfile(Guid accountId, CancellationToken ct)
         {
-            var profile = await _publicProfileService.GetAsync(GetViewerAccountId(), accountId, ct);
+            var profile = await _publicProfileService.GetAsync(TryGetAccountId() ?? Guid.Empty, accountId, ct);
             return Ok(profile);
         }
 
         [HttpGet("{accountId:guid}/stories")]
         public async Task<ActionResult<PagedResult<StoryCatalogListItemResponse>>> GetAuthorStories(Guid accountId, [FromQuery] StoryCatalogQuery query, CancellationToken ct)
         {
-            var profile = await _publicProfileService.GetAsync(GetViewerAccountId(), accountId, ct);
+            var profile = await _publicProfileService.GetAsync(TryGetAccountId() ?? Guid.Empty, accountId, ct);
 
             if (!profile.IsAuthor || profile.Author is null || profile.Author.IsRestricted)
             {
@@ -49,18 +49,6 @@ namespace Main.Controllers
             query.AuthorId = accountId;
             var stories = await _storyCatalogService.GetStoriesAsync(query, ct);
             return Ok(stories);
-        }
-
-        private Guid GetViewerAccountId()
-        {
-            try
-            {
-                return AccountId;
-            }
-            catch (UnauthorizedAccessException)
-            {
-                return Guid.Empty;
-            }
         }
     }
 }

@@ -15,7 +15,7 @@ namespace Service.Services
 {
     public class AuthorStoryService : IAuthorStoryService
     {
-        private readonly IStoryRepository _storyRepository;
+        private readonly IAuthorStoryRepository _storyRepository;
         private readonly IImageUploader _imageUploader;
         private readonly IOpenAiImageService _openAiImageService;
         private readonly IOpenAiModerationService _openAiModerationService;
@@ -24,7 +24,7 @@ namespace Service.Services
         private static readonly string[] AuthorListAllowedStatuses = { "draft", "pending", "rejected", "published", "completed", "hidden", "removed" };
 
         public AuthorStoryService(
-            IStoryRepository storyRepository,
+            IAuthorStoryRepository storyRepository,
             IImageUploader imageUploader,
             IOpenAiImageService openAiImageService,
             IOpenAiModerationService openAiModerationService)

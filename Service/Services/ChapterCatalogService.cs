@@ -14,13 +14,13 @@ namespace Service.Services
 {
     public class ChapterCatalogService : IChapterCatalogService
     {
-        private readonly IChapterRepository _chapterRepository;
-        private readonly IStoryRepository _storyRepository;
+        private readonly IChapterCatalogRepository _chapterRepository;
+        private readonly IStoryCatalogRepository _storyRepository;
         private readonly IChapterContentStorage _contentStorage;
 
         public ChapterCatalogService(
-            IChapterRepository chapterRepository,
-            IStoryRepository storyRepository,
+            IChapterCatalogRepository chapterRepository,
+            IStoryCatalogRepository storyRepository,
             IChapterContentStorage contentStorage)
         {
             _chapterRepository = chapterRepository;
@@ -36,8 +36,8 @@ namespace Service.Services
             }
 
             // Ensure story exists and is visible
-            var story = await _storyRepository.GetPublishedStoryByIdAsync(query.StoryId, ct)
-                        ?? throw new AppException("StoryNotFound", "Story was not found or not available.", 404);
+            _ = await _storyRepository.GetPublishedStoryByIdAsync(query.StoryId, ct)
+                ?? throw new AppException("StoryNotFound", "Story was not found or not available.", 404);
 
             var (chapters, total) = await _chapterRepository.GetPublishedChaptersByStoryAsync(query.StoryId, query.Page, query.PageSize, ct);
 
