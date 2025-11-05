@@ -12,7 +12,7 @@ namespace Service.Background
 {
     public class StoryWeeklyViewSyncJob : BackgroundService
     {
-        private static readonly TimeSpan LoopDelay = TimeSpan.FromHours(1);
+        private static readonly TimeSpan LoopDelay = TimeSpan.FromHours(6);
         private readonly IServiceScopeFactory _scopeFactory;
         private readonly ILogger<StoryWeeklyViewSyncJob> _logger;
 
@@ -56,34 +56,20 @@ namespace Service.Background
 
         private async Task RunOnceAsync(CancellationToken ct)
         {
-            var utcNow = DateTime.UtcNow;
-            var localNow = utcNow + StoryViewTimeHelper.LocalOffset;
-
-            if (localNow.DayOfWeek != DayOfWeek.Sunday || localNow.Hour < 23)
-            {
-                return;
-            }
-
             using var scope = _scopeFactory.CreateScope();
             var tracker = scope.ServiceProvider.GetRequiredService<IStoryViewTracker>();
             var repository = scope.ServiceProvider.GetRequiredService<IStoryWeeklyViewRepository>();
 
             var weekStartUtc = tracker.GetCurrentWeekStartUtc();
-            if (await repository.HasWeekSnapshotAsync(weekStartUtc, ct))
-            {
-                return;
-            }
-
             var views = await tracker.GetWeeklyViewsAsync(weekStartUtc, ct);
             if (views.Count == 0)
             {
-                _logger.LogInformation("No story views to archive for week {WeekStart}.", weekStartUtc);
+                _logger.LogDebug("No story views to archive for week {WeekStart}.", weekStartUtc);
                 return;
             }
 
             await repository.UpsertWeeklyViewsAsync(weekStartUtc, views, ct);
-            _logger.LogInformation("Archived {Count} story weekly view records for week {WeekStart}.", views.Count, weekStartUtc);
+            _logger.LogInformation("Upserted {Count} story weekly view records for week {WeekStart}.", views.Count, weekStartUtc);
         }
     }
 }
-
