@@ -28,6 +28,7 @@ namespace Service.Implementations
                 RequestId = x.request_id,
                 RequesterId = x.requester_id,
                 RequesterUsername = x.requester?.username ?? string.Empty,
+                RequesterEmail = x.requester?.email ?? string.Empty,
                 Status = x.status,
                 Content = x.request_content,
                 CreatedAt = x.created_at,
