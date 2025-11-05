@@ -62,6 +62,8 @@ public partial class AppDbContext : DbContext
 
     public virtual DbSet<story_tag> story_tags { get; set; }
 
+    public virtual DbSet<story_weekly_view> story_weekly_views { get; set; }
+
     public virtual DbSet<subcription> subcriptions { get; set; }
 
     public virtual DbSet<subscription_plan> subscription_plans { get; set; }
@@ -393,6 +395,21 @@ public partial class AppDbContext : DbContext
             entity.HasOne(d => d.tag).WithMany(p => p.story_tags)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("fk_story_tags_tag");
+        });
+
+        modelBuilder.Entity<story_weekly_view>(entity =>
+        {
+            entity.HasKey(e => e.story_weekly_view_id).HasName("PRIMARY");
+
+            entity.Property(e => e.story_weekly_view_id).ValueGeneratedNever();
+            entity.Property(e => e.view_count).HasDefaultValueSql("0");
+            entity.Property(e => e.week_start_utc).HasColumnType("datetime");
+            entity.Property(e => e.captured_at_utc).HasDefaultValueSql("CURRENT_TIMESTAMP");
+
+            entity.HasOne(d => d.story).WithMany(p => p.story_weekly_views)
+                .HasForeignKey(d => d.story_id)
+                .OnDelete(DeleteBehavior.Cascade)
+                .HasConstraintName("fk_story_week_story");
         });
 
         modelBuilder.Entity<subcription>(entity =>

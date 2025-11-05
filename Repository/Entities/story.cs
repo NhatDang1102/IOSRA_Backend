@@ -54,4 +54,7 @@ public partial class story
 
     [InverseProperty("story")]
     public virtual ICollection<story_tag> story_tags { get; set; } = new List<story_tag>();
+
+    [InverseProperty("story")]
+    public virtual ICollection<story_weekly_view> story_weekly_views { get; set; } = new List<story_weekly_view>();
 }
