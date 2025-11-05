@@ -10,19 +10,18 @@ using Service.Interfaces;
 
 namespace Main.Controllers
 {
-    [Route("api/[controller]")]
+    [Route("api/StoryCatalog")]
     [AllowAnonymous]
-    public class StoryController : AppControllerBase
+    public class StoryCatalogController : AppControllerBase
     {
         private readonly IStoryCatalogService _storyCatalogService;
 
-        public StoryController(IStoryCatalogService storyCatalogService)
+        public StoryCatalogController(IStoryCatalogService storyCatalogService)
         {
             _storyCatalogService = storyCatalogService;
         }
 
         [HttpGet]
-        [AllowAnonymous]
         public async Task<ActionResult<PagedResult<StoryCatalogListItemResponse>>> List([FromQuery] StoryCatalogQuery query, CancellationToken ct)
         {
             var result = await _storyCatalogService.GetStoriesAsync(query, ct);
@@ -30,7 +29,6 @@ namespace Main.Controllers
         }
 
         [HttpGet("{storyId:guid}")]
-        [AllowAnonymous]
         public async Task<ActionResult<StoryCatalogDetailResponse>> Get(Guid storyId, CancellationToken ct)
         {
             var story = await _storyCatalogService.GetStoryAsync(storyId, ct);
@@ -38,3 +36,4 @@ namespace Main.Controllers
         }
     }
 }
+

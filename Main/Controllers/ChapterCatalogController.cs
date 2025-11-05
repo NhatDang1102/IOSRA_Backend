@@ -11,19 +11,18 @@ using Service.Interfaces;
 
 namespace Main.Controllers
 {
-    [Route("api/[controller]")]
+    [Route("api/ChapterCatalog")]
     [AllowAnonymous]
-    public class ChapterController : AppControllerBase
+    public class ChapterCatalogController : AppControllerBase
     {
         private readonly IChapterCatalogService _chapterCatalogService;
 
-        public ChapterController(IChapterCatalogService chapterCatalogService)
+        public ChapterCatalogController(IChapterCatalogService chapterCatalogService)
         {
             _chapterCatalogService = chapterCatalogService;
         }
 
         [HttpGet]
-        [AllowAnonymous]
         public async Task<ActionResult<PagedResult<ChapterCatalogListItemResponse>>> List([FromQuery] ChapterCatalogQuery query, CancellationToken ct)
         {
             if (query.StoryId == Guid.Empty)
@@ -36,7 +35,6 @@ namespace Main.Controllers
         }
 
         [HttpGet("{chapterId:guid}")]
-        [AllowAnonymous]
         public async Task<ActionResult<ChapterCatalogDetailResponse>> Get(Guid chapterId, CancellationToken ct)
         {
             var chapter = await _chapterCatalogService.GetChapterAsync(chapterId, ct);
@@ -44,3 +42,4 @@ namespace Main.Controllers
         }
     }
 }
+

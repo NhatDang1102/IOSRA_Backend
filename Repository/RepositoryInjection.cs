@@ -11,6 +11,7 @@ namespace Repository
             services.AddScoped<IAuthRepository, AuthRepository>();
             services.AddScoped<IAdminRepository, AdminRepository>();
             services.AddScoped<IProfileRepository, ProfileRepository>();
+            services.AddScoped<IPublicProfileRepository, PublicProfileRepository>();
             services.AddScoped<IOpRequestRepository, OpRequestRepository>();
             services.AddScoped<ITagRepository, TagRepository>();
             services.AddScoped<IStoryRepository, StoryRepository>();
