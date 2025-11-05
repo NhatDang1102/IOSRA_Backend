@@ -30,7 +30,7 @@ namespace Service.Services
                 throw new AppException("ValidationFailed", "Page and PageSize must be positive integers.", 400);
             }
 
-            var (stories, total) = await _storyRepository.SearchPublishedStoriesAsync(query.Query, query.TagId, query.Page, query.PageSize, ct);
+            var (stories, total) = await _storyRepository.SearchPublishedStoriesAsync(query.Query, query.TagId, query.AuthorId, query.Page, query.PageSize, ct);
 
             if (stories.Count == 0)
             {

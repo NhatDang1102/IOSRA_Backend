@@ -1,5 +1,6 @@
 using System;
 using System.ComponentModel.DataAnnotations;
+using System.Text.Json.Serialization;
 
 namespace Contract.DTOs.Request.Story
 {
@@ -15,5 +16,7 @@ namespace Contract.DTOs.Request.Story
         public string? Query { get; set; }
 
         public Guid? TagId { get; set; }
+
+        public Guid? AuthorId { get; set; }
     }
 }

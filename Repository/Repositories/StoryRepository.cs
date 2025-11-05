@@ -178,7 +178,7 @@ namespace Repository.Repositories
                 .ToListAsync(ct);
         }
 
-        public async Task<(List<story> Items, int Total)> SearchPublishedStoriesAsync(string? query, Guid? tagId, int page, int pageSize, CancellationToken ct = default)
+        public async Task<(List<story> Items, int Total)> SearchPublishedStoriesAsync(string? query, Guid? tagId, Guid? authorId, int page, int pageSize, CancellationToken ct = default)
         {
             if (page < 1) page = 1;
             if (pageSize < 1) pageSize = 20;
@@ -199,9 +199,14 @@ namespace Repository.Repositories
                     EF.Functions.Like(s.author.account.username, likeTerm));
             }
 
-            if (tagId.HasValue)
+            if (tagId.HasValue && tagId.Value != Guid.Empty)
             {
                 storiesQuery = storiesQuery.Where(s => s.story_tags.Any(st => st.tag_id == tagId.Value));
+            }
+
+            if (authorId.HasValue && authorId.Value != Guid.Empty)
+            {
+                storiesQuery = storiesQuery.Where(s => s.author_id == authorId.Value);
             }
 
             var total = await storiesQuery.CountAsync(ct);

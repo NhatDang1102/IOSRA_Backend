@@ -49,6 +49,7 @@ namespace Service
             services.AddScoped<IAuthorUpgradeService, AuthorUpgradeService>();
             services.AddScoped<IOperationModService, OperationModService>();
             services.AddScoped<IProfileService, ProfileService>();
+            services.AddScoped<IPublicProfileService, PublicProfileService>();
             services.AddScoped<ITagService, TagService>();
             services.AddScoped<IAuthorStoryService, AuthorStoryService>();
             services.AddScoped<IStoryCatalogService, StoryCatalogService>();

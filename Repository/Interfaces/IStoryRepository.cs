@@ -21,7 +21,7 @@ namespace Repository.Interfaces
         Task<content_approve?> GetContentApprovalByIdAsync(Guid reviewId, CancellationToken ct = default);
         Task<List<content_approve>> GetContentApprovalsForStoryAsync(Guid storyId, CancellationToken ct = default);
         Task<List<story>> GetStoriesForModerationAsync(IEnumerable<string> statuses, CancellationToken ct = default);
-        Task<(List<story> Items, int Total)> SearchPublishedStoriesAsync(string? query, Guid? tagId, int page, int pageSize, CancellationToken ct = default);
+        Task<(List<story> Items, int Total)> SearchPublishedStoriesAsync(string? query, Guid? tagId, Guid? authorId, int page, int pageSize, CancellationToken ct = default);
         Task<story?> GetPublishedStoryByIdAsync(Guid storyId, CancellationToken ct = default);
         Task<bool> AuthorHasPendingStoryAsync(Guid authorId, Guid? excludeStoryId = null, CancellationToken ct = default);
         Task<bool> AuthorHasUncompletedPublishedStoryAsync(Guid authorId, CancellationToken ct = default);

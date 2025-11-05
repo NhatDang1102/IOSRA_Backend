@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using Repository.DBContext;
 using Repository.Entities;
 using Repository.Interfaces;
+using Contract.DTOs.Internal;
 using System;
 using System.Threading;
 using System.Threading.Tasks;

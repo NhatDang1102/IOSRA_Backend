@@ -27,6 +27,7 @@ namespace Main
             services.Configure<CloudinarySettings>(configuration.GetSection("CloudinarySettings"));
             services.Configure<CloudflareR2Settings>(configuration.GetSection("CloudflareR2"));
             services.Configure<OpenAiSettings>(configuration.GetSection("OpenAi"));
+            services.AddMemoryCache();
 
             var connectionString = configuration.GetConnectionString("Default");
             services.AddDbContext<AppDbContext>(o => o.UseMySql(connectionString, ServerVersion.AutoDetect(connectionString)));
