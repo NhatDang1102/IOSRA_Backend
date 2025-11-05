@@ -2,6 +2,7 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 using Repository.Entities;
+using Contract.DTOs.Internal;
 
 namespace Repository.Interfaces
 {
