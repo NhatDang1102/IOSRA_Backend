@@ -6,6 +6,7 @@ using Service.Helpers;
 using Service.Implementations;
 using Service.Services;
 using Service.Interfaces;
+using Service.Background;
 using System;
 using System.Net.Http.Headers;
 
@@ -42,6 +43,7 @@ namespace Service
             });
             services.AddTransient<IOpenAiModerationService>(sp => sp.GetRequiredService<OpenAiService>());
             services.AddTransient<IOpenAiImageService>(sp => sp.GetRequiredService<OpenAiService>());
+            services.AddSingleton<IStoryViewTracker, StoryViewTracker>();
 
             services.AddScoped<IJwtTokenFactory, JwtTokenFactory>();
             services.AddScoped<IAuthService, AuthService>();
@@ -50,6 +52,7 @@ namespace Service
             services.AddScoped<IOperationModService, OperationModService>();
             services.AddScoped<IProfileService, ProfileService>();
             services.AddScoped<IPublicProfileService, PublicProfileService>();
+            services.AddScoped<IStoryHighlightService, StoryHighlightService>();
             services.AddScoped<ITagService, TagService>();
             services.AddScoped<IAuthorStoryService, AuthorStoryService>();
             services.AddScoped<IStoryCatalogService, StoryCatalogService>();
@@ -57,6 +60,7 @@ namespace Service
             services.AddScoped<IChapterCatalogService, ChapterCatalogService>();
             services.AddScoped<IChapterModerationService, ChapterModerationService>();
             services.AddScoped<IStoryModerationService, StoryModerationService>();
+            services.AddHostedService<StoryWeeklyViewSyncJob>();
 
             return services;
         }

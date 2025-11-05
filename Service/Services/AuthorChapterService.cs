@@ -16,16 +16,16 @@ namespace Service.Services
     public class AuthorChapterService : IAuthorChapterService
     {
         private const int MinContentLength = 50;
-        private readonly IChapterRepository _chapterRepository;
-        private readonly IStoryRepository _storyRepository;
+        private readonly IAuthorChapterRepository _chapterRepository;
+        private readonly IAuthorStoryRepository _storyRepository;
         private readonly IChapterContentStorage _contentStorage;
         private readonly IOpenAiModerationService _openAiModerationService;
 
         private static readonly string[] AuthorChapterAllowedStatuses = { "draft", "pending", "rejected", "published", "hidden", "removed" };
 
         public AuthorChapterService(
-            IChapterRepository chapterRepository,
-            IStoryRepository storyRepository,
+            IAuthorChapterRepository chapterRepository,
+            IAuthorStoryRepository storyRepository,
             IChapterContentStorage contentStorage,
             IOpenAiModerationService openAiModerationService)
         {

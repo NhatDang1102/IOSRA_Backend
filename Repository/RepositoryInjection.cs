@@ -14,8 +14,13 @@ namespace Repository
             services.AddScoped<IPublicProfileRepository, PublicProfileRepository>();
             services.AddScoped<IOpRequestRepository, OpRequestRepository>();
             services.AddScoped<ITagRepository, TagRepository>();
-            services.AddScoped<IStoryRepository, StoryRepository>();
-            services.AddScoped<IChapterRepository, ChapterRepository>();
+            services.AddScoped<IAuthorStoryRepository, AuthorStoryRepository>();
+            services.AddScoped<IStoryCatalogRepository, StoryCatalogRepository>();
+            services.AddScoped<IStoryModerationRepository, StoryModerationRepository>();
+            services.AddScoped<IAuthorChapterRepository, AuthorChapterRepository>();
+            services.AddScoped<IChapterCatalogRepository, ChapterCatalogRepository>();
+            services.AddScoped<IChapterModerationRepository, ChapterModerationRepository>();
+            services.AddScoped<IStoryWeeklyViewRepository, StoryWeeklyViewRepository>();
 
             return services;
         }

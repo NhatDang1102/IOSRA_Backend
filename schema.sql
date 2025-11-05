@@ -300,6 +300,19 @@ CREATE TABLE favorite_story (
     REFERENCES story(story_id) ON DELETE CASCADE ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
+CREATE TABLE story_weekly_views (
+  story_weekly_view_id CHAR(36) NOT NULL,
+  story_id             CHAR(36) NOT NULL,
+  week_start_utc       DATETIME NOT NULL,
+  view_count           BIGINT UNSIGNED NOT NULL DEFAULT 0,
+  captured_at_utc      DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (story_weekly_view_id),
+  UNIQUE KEY ux_story_week (story_id, week_start_utc),
+  KEY fk_story_week_story (story_id),
+  CONSTRAINT fk_story_week_story FOREIGN KEY (story_id)
+    REFERENCES story(story_id) ON DELETE CASCADE ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
 -- ===================== Economy =====================
 CREATE TABLE dia_wallet (
   wallet_id   CHAR(36) NOT NULL,

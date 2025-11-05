@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using Contract.DTOs.Request.Story;
@@ -15,10 +16,12 @@ namespace Main.Controllers
     public class StoryCatalogController : AppControllerBase
     {
         private readonly IStoryCatalogService _storyCatalogService;
+        private readonly IStoryHighlightService _storyHighlightService;
 
-        public StoryCatalogController(IStoryCatalogService storyCatalogService)
+        public StoryCatalogController(IStoryCatalogService storyCatalogService, IStoryHighlightService storyHighlightService)
         {
             _storyCatalogService = storyCatalogService;
+            _storyHighlightService = storyHighlightService;
         }
 
         [HttpGet]
@@ -26,6 +29,20 @@ namespace Main.Controllers
         {
             var result = await _storyCatalogService.GetStoriesAsync(query, ct);
             return Ok(result);
+        }
+
+        [HttpGet("latest")]
+        public async Task<ActionResult<IReadOnlyList<StoryCatalogListItemResponse>>> Latest([FromQuery] int limit = 10, CancellationToken ct = default)
+        {
+            var items = await _storyHighlightService.GetLatestStoriesAsync(limit, ct);
+            return Ok(items);
+        }
+
+        [HttpGet("top-weekly")]
+        public async Task<ActionResult<IReadOnlyList<StoryWeeklyHighlightResponse>>> TopWeekly([FromQuery] int limit = 10, CancellationToken ct = default)
+        {
+            var items = await _storyHighlightService.GetTopWeeklyStoriesAsync(limit, ct);
+            return Ok(items);
         }
 
         [HttpGet("{storyId:guid}")]
