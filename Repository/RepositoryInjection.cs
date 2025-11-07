@@ -21,6 +21,8 @@ namespace Repository
             services.AddScoped<IChapterCatalogRepository, ChapterCatalogRepository>();
             services.AddScoped<IChapterModerationRepository, ChapterModerationRepository>();
             services.AddScoped<IStoryWeeklyViewRepository, StoryWeeklyViewRepository>();
+            services.AddScoped<IStoryRatingRepository, StoryRatingRepository>();
+            services.AddScoped<IChapterCommentRepository, ChapterCommentRepository>();
 
             return services;
         }

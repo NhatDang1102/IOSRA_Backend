@@ -19,6 +19,9 @@ public partial class chapter_comment
     public Guid reader_id { get; set; }
 
     
+    public Guid story_id { get; set; }
+
+    
     public Guid chapter_id { get; set; }
 
     [Column(TypeName = "text")]
@@ -27,8 +30,14 @@ public partial class chapter_comment
     [Column(TypeName = "enum('visible','hidden','removed')")]
     public string status { get; set; } = null!;
 
+    [Column(TypeName = "bit(1)")]
+    public bool is_locked { get; set; }
+
     [Column(TypeName = "datetime")]
     public DateTime created_at { get; set; }
+
+    [Column(TypeName = "datetime")]
+    public DateTime updated_at { get; set; }
 
     [ForeignKey("chapter_id")]
     [InverseProperty("chapter_comments")]
@@ -37,4 +46,8 @@ public partial class chapter_comment
     [ForeignKey("reader_id")]
     [InverseProperty("chapter_comments")]
     public virtual reader reader { get; set; } = null!;
+
+    [ForeignKey("story_id")]
+    [InverseProperty("chapter_comments")]
+    public virtual story story { get; set; } = null!;
 }

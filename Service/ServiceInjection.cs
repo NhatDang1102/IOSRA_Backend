@@ -60,6 +60,8 @@ namespace Service
             services.AddScoped<IChapterCatalogService, ChapterCatalogService>();
             services.AddScoped<IChapterModerationService, ChapterModerationService>();
             services.AddScoped<IStoryModerationService, StoryModerationService>();
+            services.AddScoped<IStoryRatingService, StoryRatingService>();
+            services.AddScoped<IChapterCommentService, ChapterCommentService>();
             services.AddHostedService<StoryWeeklyViewSyncJob>();
 
             return services;

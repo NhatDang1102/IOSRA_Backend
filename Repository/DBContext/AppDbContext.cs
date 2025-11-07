@@ -62,6 +62,8 @@ public partial class AppDbContext : DbContext
 
     public virtual DbSet<story_tag> story_tags { get; set; }
 
+    public virtual DbSet<story_rating> story_ratings { get; set; }
+
     public virtual DbSet<story_weekly_view> story_weekly_views { get; set; }
 
     public virtual DbSet<subcription> subcriptions { get; set; }
@@ -180,10 +182,32 @@ public partial class AppDbContext : DbContext
             entity.Property(e => e.comment_id).ValueGeneratedNever(); 
             entity.Property(e => e.created_at).HasDefaultValueSql("CURRENT_TIMESTAMP");
             entity.Property(e => e.status).HasDefaultValueSql("'visible'");
+            entity.Property(e => e.is_locked).HasDefaultValue(false);
+            entity.Property(e => e.updated_at)
+                .ValueGeneratedOnAddOrUpdate()
+                .HasDefaultValueSql("CURRENT_TIMESTAMP");
+
+            entity.HasIndex(e => e.story_id).HasDatabaseName("ix_cmt_story");
 
             entity.HasOne(d => d.chapter).WithMany(p => p.chapter_comments).HasConstraintName("fk_cmt_chapter");
-
+            entity.HasOne(d => d.story).WithMany(p => p.chapter_comments).HasConstraintName("fk_cmt_story");
             entity.HasOne(d => d.reader).WithMany(p => p.chapter_comments).HasConstraintName("fk_cmt_reader");
+        });
+
+        modelBuilder.Entity<story_rating>(entity =>
+        {
+            entity.HasKey(e => new { e.story_id, e.reader_id }).HasName("PRIMARY");
+
+            entity.Property(e => e.score).HasColumnType("tinyint");
+            entity.Property(e => e.created_at).HasDefaultValueSql("CURRENT_TIMESTAMP");
+            entity.Property(e => e.updated_at)
+                .ValueGeneratedOnAddOrUpdate()
+                .HasDefaultValueSql("CURRENT_TIMESTAMP");
+
+            entity.HasIndex(e => e.reader_id).HasDatabaseName("ix_rating_reader");
+
+            entity.HasOne(d => d.reader).WithMany(p => p.story_ratings).HasConstraintName("fk_rating_reader");
+            entity.HasOne(d => d.story).WithMany(p => p.story_ratings).HasConstraintName("fk_rating_story");
         });
 
         modelBuilder.Entity<chapter_localization>(entity =>

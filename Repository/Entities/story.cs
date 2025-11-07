@@ -63,4 +63,10 @@ public partial class story
 
     [InverseProperty("story")]
     public virtual ICollection<story_weekly_view> story_weekly_views { get; set; } = new List<story_weekly_view>();
+
+    [InverseProperty("story")]
+    public virtual ICollection<chapter_comment> chapter_comments { get; set; } = new List<chapter_comment>();
+
+    [InverseProperty("story")]
+    public virtual ICollection<story_rating> story_ratings { get; set; } = new List<story_rating>();
 }

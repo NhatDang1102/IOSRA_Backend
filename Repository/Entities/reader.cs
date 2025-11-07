@@ -31,6 +31,9 @@ public partial class reader
     [InverseProperty("reader")]
     public virtual ICollection<favorite_story> favorite_stories { get; set; } = new List<favorite_story>();
 
+    [InverseProperty("reader")]
+    public virtual ICollection<story_rating> story_ratings { get; set; } = new List<story_rating>();
+
     [InverseProperty("follower")]
     public virtual ICollection<follow> follows { get; set; } = new List<follow>();
 }

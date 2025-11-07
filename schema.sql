@@ -221,17 +221,37 @@ CREATE TABLE content_approve (
 CREATE TABLE chapter_comment (
   comment_id CHAR(36) NOT NULL,
   reader_id  CHAR(36) NOT NULL,
+  story_id   CHAR(36) NOT NULL,
   chapter_id CHAR(36) NOT NULL,
   content    TEXT NOT NULL,
   status     ENUM('visible','hidden','removed') NOT NULL DEFAULT 'visible',
+  is_locked  TINYINT(1) NOT NULL DEFAULT 0,
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (comment_id),
   KEY ix_cmt_reader (reader_id),
   KEY ix_cmt_chapter (chapter_id),
+  KEY ix_cmt_story (story_id),
   CONSTRAINT fk_cmt_reader FOREIGN KEY (reader_id)
     REFERENCES reader(account_id) ON DELETE CASCADE ON UPDATE CASCADE,
   CONSTRAINT fk_cmt_chapter FOREIGN KEY (chapter_id)
-    REFERENCES chapters(chapter_id) ON DELETE CASCADE ON UPDATE CASCADE
+    REFERENCES chapters(chapter_id) ON DELETE CASCADE ON UPDATE CASCADE,
+  CONSTRAINT fk_cmt_story FOREIGN KEY (story_id)
+    REFERENCES story(story_id) ON DELETE CASCADE ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+CREATE TABLE story_rating (
+  story_id   CHAR(36) NOT NULL,
+  reader_id  CHAR(36) NOT NULL,
+  score      TINYINT UNSIGNED NOT NULL,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (story_id, reader_id),
+  KEY ix_rating_reader (reader_id),
+  CONSTRAINT fk_rating_story FOREIGN KEY (story_id)
+    REFERENCES story(story_id) ON DELETE CASCADE ON UPDATE CASCADE,
+  CONSTRAINT fk_rating_reader FOREIGN KEY (reader_id)
+    REFERENCES reader(account_id) ON DELETE CASCADE ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 CREATE TABLE chapter_localizations (
