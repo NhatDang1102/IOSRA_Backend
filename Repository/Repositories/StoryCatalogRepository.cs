@@ -33,11 +33,12 @@ namespace Repository.Repositories
             if (!string.IsNullOrWhiteSpace(query))
             {
                 var term = query.Trim();
-                var likeTerm = $"%{term}%";
+                var likePattern = BuildLikePattern(term);
+                const string escapeChar = "\\";
+
                 storiesQuery = storiesQuery.Where(s =>
-                    EF.Functions.Like(s.title, likeTerm) ||
-                    (s.desc != null && EF.Functions.Like(s.desc, likeTerm)) ||
-                    EF.Functions.Like(s.author.account.username, likeTerm));
+                    EF.Functions.Like(s.title, likePattern, escapeChar) ||
+                    (s.desc != null && EF.Functions.Like(s.desc, likePattern, escapeChar)));
             }
 
             if (tagId.HasValue && tagId.Value != Guid.Empty)
@@ -101,6 +102,14 @@ namespace Repository.Repositories
                   .Include(s => s.author).ThenInclude(a => a.account)
                   .Include(s => s.story_tags).ThenInclude(st => st.tag)
                   .FirstOrDefaultAsync(s => s.story_id == storyId && PublicStoryStatuses.Contains(s.status), ct);
+        private static string BuildLikePattern(string term)
+        {
+            var escaped = term
+                .Replace("\\", "\\\\")
+                .Replace("%", "\\%")
+                .Replace("_", "\\_");
+
+            return $"%{escaped}%";
+        }
     }
 }
-
