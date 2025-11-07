@@ -12,6 +12,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using Repository.DBContext;
+using Repository.Utils;
 using Service.Helpers;
 using Service.Interfaces;
 using StackExchange.Redis;
@@ -30,7 +31,12 @@ namespace Main
             services.AddMemoryCache();
 
             var connectionString = configuration.GetConnectionString("Default");
-            services.AddDbContext<AppDbContext>(o => o.UseMySql(connectionString, ServerVersion.AutoDetect(connectionString)));
+            services.AddSingleton<MySqlTimeZoneInterceptor>();
+            services.AddDbContext<AppDbContext>((sp, o) =>
+            {
+                o.UseMySql(connectionString, ServerVersion.AutoDetect(connectionString));
+                o.AddInterceptors(sp.GetRequiredService<MySqlTimeZoneInterceptor>());
+            });
 
             var firebaseSection = configuration.GetSection("Firebase");
             services.AddSingleton(provider =>

@@ -2,6 +2,7 @@ using Contract.DTOs.Request.Chapter;
 using Contract.DTOs.Respond.Chapter;
 using Repository.Entities;
 using Repository.Interfaces;
+using Repository.Utils;
 using Service.Exceptions;
 using Service.Interfaces;
 using System;
@@ -49,7 +50,7 @@ namespace Service.Services
             }
 
             var lastRejectedAt = await _chapterRepository.GetLastAuthorChapterRejectedAtAsync(author.account_id, ct);
-            if (lastRejectedAt.HasValue && lastRejectedAt.Value > DateTime.UtcNow.AddHours(-24))
+            if (lastRejectedAt.HasValue && lastRejectedAt.Value > TimezoneConverter.VietnamNow.AddHours(-24))
             {
                 throw new AppException("ChapterCreationCooldown", "You must wait 24 hours after a chapter rejection before creating a new chapter.", 400, new
                 {
@@ -108,8 +109,8 @@ namespace Service.Services
                 ai_score = null,
                 ai_feedback = null,
                 status = "draft",
-                created_at = DateTime.UtcNow,
-                updated_at = DateTime.UtcNow,
+                created_at = TimezoneConverter.VietnamNow,
+                updated_at = TimezoneConverter.VietnamNow,
                 submitted_at = null,
                 published_at = null
             };
@@ -193,7 +194,7 @@ namespace Service.Services
             var content = await _contentStorage.DownloadAsync(chapter.content_url, ct);
             var moderation = await _openAiModerationService.ModerateChapterAsync(chapter.title, content, ct);
             var aiScoreDecimal = (decimal)Math.Round(moderation.Score, 2, MidpointRounding.AwayFromZero);
-            var timestamp = DateTime.UtcNow;
+            var timestamp = TimezoneConverter.VietnamNow;
 
             chapter.updated_at = timestamp;
             chapter.ai_score = aiScoreDecimal;
@@ -223,7 +224,7 @@ namespace Service.Services
             if (autoApprove)
             {
                 chapter.status = "published";
-                chapter.published_at ??= DateTime.UtcNow;
+                chapter.published_at ??= TimezoneConverter.VietnamNow;
                 await _chapterRepository.UpdateAsync(chapter, ct);
                 await UpsertChapterApprovalAsync(chapter, "approved", aiScoreDecimal, moderation.Explanation, ct);
             }
@@ -308,7 +309,7 @@ namespace Service.Services
         private async Task<content_approve> UpsertChapterApprovalAsync(chapter chapter, string status, decimal aiScore, string? aiNote, CancellationToken ct)
         {
             var approval = await _chapterRepository.GetContentApprovalForChapterAsync(chapter.chapter_id, ct);
-            var timestamp = DateTime.UtcNow;
+            var timestamp = TimezoneConverter.VietnamNow;
 
             if (approval == null)
             {

@@ -2,6 +2,7 @@ using Contract.DTOs.Request.Author;
 using Contract.DTOs.Respond.Author;
 using Contract.DTOs.Respond.OperationMod;
 using Repository.Interfaces;
+using Repository.Utils;
 using Service.Exceptions;
 using Service.Interfaces;
 using System;
@@ -46,7 +47,7 @@ namespace Service.Implementations
             if (lastRejectedAt.HasValue)
             {
                 var until = lastRejectedAt.Value.Add(Cooldown);
-                var now = DateTime.UtcNow;
+                var now = TimezoneConverter.VietnamNow;
                 if (now < until)
                 {
                     var remain = until - now;

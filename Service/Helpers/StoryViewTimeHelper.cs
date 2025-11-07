@@ -1,4 +1,5 @@
 using System;
+using Repository.Utils;
 
 namespace Service.Helpers
 {
@@ -8,7 +9,7 @@ namespace Service.Helpers
 
         internal static DateTime GetCurrentWeekStartUtc()
         {
-            return GetWeekStartUtc(DateTime.UtcNow);
+            return GetWeekStartUtc(TimezoneConverter.VietnamNow - LocalOffset);
         }
 
         internal static DateTime GetWeekStartUtc(DateTime utcNow)

@@ -7,7 +7,8 @@ using Microsoft.EntityFrameworkCore;
 using Repository.Base;
 using Repository.DBContext;
 using Repository.Entities;
-using Repository.Interfaces;
+using Repository.Interfaces;
+using Repository.Utils;
 
 namespace Repository.Repositories
 {
@@ -88,7 +89,7 @@ namespace Repository.Repositories
         public async Task AddContentApproveAsync(content_approve entity, CancellationToken ct = default)
         {
             EnsureId(entity, nameof(content_approve.review_id));
-            entity.created_at = entity.created_at == default ? DateTime.UtcNow : entity.created_at;
+            entity.created_at = entity.created_at == default ? TimezoneConverter.VietnamNow : entity.created_at;
             _db.content_approves.Add(entity);
             await _db.SaveChangesAsync(ct);
         }

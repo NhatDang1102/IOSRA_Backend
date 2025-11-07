@@ -1,6 +1,7 @@
 ﻿using Microsoft.Extensions.Configuration;
 using Microsoft.IdentityModel.Tokens;
 using Repository.Entities;
+using Repository.Utils;
 using Service.Interfaces;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
@@ -35,7 +36,7 @@ namespace Service.Implementations
                 claims.AddRange(roles.Select(r => new Claim(ClaimTypes.Role, r)));
 
             // Thời gian hết hạn của token (mặc định 60 phút)
-            var expires = DateTime.UtcNow.AddMinutes(int.Parse(jwt["ExpiresMinutes"] ?? "60"));
+            var expires = TimezoneConverter.VietnamNow.AddMinutes(int.Parse(jwt["ExpiresMinutes"] ?? "60"));
 
             // Tạo JWT token
             var token = new JwtSecurityToken(

@@ -2,6 +2,7 @@ using Contract.DTOs.Request.Story;
 using Contract.DTOs.Respond.Story;
 using Repository.Entities;
 using Repository.Interfaces;
+using Repository.Utils;
 using Service.Exceptions;
 using Service.Interfaces;
 using Microsoft.AspNetCore.Http;
@@ -45,7 +46,7 @@ namespace Service.Services
             }
 
             var lastRejectedAt = await _storyRepository.GetLastAuthorStoryRejectedAtAsync(author.account_id, ct);
-            if (lastRejectedAt.HasValue && lastRejectedAt.Value > DateTime.UtcNow.AddHours(-24))
+            if (lastRejectedAt.HasValue && lastRejectedAt.Value > TimezoneConverter.VietnamNow.AddHours(-24))
             {
                 throw new AppException("StoryCreationCooldown", "You must wait 24 hours after a rejection before creating a new story.", 400, new
                 {
@@ -137,7 +138,7 @@ namespace Service.Services
             var aiResult = await _openAiModerationService.ModerateStoryAsync(story.title, story.desc, ct);
             var aiScore = (decimal)Math.Round(aiResult.Score, 2, MidpointRounding.AwayFromZero);
             var aiNote = aiResult.Explanation;
-            var now = DateTime.UtcNow;
+            var now = TimezoneConverter.VietnamNow;
 
             story.updated_at = now;
 
@@ -167,7 +168,7 @@ namespace Service.Services
             if (aiScore >= 0.70m)
             {
                 story.status = "published";
-                story.published_at ??= DateTime.UtcNow;
+                story.published_at ??= TimezoneConverter.VietnamNow;
 
                 var authorRankName = author.rank?.rank_name;
                 story.is_premium = !string.IsNullOrWhiteSpace(authorRankName) &&
@@ -242,7 +243,7 @@ namespace Service.Services
             }
 
             var earliestCompletion = publishedAt.Value.AddDays(1);
-            if (DateTime.UtcNow < earliestCompletion)
+            if (TimezoneConverter.VietnamNow < earliestCompletion)
             {
                 throw new AppException("StoryCompletionCooldown", "Story must be published for at least 30 days before completion.", 400, new
                 {
@@ -251,7 +252,7 @@ namespace Service.Services
             }
 
             story.status = "completed";
-            story.updated_at = DateTime.UtcNow;
+            story.updated_at = TimezoneConverter.VietnamNow;
 
             await _storyRepository.UpdateStoryAsync(story, ct);
 
@@ -284,7 +285,7 @@ namespace Service.Services
             var coverUrl = await _imageUploader.UploadStoryCoverAsync(stream, coverFile.FileName, ct);
 
             story.cover_url = coverUrl;
-            story.updated_at = DateTime.UtcNow;
+            story.updated_at = TimezoneConverter.VietnamNow;
 
             await _storyRepository.UpdateStoryAsync(story, ct);
 
@@ -358,7 +359,7 @@ namespace Service.Services
         private async Task<content_approve> UpsertStoryApprovalAsync(Guid storyId, string status, decimal aiScore, string? aiNote, CancellationToken ct)
         {
             var approval = await _storyRepository.GetContentApprovalForStoryAsync(storyId, ct);
-            var timestamp = DateTime.UtcNow;
+            var timestamp = TimezoneConverter.VietnamNow;
 
             if (approval == null)
             {
