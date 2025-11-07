@@ -10,6 +10,7 @@ namespace Contract.DTOs.Respond.Story
         public string Status { get; set; } = null!;
         public bool IsPremium { get; set; }
         public string? CoverUrl { get; set; }
+        public string LengthPlan { get; set; } = null!;
         public DateTime CreatedAt { get; set; }
         public DateTime UpdatedAt { get; set; }
         public DateTime? PublishedAt { get; set; }

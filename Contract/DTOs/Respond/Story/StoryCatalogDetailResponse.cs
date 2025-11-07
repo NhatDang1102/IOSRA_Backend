@@ -14,6 +14,7 @@ namespace Contract.DTOs.Respond.Story
         public string? Description { get; set; }
         public int TotalChapters { get; set; }
         public DateTime? PublishedAt { get; set; }
+        public string LengthPlan { get; set; } = null!;
         public IReadOnlyList<StoryTagResponse> Tags { get; set; } = Array.Empty<StoryTagResponse>();
     }
 }

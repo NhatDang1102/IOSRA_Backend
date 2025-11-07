@@ -28,6 +28,7 @@ namespace Service.Helpers
                 IsPremium = entity.is_premium,
                 TotalChapters = chapterCount,
                 PublishedAt = entity.published_at,
+                LengthPlan = entity.length_plan,
                 ShortDescription = BuildShortDescription(entity.desc),
                 Tags = tags
             };

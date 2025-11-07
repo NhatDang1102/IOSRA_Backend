@@ -116,6 +116,8 @@ CREATE TABLE story (
   title        VARCHAR(255) NOT NULL,
   author_id    CHAR(36) NOT NULL,
   `desc`       MEDIUMTEXT NULL,
+  outline      TEXT NOT NULL,
+  length_plan  ENUM('novel','short','super_short') NOT NULL DEFAULT 'short',
   cover_url    VARCHAR(512) NULL,
   status       ENUM('draft','pending','rejected','published','completed','hidden','removed') NOT NULL DEFAULT 'draft',
   is_premium   TINYINT(1) NOT NULL DEFAULT 0,

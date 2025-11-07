@@ -15,6 +15,8 @@ namespace Contract.DTOs.Respond.Story
         public decimal? AiScore { get; set; }
         public string? AiResult { get; set; }
         public string Status { get; set; } = null!;
+        public string Outline { get; set; } = null!;
+        public string LengthPlan { get; set; } = null!;
         public DateTime SubmittedAt { get; set; }
         public string? PendingNote { get; set; }
         public IReadOnlyList<StoryTagResponse> Tags { get; set; } = Array.Empty<StoryTagResponse>();

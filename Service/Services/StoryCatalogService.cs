@@ -84,6 +84,7 @@ namespace Service.Services
                 Description = story.desc,
                 TotalChapters = totalChapters,
                 PublishedAt = story.published_at,
+                LengthPlan = story.length_plan,
                 Tags = tags
             };
         }

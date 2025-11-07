@@ -22,6 +22,15 @@ namespace Contract.DTOs.Request.Story
         [RegularExpression("upload|generate", ErrorMessage = "CoverMode must be 'upload' or 'generate'.")]
         public string CoverMode { get; set; } = null!;
 
+        [Required]
+        [MinLength(20)]
+        [StringLength(10000)]
+        public string Outline { get; set; } = null!;
+
+        [Required]
+        [RegularExpression("novel|short|super_short", ErrorMessage = "LengthPlan must be novel, short, or super_short.")]
+        public string LengthPlan { get; set; } = "short";
+
         public IFormFile? CoverFile { get; set; }
 
         [StringLength(500)]

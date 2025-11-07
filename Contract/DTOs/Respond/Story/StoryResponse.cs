@@ -16,6 +16,8 @@ namespace Contract.DTOs.Respond.Story
         public string? AiNote { get; set; }
         public string? ModeratorStatus { get; set; }
         public string? ModeratorNote { get; set; }
+        public string Outline { get; set; } = null!;
+        public string LengthPlan { get; set; } = null!;
         public DateTime CreatedAt { get; set; }
         public DateTime UpdatedAt { get; set; }
         public DateTime? PublishedAt { get; set; }

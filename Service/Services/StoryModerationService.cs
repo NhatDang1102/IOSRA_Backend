@@ -157,6 +157,8 @@ namespace Service.Services
                 AiScore = approval.ai_score,
                 AiResult = ResolveAiDecision(approval),
                 Status = story.status,
+                Outline = story.outline,
+                LengthPlan = story.length_plan,
                 SubmittedAt = approval.created_at,
                 PendingNote = approval.moderator_note,
                 Tags = tags

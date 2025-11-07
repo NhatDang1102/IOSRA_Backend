@@ -23,6 +23,10 @@ namespace Service.Services
 
         private static readonly string[] AllowedCoverModes = { "upload", "generate" };
         private static readonly string[] AuthorListAllowedStatuses = { "draft", "pending", "rejected", "published", "completed", "hidden", "removed" };
+        private static readonly HashSet<string> AllowedLengthPlans = new(StringComparer.OrdinalIgnoreCase)
+        {
+            "novel", "short", "super_short"
+        };
 
         public AuthorStoryService(
             IAuthorStoryRepository storyRepository,
@@ -70,6 +74,14 @@ namespace Service.Services
             }
 
             var tagIds = request.TagIds.Distinct().ToArray();
+            var outline = (request.Outline ?? string.Empty).Trim();
+            if (string.IsNullOrWhiteSpace(outline))
+            {
+                throw new AppException("OutlineRequired", "Story outline is required.", 400);
+            }
+
+            var lengthPlan = NormalizeLengthPlan(request.LengthPlan);
+
             var tags = await _storyRepository.GetTagsByIdsAsync(tagIds, ct);
             if (tags.Count != tagIds.Length)
             {
@@ -85,6 +97,8 @@ namespace Service.Services
                 author_id = author.account_id,
                 title = request.Title.Trim(),
                 desc = string.IsNullOrWhiteSpace(request.Description) ? null : request.Description.Trim(),
+                outline = outline,
+                length_plan = lengthPlan,
                 cover_url = coverUrl,
                 status = "draft",
                 is_premium = isPremium
@@ -424,6 +438,8 @@ namespace Service.Services
                 AiNote = approval?.ai_note,
                 ModeratorStatus = moderatorStatus,
                 ModeratorNote = moderatorNote,
+                Outline = story.outline,
+                LengthPlan = story.length_plan,
                 CreatedAt = story.created_at,
                 UpdatedAt = story.updated_at,
                 PublishedAt = story.published_at,
@@ -450,6 +466,7 @@ namespace Service.Services
                 Status = story.status,
                 IsPremium = story.is_premium,
                 CoverUrl = story.cover_url,
+                LengthPlan = story.length_plan,
                 CreatedAt = story.created_at,
                 UpdatedAt = story.updated_at,
                 PublishedAt = story.published_at,
@@ -480,6 +497,21 @@ namespace Service.Services
             }
 
             return "flagged";
+        }
+
+        private static string NormalizeLengthPlan(string? plan)
+        {
+            if (string.IsNullOrWhiteSpace(plan))
+            {
+                throw new AppException("LengthPlanRequired", "Length plan is required.", 400);
+            }
+
+            var normalized = plan.Trim().ToLowerInvariant();
+            if (!AllowedLengthPlans.Contains(normalized))
+            {
+                throw new AppException("InvalidLengthPlan", "Length plan must be novel, short, or super_short.", 400);
+            }
+            return normalized;
         }
     }
 }

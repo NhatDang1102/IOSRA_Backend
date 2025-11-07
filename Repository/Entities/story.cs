@@ -22,6 +22,12 @@ public partial class story
     [Column(TypeName = "mediumtext")]
     public string? desc { get; set; }
 
+    [Column(TypeName = "text")]
+    public string outline { get; set; } = null!;
+
+    [Column(TypeName = "enum('novel','short','super_short')")]
+    public string length_plan { get; set; } = "short";
+
     [StringLength(512)]
     public string? cover_url { get; set; }
 
