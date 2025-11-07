@@ -2,6 +2,7 @@
 using Contract.DTOs.Respond.Story;
 using Repository.Entities;
 using Repository.Interfaces;
+using Repository.Utils;
 using Service.Exceptions;
 using Service.Interfaces;
 using System;
@@ -87,12 +88,12 @@ namespace Service.Services
             var humanNote = string.IsNullOrWhiteSpace(request.ModeratorNote) ? null : request.ModeratorNote.Trim();
             approval.moderator_note = humanNote;
             approval.moderator_id = moderatorAccountId;
-            approval.created_at = DateTime.UtcNow;
+            approval.created_at = TimezoneConverter.VietnamNow;
 
             if (request.Approve)
             {
                 story.status = "published";
-                story.published_at ??= DateTime.UtcNow;
+                story.published_at ??= TimezoneConverter.VietnamNow;
                 var authorRank = story.author.rank?.rank_name;
                 story.is_premium = !string.IsNullOrWhiteSpace(authorRank) && !string.Equals(authorRank, "Casual", StringComparison.OrdinalIgnoreCase);
             }
@@ -101,7 +102,7 @@ namespace Service.Services
                 story.status = "rejected";
                 story.published_at = null;
             }
-            story.updated_at = DateTime.UtcNow;
+            story.updated_at = TimezoneConverter.VietnamNow;
 
             await _storyRepository.SaveChangesAsync(ct);
 

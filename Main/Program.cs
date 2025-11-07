@@ -19,7 +19,8 @@ using Service.Services;
 using Main.Middleware;
 using Main;            
 using Repository;        
-using Service;         
+using Service;
+using Repository.Utils;        
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -52,6 +53,6 @@ app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
-app.MapGet("/", () => Results.Ok(new { ok = true, time = DateTime.UtcNow }));
+app.MapGet("/", () => Results.Ok(new { ok = true, time = TimezoneConverter.VietnamNow }));
 
 app.Run();

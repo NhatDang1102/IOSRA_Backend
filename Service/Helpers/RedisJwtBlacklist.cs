@@ -4,6 +4,8 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 
+using Repository.Utils;
+
 namespace Service.Helpers
 {
     // Service quản lý blacklist JWT token khi logout (sử dụng Redis)
@@ -18,7 +20,11 @@ namespace Service.Helpers
         {
             var db = _redis.GetDatabase();
             // Tính TTL = thời gian còn lại đến khi token hết hạn
-            var ttl = expiresAtUtc - DateTimeOffset.UtcNow;
+            var localNow = new DateTimeOffset(TimezoneConverter.VietnamNow, TimezoneConverter.VietnamOffset);
+
+            var expiresLocal = expiresAtUtc.ToOffset(TimezoneConverter.VietnamOffset);
+
+            var ttl = expiresLocal - localNow;
             if (ttl < TimeSpan.Zero) ttl = TimeSpan.FromMinutes(1); // Tối thiểu 1 phút
             // Lưu vào Redis với TTL - sau khi hết hạn key tự động bị xóa
             await db.StringSetAsync($"{Prefix}:{jti}", "1", ttl);

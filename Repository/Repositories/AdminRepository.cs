@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using Repository.DBContext;
 using Repository.Entities;
 using Repository.Interfaces;
+using Repository.Utils;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -58,7 +59,7 @@ namespace Repository.Repositories
             var acc = await _db.accounts.FirstOrDefaultAsync(a => a.account_id == accountId, ct);
             if (acc is null) return;
             acc.status = status;
-            acc.updated_at = DateTime.UtcNow;
+            acc.updated_at = TimezoneConverter.VietnamNow;
             await _db.SaveChangesAsync(ct);
         }
 
@@ -75,7 +76,7 @@ namespace Repository.Repositories
             var olds = _db.account_roles.Where(r => r.account_id == accountId);
             _db.account_roles.RemoveRange(olds);
 
-            var now = DateTime.UtcNow;
+            var now = TimezoneConverter.VietnamNow;
             foreach (var rid in roleIds.Distinct())
             {
                 _db.account_roles.Add(new account_role

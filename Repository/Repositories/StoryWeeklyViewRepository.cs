@@ -9,6 +9,7 @@ using Repository.Base;
 using Repository.DBContext;
 using Repository.Entities;
 using Repository.Interfaces;
+using Repository.Utils;
 
 namespace Repository.Repositories
 {
@@ -33,7 +34,7 @@ namespace Repository.Repositories
                 .ToListAsync(ct);
 
             var existingLookup = existing.ToDictionary(x => x.story_id, x => x);
-            var now = DateTime.UtcNow;
+            var now = TimezoneConverter.VietnamNow;
 
             foreach (var item in items)
             {

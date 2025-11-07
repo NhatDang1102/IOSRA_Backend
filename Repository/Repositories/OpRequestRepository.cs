@@ -8,6 +8,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Repository.Utils;
 
 namespace Repository.Repositories
 {
@@ -29,7 +30,7 @@ namespace Repository.Repositories
                 omod_id = null,
                 status = "pending",
                 withdraw_code = null,
-                created_at = DateTime.UtcNow
+                created_at = TimezoneConverter.VietnamNow
             };
 
             _db.op_requests.Add(req);

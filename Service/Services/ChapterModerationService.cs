@@ -2,6 +2,7 @@
 using Contract.DTOs.Respond.Chapter;
 using Repository.Entities;
 using Repository.Interfaces;
+using Repository.Utils;
 using Service.Exceptions;
 using Service.Interfaces;
 using System;
@@ -86,12 +87,12 @@ namespace Service.Services
             var humanNote = string.IsNullOrWhiteSpace(request.ModeratorNote) ? null : request.ModeratorNote.Trim();
             approval.moderator_note = humanNote;
             approval.moderator_id = moderatorAccountId;
-            approval.created_at = DateTime.UtcNow;
+            approval.created_at = TimezoneConverter.VietnamNow;
 
             if (request.Approve)
             {
                 chapter.status = "published";
-                chapter.published_at ??= DateTime.UtcNow;
+                chapter.published_at ??= TimezoneConverter.VietnamNow;
             }
             else
             {
@@ -103,7 +104,7 @@ namespace Service.Services
                 }
             }
 
-            chapter.updated_at = DateTime.UtcNow;
+            chapter.updated_at = TimezoneConverter.VietnamNow;
 
             await _chapterRepository.SaveChangesAsync(ct);
 
