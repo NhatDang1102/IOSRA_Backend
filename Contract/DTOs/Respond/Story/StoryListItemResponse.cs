@@ -15,5 +15,10 @@ namespace Contract.DTOs.Respond.Story
         public DateTime UpdatedAt { get; set; }
         public DateTime? PublishedAt { get; set; }
         public IReadOnlyList<StoryTagResponse> Tags { get; set; } = Array.Empty<StoryTagResponse>();
+        public decimal? AiScore { get; set; }
+        public string? AiResult { get; set; }
+        public string? AiNote { get; set; }
+        public string? ModeratorStatus { get; set; }
+        public string? ModeratorNote { get; set; }
     }
 }
