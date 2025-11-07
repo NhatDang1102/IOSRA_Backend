@@ -1,0 +1,32 @@
+using System;
+using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
+using Microsoft.AspNetCore.Http;
+
+namespace Contract.DTOs.Request.Story
+{
+    public class StoryUpdateRequest
+    {
+        [StringLength(150)]
+        public string? Title { get; set; }
+
+        [StringLength(5000)]
+        public string? Description { get; set; }
+
+        [StringLength(10000)]
+        public string? Outline { get; set; }
+
+        [RegularExpression("novel|short|super_short", ErrorMessage = "LengthPlan must be novel, short, or super_short.")]
+        public string? LengthPlan { get; set; }
+
+        public List<Guid>? TagIds { get; set; }
+
+        [RegularExpression("upload", ErrorMessage = "CoverMode must be 'upload'.")]
+        public string? CoverMode { get; set; }
+
+        public IFormFile? CoverFile { get; set; }
+
+        [StringLength(500)]
+        public string? CoverPrompt { get; set; }
+    }
+}

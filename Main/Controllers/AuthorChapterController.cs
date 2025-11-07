@@ -40,6 +40,13 @@ namespace Main.Controllers
             return Ok(chapter);
         }
 
+        [HttpPut("{storyId:guid}/{chapterId:guid}")]
+        public async Task<IActionResult> Update([FromRoute] Guid storyId, [FromRoute] Guid chapterId, [FromBody] ChapterUpdateRequest request, CancellationToken ct)
+        {
+            var chapter = await _authorChapterService.UpdateDraftAsync(AccountId, storyId, chapterId, request, ct);
+            return Ok(chapter);
+        }
+
         [HttpPost("{chapterId:guid}/submit")]
         public async Task<IActionResult> Submit([FromRoute] Guid chapterId, [FromBody] ChapterSubmitRequest request, CancellationToken ct)
         {

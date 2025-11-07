@@ -242,6 +242,105 @@ namespace Service.Services
             return MapChapter(chapter, approvals);
         }
 
+        public async Task<ChapterResponse> UpdateDraftAsync(Guid authorAccountId, Guid storyId, Guid chapterId, ChapterUpdateRequest request, CancellationToken ct = default)
+        {
+            var author = await _storyRepository.GetAuthorAsync(authorAccountId, ct)
+                         ?? throw new AppException("AuthorNotFound", "Author profile is not registered.", 404);
+
+            var story = await _storyRepository.GetStoryForAuthorAsync(storyId, author.account_id, ct)
+                        ?? throw new AppException("StoryNotFound", "Story was not found.", 404);
+
+            var chapter = await _chapterRepository.GetForAuthorAsync(story.story_id, chapterId, author.account_id, ct)
+                         ?? throw new AppException("ChapterNotFound", "Chapter was not found.", 404);
+
+            if (!string.Equals(chapter.status, "draft", StringComparison.OrdinalIgnoreCase))
+            {
+                throw new AppException("ChapterUpdateNotAllowed", "Only draft chapters can be edited before submission.", 400);
+            }
+
+            var updated = false;
+
+            if (request.Title != null)
+            {
+                var title = request.Title.Trim();
+                if (string.IsNullOrWhiteSpace(title))
+                {
+                    throw new AppException("InvalidChapterTitle", "Chapter title must not be empty.", 400);
+                }
+
+                chapter.title = title;
+                updated = true;
+            }
+
+            if (request.LanguageCode != null)
+            {
+                var languageCode = request.LanguageCode.Trim();
+                if (string.IsNullOrWhiteSpace(languageCode))
+                {
+                    throw new AppException("LanguageCodeRequired", "Language code must not be empty.", 400);
+                }
+
+                var language = await _chapterRepository.GetLanguageByCodeAsync(languageCode, ct)
+                              ?? throw new AppException("LanguageNotSupported", $"Language '{languageCode}' is not supported.", 400);
+                chapter.language_id = language.lang_id;
+                chapter.language = language;
+                updated = true;
+            }
+
+            if (request.Content != null)
+            {
+                var content = request.Content.Trim();
+                if (content.Length < MinContentLength)
+                {
+                    throw new AppException("ChapterContentTooShort", $"Chapter content must contain at least {MinContentLength} characters.", 400);
+                }
+
+                var wordCount = CountWords(content);
+                if (wordCount <= 0)
+                {
+                    throw new AppException("ChapterContentEmpty", "Chapter content must include words.", 400);
+                }
+
+                var price = CalculatePrice(wordCount);
+                string? newContentKey = null;
+                try
+                {
+                    newContentKey = await _contentStorage.UploadAsync(story.story_id, chapter.chapter_id, content, ct);
+                    if (!string.IsNullOrWhiteSpace(chapter.content_url))
+                    {
+                        await _contentStorage.DeleteAsync(chapter.content_url, ct);
+                    }
+
+                    chapter.content_url = newContentKey;
+                }
+                catch
+                {
+                    if (!string.IsNullOrWhiteSpace(newContentKey))
+                    {
+                        await _contentStorage.DeleteAsync(newContentKey, ct);
+                    }
+                    throw;
+                }
+
+                chapter.word_count = wordCount;
+                chapter.dias_price = (uint)price;
+                chapter.ai_score = null;
+                chapter.ai_feedback = null;
+                updated = true;
+            }
+
+            if (!updated)
+            {
+                throw new AppException("NoChanges", "No changes were provided.", 400);
+            }
+
+            chapter.updated_at = TimezoneConverter.VietnamNow;
+            await _chapterRepository.UpdateAsync(chapter, ct);
+
+            var approvals = await _chapterRepository.GetContentApprovalsForChapterAsync(chapter.chapter_id, ct);
+            return MapChapter(chapter, approvals);
+        }
+
         private static IReadOnlyList<string>? NormalizeChapterStatuses(string? status)
         {
             if (string.IsNullOrWhiteSpace(status))

@@ -41,11 +41,11 @@ namespace Main.Controllers
             return Ok(story);
         }
 
-        [HttpPost("{storyId:guid}/cover")]
+        [HttpPut("{storyId:guid}")]
         [RequestSizeLimit(10 * 1024 * 1024)]
-        public async Task<IActionResult> ReplaceCover([FromRoute] Guid storyId, [FromForm] StoryCoverUploadRequest request, CancellationToken ct)
+        public async Task<IActionResult> Update([FromRoute] Guid storyId, [FromForm] StoryUpdateRequest request, CancellationToken ct)
         {
-            var story = await _authorStoryService.UpdateCoverAsync(AccountId, storyId, request.CoverFile, ct);
+            var story = await _authorStoryService.UpdateDraftAsync(AccountId, storyId, request, ct);
             return Ok(story);
         }
 

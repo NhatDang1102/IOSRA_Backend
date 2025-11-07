@@ -88,7 +88,7 @@ namespace Service.Services
                 throw new AppException("InvalidTag", "One or more tags do not exist.", 400);
             }
 
-            var coverUrl = await ResolveCoverUrlAsync(request, ct);
+            var coverUrl = await ResolveCoverUrlAsync(request.CoverMode, request.CoverFile, request.CoverPrompt, ct);
             var isPremium = author.rank is not null &&
                             !string.Equals(author.rank.rank_name, "Casual", StringComparison.OrdinalIgnoreCase);
 
@@ -274,13 +274,8 @@ namespace Service.Services
             return MapStory(story, approvals);
         }
 
-        public async Task<StoryResponse> UpdateCoverAsync(Guid authorAccountId, Guid storyId, IFormFile coverFile, CancellationToken ct = default)
+        public async Task<StoryResponse> UpdateDraftAsync(Guid authorAccountId, Guid storyId, StoryUpdateRequest request, CancellationToken ct = default)
         {
-            if (coverFile == null || coverFile.Length == 0)
-            {
-                throw new AppException("CoverFileRequired", "Cover file must be provided.", 400);
-            }
-
             var author = await RequireAuthorAsync(authorAccountId, ct);
             if (author.restricted)
             {
@@ -292,44 +287,102 @@ namespace Service.Services
 
             if (!string.Equals(story.status, "draft", StringComparison.OrdinalIgnoreCase))
             {
-                throw new AppException("StoryCoverUpdateNotAllowed", "Cover can only be replaced while the story is in draft status.", 400);
+                throw new AppException("StoryUpdateNotAllowed", "Only draft stories can be edited before submission.", 400);
             }
 
-            await using var stream = coverFile.OpenReadStream();
-            var coverUrl = await _imageUploader.UploadStoryCoverAsync(stream, coverFile.FileName, ct);
+            var updated = false;
 
-            story.cover_url = coverUrl;
+            if (!string.IsNullOrWhiteSpace(request.Title))
+            {
+                story.title = request.Title.Trim();
+                updated = true;
+            }
+
+            if (request.Description != null)
+            {
+                story.desc = string.IsNullOrWhiteSpace(request.Description) ? null : request.Description.Trim();
+                updated = true;
+            }
+
+            if (request.Outline != null)
+            {
+                var outline = request.Outline.Trim();
+                if (string.IsNullOrWhiteSpace(outline))
+                {
+                    throw new AppException("OutlineRequired", "Story outline must not be empty.", 400);
+                }
+                story.outline = outline;
+                updated = true;
+            }
+
+            if (request.LengthPlan != null)
+            {
+                story.length_plan = NormalizeLengthPlan(request.LengthPlan);
+                updated = true;
+            }
+
+            if (request.TagIds is { Count: > 0 })
+            {
+                var tagIds = request.TagIds.Distinct().ToArray();
+                var tags = await _storyRepository.GetTagsByIdsAsync(tagIds, ct);
+                if (tags.Count != tagIds.Length)
+                {
+                    throw new AppException("InvalidTag", "One or more tags do not exist.", 400);
+                }
+
+                await _storyRepository.ReplaceStoryTagsAsync(story.story_id, tagIds, ct);
+                updated = true;
+            }
+
+            if (!string.IsNullOrWhiteSpace(request.CoverMode))
+            {
+                var coverMode = request.CoverMode.Trim().ToLowerInvariant();
+                if (!string.Equals(coverMode, "upload", StringComparison.OrdinalIgnoreCase))
+                {
+                    throw new AppException("CoverRegenerationNotAllowed", "AI cover generation is not available while editing an existing draft. Please upload a new image instead.", 400);
+                }
+
+                var coverUrl = await ResolveCoverUrlAsync("upload", request.CoverFile, null, ct);
+                story.cover_url = coverUrl;
+                updated = true;
+            }
+
+            if (!updated)
+            {
+                throw new AppException("NoChanges", "No changes were provided.", 400);
+            }
+
             story.updated_at = TimezoneConverter.VietnamNow;
-
             await _storyRepository.UpdateStoryAsync(story, ct);
 
+            var refreshed = await _storyRepository.GetStoryForAuthorAsync(story.story_id, author.account_id, ct) ?? story;
             var approvals = await _storyRepository.GetContentApprovalsForStoryAsync(story.story_id, ct);
-            return MapStory(story, approvals);
+            return MapStory(refreshed, approvals);
         }
 
-        private async Task<string?> ResolveCoverUrlAsync(StoryCreateRequest request, CancellationToken ct)
+        private async Task<string?> ResolveCoverUrlAsync(string coverMode, IFormFile? coverFile, string? coverPrompt, CancellationToken ct)
         {
-            var mode = request.CoverMode.ToLowerInvariant();
+            var mode = coverMode.ToLowerInvariant();
             switch (mode)
             {
                 case "upload":
-                    if (request.CoverFile == null || request.CoverFile.Length == 0)
+                    if (coverFile == null || coverFile.Length == 0)
                     {
                         throw new AppException("CoverRequired", "CoverFile must be provided when CoverMode is 'upload'.", 400);
                     }
 
-                    await using (var stream = request.CoverFile.OpenReadStream())
+                    await using (var stream = coverFile.OpenReadStream())
                     {
-                        return await _imageUploader.UploadStoryCoverAsync(stream, request.CoverFile.FileName, ct);
+                        return await _imageUploader.UploadStoryCoverAsync(stream, coverFile.FileName, ct);
                     }
 
                 case "generate":
-                    if (string.IsNullOrWhiteSpace(request.CoverPrompt))
+                    if (string.IsNullOrWhiteSpace(coverPrompt))
                     {
                         throw new AppException("CoverPromptRequired", "CoverPrompt must be provided when CoverMode is 'generate'.", 400);
                     }
 
-                    var image = await _openAiImageService.GenerateCoverAsync(request.CoverPrompt, ct);
+                    var image = await _openAiImageService.GenerateCoverAsync(coverPrompt, ct);
                     try
                     {
                         return await _imageUploader.UploadStoryCoverAsync(image.Data, image.FileName, ct);
