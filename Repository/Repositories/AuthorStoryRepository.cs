@@ -56,6 +56,7 @@ namespace Repository.Repositories
         {
             var query = _db.stories
                 .Include(s => s.story_tags).ThenInclude(st => st.tag)
+                .Include(s => s.content_approves)
                 .Where(s => s.author_id == authorId);
 
             if (statuses is not null)

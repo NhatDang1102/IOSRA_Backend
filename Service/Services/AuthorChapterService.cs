@@ -261,6 +261,11 @@ namespace Service.Services
         private static ChapterResponse MapChapter(chapter chapter, IReadOnlyList<content_approve> approvals)
         {
             var language = chapter.language ?? throw new InvalidOperationException("Chapter language navigation was not loaded.");
+            var latestApproval = approvals?
+                .OrderByDescending(a => a.created_at)
+                .FirstOrDefault();
+            var moderatorStatus = latestApproval?.moderator_id.HasValue == true ? latestApproval.status : null;
+            var moderatorNote = latestApproval?.moderator_id.HasValue == true ? latestApproval.moderator_note : null;
 
             return new ChapterResponse
             {
@@ -275,8 +280,11 @@ namespace Service.Services
                 PriceDias = (int)chapter.dias_price,
                 AccessType = chapter.access_type,
                 Status = chapter.status,
-                AiScore = chapter.ai_score,
+                AiScore = latestApproval?.ai_score ?? chapter.ai_score,
                 AiFeedback = chapter.ai_feedback,
+                AiResult = ResolveAiDecision(latestApproval),
+                ModeratorStatus = moderatorStatus,
+                ModeratorNote = moderatorNote,
                 ContentPath = chapter.content_url,
                 CreatedAt = chapter.created_at,
                 UpdatedAt = chapter.updated_at,
@@ -288,6 +296,11 @@ namespace Service.Services
         private static ChapterListItemResponse MapChapterListItem(chapter chapter)
         {
             var language = chapter.language ?? throw new InvalidOperationException("Chapter language navigation was not loaded.");
+            var approval = chapter.content_approves?
+                .OrderByDescending(a => a.created_at)
+                .FirstOrDefault();
+            var moderatorStatus = approval?.moderator_id.HasValue == true ? approval.status : null;
+            var moderatorNote = approval?.moderator_id.HasValue == true ? approval.moderator_note : null;
 
             return new ChapterListItemResponse
             {
@@ -302,8 +315,33 @@ namespace Service.Services
                 CreatedAt = chapter.created_at,
                 UpdatedAt = chapter.updated_at,
                 SubmittedAt = chapter.submitted_at,
-                PublishedAt = chapter.published_at
+                PublishedAt = chapter.published_at,
+                AiScore = approval?.ai_score ?? chapter.ai_score,
+                AiResult = ResolveAiDecision(approval),
+                AiNote = approval?.ai_note ?? chapter.ai_feedback,
+                ModeratorStatus = moderatorStatus,
+                ModeratorNote = moderatorNote
             };
+        }
+
+        private static string? ResolveAiDecision(content_approve? approval)
+        {
+            if (approval == null || approval.ai_score is not decimal score)
+            {
+                return null;
+            }
+
+            if (score < 0.50m)
+            {
+                return "rejected";
+            }
+
+            if (score >= 0.70m)
+            {
+                return "approved";
+            }
+
+            return "flagged";
         }
 
         private async Task<content_approve> UpsertChapterApprovalAsync(chapter chapter, string status, decimal aiScore, string? aiNote, CancellationToken ct)

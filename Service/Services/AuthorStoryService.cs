@@ -459,6 +459,13 @@ namespace Service.Services
                 .OrderBy(t => t.TagName, StringComparer.OrdinalIgnoreCase)
                 .ToArray() ?? Array.Empty<StoryTagResponse>();
 
+            var approval = story.content_approves?
+                .OrderByDescending(a => a.created_at)
+                .FirstOrDefault();
+
+            var moderatorStatus = approval?.moderator_id.HasValue == true ? approval.status : null;
+            var moderatorNote = approval?.moderator_id.HasValue == true ? approval.moderator_note : null;
+
             return new StoryListItemResponse
             {
                 StoryId = story.story_id,
@@ -470,7 +477,12 @@ namespace Service.Services
                 CreatedAt = story.created_at,
                 UpdatedAt = story.updated_at,
                 PublishedAt = story.published_at,
-                Tags = tags
+                Tags = tags,
+                AiScore = approval?.ai_score,
+                AiResult = ResolveAiDecision(approval),
+                AiNote = approval?.ai_note,
+                ModeratorStatus = moderatorStatus,
+                ModeratorNote = moderatorNote
             };
         }
 
