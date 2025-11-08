@@ -36,12 +36,6 @@ public partial class chapter
 
     public int word_count { get; set; }
 
-    [Precision(5, 2)]
-    public decimal? ai_score { get; set; }
-
-    [Column(TypeName = "text")]
-    public string? ai_feedback { get; set; }
-
     [Column(TypeName = "enum('draft','pending','rejected','published','hidden','removed')")]
     public string status { get; set; } = null!;
 

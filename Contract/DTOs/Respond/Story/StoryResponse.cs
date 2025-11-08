@@ -13,7 +13,7 @@ namespace Contract.DTOs.Respond.Story
         public string? CoverUrl { get; set; }
         public decimal? AiScore { get; set; }
         public string? AiResult { get; set; }
-        public string? AiNote { get; set; }
+        public string? AiFeedback { get; set; }
         public string? ModeratorStatus { get; set; }
         public string? ModeratorNote { get; set; }
         public string Outline { get; set; } = null!;

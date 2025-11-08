@@ -106,8 +106,6 @@ namespace Service.Services
                 access_type = accessType,
                 content_url = null,
                 word_count = wordCount,
-                ai_score = null,
-                ai_feedback = null,
                 status = "draft",
                 created_at = TimezoneConverter.VietnamNow,
                 updated_at = TimezoneConverter.VietnamNow,
@@ -197,12 +195,10 @@ namespace Service.Services
             var timestamp = TimezoneConverter.VietnamNow;
 
             chapter.updated_at = timestamp;
-            chapter.ai_score = aiScoreDecimal;
-            chapter.ai_feedback = moderation.Explanation;
             chapter.submitted_at = timestamp;
 
-            var shouldReject = moderation.ShouldReject || aiScoreDecimal < 0.50m;
-            var autoApprove = !shouldReject && aiScoreDecimal >= 0.70m;
+            var shouldReject = moderation.ShouldReject || aiScoreDecimal < 5m;
+            var autoApprove = !shouldReject && aiScoreDecimal >= 7m;
 
             if (shouldReject)
             {
@@ -232,7 +228,6 @@ namespace Service.Services
             {
                 chapter.status = "pending";
                 chapter.published_at = null;
-                chapter.ai_feedback = moderation.Explanation;
                 await _chapterRepository.UpdateAsync(chapter, ct);
 
                 await UpsertChapterApprovalAsync(chapter, "pending", aiScoreDecimal, moderation.Explanation, ct);
@@ -324,8 +319,6 @@ namespace Service.Services
 
                 chapter.word_count = wordCount;
                 chapter.dias_price = (uint)price;
-                chapter.ai_score = null;
-                chapter.ai_feedback = null;
                 updated = true;
             }
 
@@ -364,7 +357,7 @@ namespace Service.Services
                 .OrderByDescending(a => a.created_at)
                 .FirstOrDefault();
             var moderatorStatus = latestApproval?.moderator_id.HasValue == true ? latestApproval.status : null;
-            var moderatorNote = latestApproval?.moderator_id.HasValue == true ? latestApproval.moderator_note : null;
+            var moderatorNote = latestApproval?.moderator_id.HasValue == true ? latestApproval.moderator_feedback : null;
 
             return new ChapterResponse
             {
@@ -379,8 +372,8 @@ namespace Service.Services
                 PriceDias = (int)chapter.dias_price,
                 AccessType = chapter.access_type,
                 Status = chapter.status,
-                AiScore = latestApproval?.ai_score ?? chapter.ai_score,
-                AiFeedback = chapter.ai_feedback,
+                AiScore = latestApproval?.ai_score,
+                AiFeedback = latestApproval?.ai_feedback,
                 AiResult = ResolveAiDecision(latestApproval),
                 ModeratorStatus = moderatorStatus,
                 ModeratorNote = moderatorNote,
@@ -399,7 +392,7 @@ namespace Service.Services
                 .OrderByDescending(a => a.created_at)
                 .FirstOrDefault();
             var moderatorStatus = approval?.moderator_id.HasValue == true ? approval.status : null;
-            var moderatorNote = approval?.moderator_id.HasValue == true ? approval.moderator_note : null;
+            var moderatorNote = approval?.moderator_id.HasValue == true ? approval.moderator_feedback : null;
 
             return new ChapterListItemResponse
             {
@@ -415,9 +408,9 @@ namespace Service.Services
                 UpdatedAt = chapter.updated_at,
                 SubmittedAt = chapter.submitted_at,
                 PublishedAt = chapter.published_at,
-                AiScore = approval?.ai_score ?? chapter.ai_score,
+                AiScore = approval?.ai_score,
                 AiResult = ResolveAiDecision(approval),
-                AiNote = approval?.ai_note ?? chapter.ai_feedback,
+                AiFeedback = approval?.ai_feedback,
                 ModeratorStatus = moderatorStatus,
                 ModeratorNote = moderatorNote
             };
@@ -430,12 +423,12 @@ namespace Service.Services
                 return null;
             }
 
-            if (score < 0.50m)
+            if (score < 5m)
             {
                 return "rejected";
             }
 
-            if (score >= 0.70m)
+            if (score >= 7m)
             {
                 return "approved";
             }
@@ -457,8 +450,8 @@ namespace Service.Services
                     chapter_id = chapter.chapter_id,
                     status = status,
                     ai_score = aiScore,
-                    ai_note = aiNote,
-                    moderator_note = null,
+                    ai_feedback = aiNote,
+                    moderator_feedback = null,
                     moderator_id = null,
                     created_at = timestamp
                 };
@@ -469,8 +462,8 @@ namespace Service.Services
             {
                 approval.status = status;
                 approval.ai_score = aiScore;
-                approval.ai_note = aiNote;
-                approval.moderator_note = null;
+                approval.ai_feedback = aiNote;
+                approval.moderator_feedback = null;
                 approval.moderator_id = null;
                 approval.created_at = timestamp;
 

@@ -156,7 +156,7 @@ namespace Service.Services
 
             story.updated_at = now;
 
-            if (aiResult.ShouldReject || aiScore < 0.50m)
+            if (aiResult.ShouldReject || aiScore < 5m)
             {
                 story.status = "rejected";
                 story.published_at = null;
@@ -179,7 +179,7 @@ namespace Service.Services
                 });
             }
 
-            if (aiScore >= 0.70m)
+            if (aiScore >= 7m)
             {
                 story.status = "published";
                 story.published_at ??= TimezoneConverter.VietnamNow;
@@ -436,8 +436,8 @@ namespace Service.Services
                     story_id = storyId,
                     status = status,
                     ai_score = aiScore,
-                    ai_note = aiNote,
-                    moderator_note = null,
+                    ai_feedback = aiNote,
+                    moderator_feedback = null,
                     moderator_id = null,
                     created_at = timestamp
                 };
@@ -448,8 +448,8 @@ namespace Service.Services
             {
                 approval.status = status;
                 approval.ai_score = aiScore;
-                approval.ai_note = aiNote;
-                approval.moderator_note = null;
+                approval.ai_feedback = aiNote;
+                approval.moderator_feedback = null;
                 approval.moderator_id = null;
                 approval.created_at = timestamp;
 
@@ -476,7 +476,7 @@ namespace Service.Services
                 .FirstOrDefault();
 
             var moderatorStatus = approval?.moderator_id.HasValue == true ? approval.status : null;
-            var moderatorNote = approval?.moderator_id.HasValue == true ? approval.moderator_note : null;
+            var moderatorNote = approval?.moderator_id.HasValue == true ? approval.moderator_feedback : null;
 
             return new StoryResponse
             {
@@ -488,7 +488,7 @@ namespace Service.Services
                 CoverUrl = story.cover_url,
                 AiScore = approval?.ai_score,
                 AiResult = ResolveAiDecision(approval),
-                AiNote = approval?.ai_note,
+                AiFeedback = approval?.ai_feedback,
                 ModeratorStatus = moderatorStatus,
                 ModeratorNote = moderatorNote,
                 Outline = story.outline,
@@ -517,7 +517,7 @@ namespace Service.Services
                 .FirstOrDefault();
 
             var moderatorStatus = approval?.moderator_id.HasValue == true ? approval.status : null;
-            var moderatorNote = approval?.moderator_id.HasValue == true ? approval.moderator_note : null;
+            var moderatorNote = approval?.moderator_id.HasValue == true ? approval.moderator_feedback : null;
 
             return new StoryListItemResponse
             {
@@ -533,7 +533,7 @@ namespace Service.Services
                 Tags = tags,
                 AiScore = approval?.ai_score,
                 AiResult = ResolveAiDecision(approval),
-                AiNote = approval?.ai_note,
+                AiFeedback = approval?.ai_feedback,
                 ModeratorStatus = moderatorStatus,
                 ModeratorNote = moderatorNote
             };
@@ -551,12 +551,12 @@ namespace Service.Services
                 return null;
             }
 
-            if (score < 0.50m)
+            if (score < 5m)
             {
                 return "rejected";
             }
 
-            if (score >= 0.70m)
+            if (score >= 7m)
             {
                 return "approved";
             }

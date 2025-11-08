@@ -29,7 +29,7 @@ public partial class content_approve
     public decimal? ai_score { get; set; }
 
     [Column(TypeName = "text")]
-    public string? ai_note { get; set; }
+    public string? ai_feedback { get; set; }
 
     [Column(TypeName = "enum('pending','approved','rejected')")]
     public string status { get; set; } = null!;
@@ -38,7 +38,7 @@ public partial class content_approve
     public Guid? moderator_id { get; set; }
 
     [Column(TypeName = "text")]
-    public string? moderator_note { get; set; }
+    public string? moderator_feedback { get; set; }
 
     [Column(TypeName = "datetime")]
     public DateTime created_at { get; set; }
