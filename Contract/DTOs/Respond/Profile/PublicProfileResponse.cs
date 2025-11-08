@@ -12,6 +12,7 @@ namespace Contract.DTOs.Respond.Profile
         public DateTime CreatedAt { get; set; }
         public bool IsAuthor { get; set; }
         public AuthorPublicProfileResponse? Author { get; set; }
+        public FollowStateResponse? FollowState { get; set; }
     }
 
     public class AuthorPublicProfileResponse
@@ -23,6 +24,13 @@ namespace Contract.DTOs.Respond.Profile
         public int FollowerCount { get; set; }
         public int PublishedStoryCount { get; set; }
         public DateTime? LatestPublishedAt { get; set; }
+    }
+
+    public class FollowStateResponse
+    {
+        public bool IsFollowing { get; set; }
+        public bool NotificationsEnabled { get; set; }
+        public DateTime? FollowedAt { get; set; }
     }
 }
 

@@ -3,22 +3,24 @@ using System.Threading;
 using System.Threading.Tasks;
 using Contract.DTOs.Internal;
 using Contract.DTOs.Respond.Profile;
+using Microsoft.Extensions.Caching.Memory;
 using Repository.Interfaces;
 using Service.Exceptions;
 using Service.Interfaces;
-using Microsoft.Extensions.Caching.Memory;
 
 namespace Service.Services
 {
     public class PublicProfileService : IPublicProfileService
     {
         private readonly IPublicProfileRepository _publicProfileRepository;
+        private readonly IAuthorFollowRepository _authorFollowRepository;
         private readonly IMemoryCache _cache;
         private static readonly TimeSpan CacheDuration = TimeSpan.FromMinutes(5);
 
-        public PublicProfileService(IPublicProfileRepository publicProfileRepository, IMemoryCache cache)
+        public PublicProfileService(IPublicProfileRepository publicProfileRepository, IAuthorFollowRepository authorFollowRepository, IMemoryCache cache)
         {
             _publicProfileRepository = publicProfileRepository;
+            _authorFollowRepository = authorFollowRepository;
             _cache = cache;
         }
 
@@ -29,8 +31,32 @@ namespace Service.Services
                 throw new AppException("ValidationFailed", "Target account id is required.", 400);
             }
 
+            var projection = await GetProjectionAsync(targetAccountId, ct);
+            var response = Map(projection);
+
+            if (viewerAccountId != Guid.Empty &&
+                viewerAccountId != projection.AccountId &&
+                projection.IsAuthor)
+            {
+                var follow = await _authorFollowRepository.GetAsync(viewerAccountId, projection.AccountId, ct);
+                if (follow != null)
+                {
+                    response.FollowState = new FollowStateResponse
+                    {
+                        IsFollowing = true,
+                        NotificationsEnabled = follow.noti_new_story ?? true,
+                        FollowedAt = follow.created_at
+                    };
+                }
+            }
+
+            return response;
+        }
+
+        private async Task<PublicProfileProjection> GetProjectionAsync(Guid targetAccountId, CancellationToken ct)
+        {
             var cacheKey = $"profile:public:{targetAccountId:N}";
-            if (_cache.TryGetValue(cacheKey, out PublicProfileResponse? cached) && cached is not null)
+            if (_cache.TryGetValue(cacheKey, out PublicProfileProjection? cached) && cached is not null)
             {
                 return cached;
             }
@@ -43,9 +69,8 @@ namespace Service.Services
                 throw new AppException("AccountUnavailable", "Account is not available.", 404);
             }
 
-            var mapped = Map(projection);
-            _cache.Set(cacheKey, mapped, CacheDuration);
-            return mapped;
+            _cache.Set(cacheKey, projection, CacheDuration);
+            return projection;
         }
 
         private static PublicProfileResponse Map(PublicProfileProjection projection)
