@@ -85,7 +85,7 @@ namespace Service.Services
 
             approval.status = request.Approve ? "approved" : "rejected";
             var humanNote = string.IsNullOrWhiteSpace(request.ModeratorNote) ? null : request.ModeratorNote.Trim();
-            approval.moderator_note = humanNote;
+            approval.moderator_feedback = humanNote;
             approval.moderator_id = moderatorAccountId;
             approval.created_at = TimezoneConverter.VietnamNow;
 
@@ -100,8 +100,8 @@ namespace Service.Services
                 chapter.published_at = null;
                 if (!string.IsNullOrWhiteSpace(humanNote))
                 {
-                    chapter.ai_feedback = humanNote;
-                }
+                approval.ai_feedback = humanNote;
+            }
             }
 
             chapter.updated_at = TimezoneConverter.VietnamNow;
@@ -118,7 +118,7 @@ namespace Service.Services
             }
             else
             {
-                await _mailSender.SendChapterRejectedEmailAsync(authorAccount.email, story.title, chapter.title, approval.moderator_note);
+                await _mailSender.SendChapterRejectedEmailAsync(authorAccount.email, story.title, chapter.title, approval.moderator_feedback);
             }
         }
 
@@ -144,8 +144,8 @@ namespace Service.Services
             var author = story.author ?? throw new InvalidOperationException("Story author navigation was not loaded.");
             var account = author.account ?? throw new InvalidOperationException("Author account navigation was not loaded.");
             var language = chapter.language ?? throw new InvalidOperationException("Chapter language navigation was not loaded.");
-            var aiScore = review.ai_score ?? chapter.ai_score;
-            var aiFeedback = review.ai_note ?? chapter.ai_feedback;
+            var aiScore = review.ai_score;
+            var aiFeedback = review.ai_feedback;
 
             var submittedAt = chapter.submitted_at ?? (review.created_at == default ? chapter.updated_at : review.created_at);
 

@@ -235,7 +235,7 @@ public partial class AppDbContext : DbContext
             entity.Property(e => e.review_id).ValueGeneratedNever(); 
             entity.Property(e => e.created_at).HasDefaultValueSql("CURRENT_TIMESTAMP");
             entity.Property(e => e.status).HasDefaultValueSql("'pending'");
-            entity.Property(e => e.moderator_note).HasColumnType("text");
+            entity.Property(e => e.moderator_feedback).HasColumnType("text");
 
             entity.HasOne(d => d.chapter).WithMany(p => p.content_approves)
                 .OnDelete(DeleteBehavior.Cascade)

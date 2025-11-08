@@ -86,7 +86,7 @@ namespace Service.Services
 
             approval.status = request.Approve ? "approved" : "rejected";
             var humanNote = string.IsNullOrWhiteSpace(request.ModeratorNote) ? null : request.ModeratorNote.Trim();
-            approval.moderator_note = humanNote;
+            approval.moderator_feedback = humanNote;
             approval.moderator_id = moderatorAccountId;
             approval.created_at = TimezoneConverter.VietnamNow;
 
@@ -113,7 +113,7 @@ namespace Service.Services
             }
             else
             {
-                await _mailSender.SendStoryRejectedEmailAsync(authorEmail, story.title, approval.moderator_note);
+                await _mailSender.SendStoryRejectedEmailAsync(authorEmail, story.title, approval.moderator_feedback);
             }
         }
 
@@ -160,7 +160,7 @@ namespace Service.Services
                 Outline = story.outline,
                 LengthPlan = story.length_plan,
                 SubmittedAt = approval.created_at,
-                PendingNote = approval.moderator_note,
+                PendingNote = approval.moderator_feedback,
                 Tags = tags
             };
         }
@@ -177,12 +177,12 @@ namespace Service.Services
                 return null;
             }
 
-            if (score < 0.50m)
+            if (score < 5m)
             {
                 return "rejected";
             }
 
-            if (score >= 0.70m)
+            if (score >= 7m)
             {
                 return "approved";
             }

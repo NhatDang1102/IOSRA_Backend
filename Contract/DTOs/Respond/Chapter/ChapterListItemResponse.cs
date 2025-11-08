@@ -18,7 +18,7 @@ namespace Contract.DTOs.Respond.Chapter
         public DateTime? PublishedAt { get; set; }
         public decimal? AiScore { get; set; }
         public string? AiResult { get; set; }
-        public string? AiNote { get; set; }
+        public string? AiFeedback { get; set; }
         public string? ModeratorStatus { get; set; }
         public string? ModeratorNote { get; set; }
     }

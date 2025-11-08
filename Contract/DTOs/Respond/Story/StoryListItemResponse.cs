@@ -17,7 +17,7 @@ namespace Contract.DTOs.Respond.Story
         public IReadOnlyList<StoryTagResponse> Tags { get; set; } = Array.Empty<StoryTagResponse>();
         public decimal? AiScore { get; set; }
         public string? AiResult { get; set; }
-        public string? AiNote { get; set; }
+        public string? AiFeedback { get; set; }
         public string? ModeratorStatus { get; set; }
         public string? ModeratorNote { get; set; }
     }

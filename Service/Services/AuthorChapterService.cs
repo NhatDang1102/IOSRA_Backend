@@ -106,8 +106,6 @@ namespace Service.Services
                 access_type = accessType,
                 content_url = null,
                 word_count = wordCount,
-                ai_score = null,
-                ai_feedback = null,
                 status = "draft",
                 created_at = TimezoneConverter.VietnamNow,
                 updated_at = TimezoneConverter.VietnamNow,
@@ -197,12 +195,10 @@ namespace Service.Services
             var timestamp = TimezoneConverter.VietnamNow;
 
             chapter.updated_at = timestamp;
-            chapter.ai_score = aiScoreDecimal;
-            chapter.ai_feedback = moderation.Explanation;
             chapter.submitted_at = timestamp;
 
-            var shouldReject = moderation.ShouldReject || aiScoreDecimal < 0.50m;
-            var autoApprove = !shouldReject && aiScoreDecimal >= 0.70m;
+            var shouldReject = moderation.ShouldReject || aiScoreDecimal < 5m;
+            var autoApprove = !shouldReject && aiScoreDecimal >= 7m;
 
             if (shouldReject)
             {
@@ -232,7 +228,6 @@ namespace Service.Services
             {
                 chapter.status = "pending";
                 chapter.published_at = null;
-                chapter.ai_feedback = moderation.Explanation;
                 await _chapterRepository.UpdateAsync(chapter, ct);
 
                 await UpsertChapterApprovalAsync(chapter, "pending", aiScoreDecimal, moderation.Explanation, ct);
@@ -242,6 +237,106 @@ namespace Service.Services
             return MapChapter(chapter, approvals);
         }
 
+<<<<<<< Updated upstream
+=======
+        public async Task<ChapterResponse> UpdateDraftAsync(Guid authorAccountId, Guid storyId, Guid chapterId, ChapterUpdateRequest request, CancellationToken ct = default)
+        {
+            var author = await _storyRepository.GetAuthorAsync(authorAccountId, ct)
+                         ?? throw new AppException("AuthorNotFound", "Author profile is not registered.", 404);
+
+            var story = await _storyRepository.GetStoryForAuthorAsync(storyId, author.account_id, ct)
+                        ?? throw new AppException("StoryNotFound", "Story was not found.", 404);
+
+            var chapter = await _chapterRepository.GetForAuthorAsync(story.story_id, chapterId, author.account_id, ct)
+                         ?? throw new AppException("ChapterNotFound", "Chapter was not found.", 404);
+
+            if (!string.Equals(chapter.status, "draft", StringComparison.OrdinalIgnoreCase))
+            {
+                throw new AppException("ChapterUpdateNotAllowed", "Only draft chapters can be edited before submission.", 400);
+            }
+
+            var updated = false;
+
+            if (request.Title != null)
+            {
+                var title = request.Title.Trim();
+                if (string.IsNullOrWhiteSpace(title))
+                {
+                    throw new AppException("InvalidChapterTitle", "Chapter title must not be empty.", 400);
+                }
+
+                chapter.title = title;
+                updated = true;
+            }
+
+            if (request.LanguageCode != null)
+            {
+                var languageCode = request.LanguageCode.Trim();
+                if (string.IsNullOrWhiteSpace(languageCode))
+                {
+                    throw new AppException("LanguageCodeRequired", "Language code must not be empty.", 400);
+                }
+
+                var language = await _chapterRepository.GetLanguageByCodeAsync(languageCode, ct)
+                              ?? throw new AppException("LanguageNotSupported", $"Language '{languageCode}' is not supported.", 400);
+                chapter.language_id = language.lang_id;
+                chapter.language = language;
+                updated = true;
+            }
+
+            if (request.Content != null)
+            {
+                var content = request.Content.Trim();
+                if (content.Length < MinContentLength)
+                {
+                    throw new AppException("ChapterContentTooShort", $"Chapter content must contain at least {MinContentLength} characters.", 400);
+                }
+
+                var wordCount = CountWords(content);
+                if (wordCount <= 0)
+                {
+                    throw new AppException("ChapterContentEmpty", "Chapter content must include words.", 400);
+                }
+
+                var price = CalculatePrice(wordCount);
+                string? newContentKey = null;
+                try
+                {
+                    newContentKey = await _contentStorage.UploadAsync(story.story_id, chapter.chapter_id, content, ct);
+                    if (!string.IsNullOrWhiteSpace(chapter.content_url))
+                    {
+                        await _contentStorage.DeleteAsync(chapter.content_url, ct);
+                    }
+
+                    chapter.content_url = newContentKey;
+                }
+                catch
+                {
+                    if (!string.IsNullOrWhiteSpace(newContentKey))
+                    {
+                        await _contentStorage.DeleteAsync(newContentKey, ct);
+                    }
+                    throw;
+                }
+
+                chapter.word_count = wordCount;
+                chapter.dias_price = (uint)price;
+                updated = true;
+            }
+
+            if (!updated)
+            {
+                throw new AppException("NoChanges", "No changes were provided.", 400);
+            }
+
+            chapter.updated_at = TimezoneConverter.VietnamNow;
+            await _chapterRepository.UpdateAsync(chapter, ct);
+
+            var approvals = await _chapterRepository.GetContentApprovalsForChapterAsync(chapter.chapter_id, ct);
+            return MapChapter(chapter, approvals);
+        }
+
+>>>>>>> Stashed changes
         private static IReadOnlyList<string>? NormalizeChapterStatuses(string? status)
         {
             if (string.IsNullOrWhiteSpace(status))
@@ -265,7 +360,7 @@ namespace Service.Services
                 .OrderByDescending(a => a.created_at)
                 .FirstOrDefault();
             var moderatorStatus = latestApproval?.moderator_id.HasValue == true ? latestApproval.status : null;
-            var moderatorNote = latestApproval?.moderator_id.HasValue == true ? latestApproval.moderator_note : null;
+            var moderatorNote = latestApproval?.moderator_id.HasValue == true ? latestApproval.moderator_feedback : null;
 
             return new ChapterResponse
             {
@@ -280,8 +375,8 @@ namespace Service.Services
                 PriceDias = (int)chapter.dias_price,
                 AccessType = chapter.access_type,
                 Status = chapter.status,
-                AiScore = latestApproval?.ai_score ?? chapter.ai_score,
-                AiFeedback = chapter.ai_feedback,
+                AiScore = latestApproval?.ai_score,
+                AiFeedback = latestApproval?.ai_feedback,
                 AiResult = ResolveAiDecision(latestApproval),
                 ModeratorStatus = moderatorStatus,
                 ModeratorNote = moderatorNote,
@@ -300,7 +395,7 @@ namespace Service.Services
                 .OrderByDescending(a => a.created_at)
                 .FirstOrDefault();
             var moderatorStatus = approval?.moderator_id.HasValue == true ? approval.status : null;
-            var moderatorNote = approval?.moderator_id.HasValue == true ? approval.moderator_note : null;
+            var moderatorNote = approval?.moderator_id.HasValue == true ? approval.moderator_feedback : null;
 
             return new ChapterListItemResponse
             {
@@ -316,9 +411,9 @@ namespace Service.Services
                 UpdatedAt = chapter.updated_at,
                 SubmittedAt = chapter.submitted_at,
                 PublishedAt = chapter.published_at,
-                AiScore = approval?.ai_score ?? chapter.ai_score,
+                AiScore = approval?.ai_score,
                 AiResult = ResolveAiDecision(approval),
-                AiNote = approval?.ai_note ?? chapter.ai_feedback,
+                AiFeedback = approval?.ai_feedback,
                 ModeratorStatus = moderatorStatus,
                 ModeratorNote = moderatorNote
             };
@@ -331,12 +426,12 @@ namespace Service.Services
                 return null;
             }
 
-            if (score < 0.50m)
+            if (score < 5m)
             {
                 return "rejected";
             }
 
-            if (score >= 0.70m)
+            if (score >= 7m)
             {
                 return "approved";
             }
@@ -358,8 +453,8 @@ namespace Service.Services
                     chapter_id = chapter.chapter_id,
                     status = status,
                     ai_score = aiScore,
-                    ai_note = aiNote,
-                    moderator_note = null,
+                    ai_feedback = aiNote,
+                    moderator_feedback = null,
                     moderator_id = null,
                     created_at = timestamp
                 };
@@ -370,8 +465,8 @@ namespace Service.Services
             {
                 approval.status = status;
                 approval.ai_score = aiScore;
-                approval.ai_note = aiNote;
-                approval.moderator_note = null;
+                approval.ai_feedback = aiNote;
+                approval.moderator_feedback = null;
                 approval.moderator_id = null;
                 approval.created_at = timestamp;
 

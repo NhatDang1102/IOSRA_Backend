@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using Contract.DTOs.Settings;
 using Microsoft.Extensions.Options;
 using Service.Interfaces;
@@ -20,6 +20,8 @@ namespace Service.Helpers
 {
     public class OpenAiService : IOpenAiModerationService, IOpenAiImageService
     {
+        private const double AutoApproveThreshold = 7.0;
+        private const double ManualReviewThreshold = 5.0;
         private static readonly RegexOptions MatchOptions = RegexOptions.Compiled | RegexOptions.CultureInvariant | RegexOptions.IgnoreCase;
         private static readonly Regex WordRegex = new Regex(@"\b[\p{L}\p{Nd}_']+\b", MatchOptions);
 
@@ -41,15 +43,15 @@ namespace Service.Helpers
             ContentType: "story",
             PrimaryLabel: "Title",
             SecondaryLabel: "Description",
-            PenaltyPerViolation: 0.05,
+            PenaltyPerViolation: 0.10,
             RejectThreshold: 0.5);
 
         private static readonly ModerationProfile ChapterProfile = new(
             ContentType: "chapter",
             PrimaryLabel: "Title",
             SecondaryLabel: "Body",
-            PenaltyPerViolation: 0.02,
-            RejectThreshold: 0.4);
+            PenaltyPerViolation: 0.10,
+            RejectThreshold: 0.5);
 
         private readonly HttpClient _httpClient;
         private readonly OpenAiSettings _settings;
@@ -87,22 +89,24 @@ namespace Service.Helpers
             var scan = ScanContent(content);
 
             var totalViolations = scan.Violations.Sum(v => v.Count);
-            var score = Math.Max(0.0, 1.0 - totalViolations * profile.PenaltyPerViolation);
-            var shouldReject = score < profile.RejectThreshold;
+            var scoreRatio = Math.Max(0.0, 1.0 - totalViolations * profile.PenaltyPerViolation);
+            var scaledScore = Math.Clamp(Math.Round(scoreRatio * 10.0, 2, MidpointRounding.AwayFromZero), 0.0, 10.0);
+            var shouldReject = scoreRatio < profile.RejectThreshold;
 
+            var autoApproved = !shouldReject && scaledScore >= AutoApproveThreshold;
             var explanation = await RequestExplanationAsync(
                 profile,
                 primaryContent,
                 secondaryContent,
                 scan.Violations,
-                score,
+                scaledScore,
                 shouldReject,
-                scan.Sanitized,
+                autoApproved,
                 ct);
 
             return new OpenAiModerationResult(
                 shouldReject,
-                score,
+                scaledScore,
                 scan.Violations,
                 content,
                 scan.Sanitized,
@@ -170,6 +174,7 @@ namespace Service.Helpers
             return new OpenAiImageResult(stream, fileName, contentType);
         }
 
+
         private async Task<string> RequestExplanationAsync(
             ModerationProfile profile,
             string primaryContent,
@@ -177,160 +182,121 @@ namespace Service.Helpers
             IReadOnlyList<ModerationViolation> violations,
             double score,
             bool shouldReject,
-            string sanitizedContent,
+            bool autoApproved,
             CancellationToken ct)
         {
-            var penaltyText = profile.PenaltyPerViolation.ToString("0.00", CultureInfo.InvariantCulture);
-            var thresholdText = profile.RejectThreshold.ToString("0.00", CultureInfo.InvariantCulture);
-            var keywordInstruction = $"You will subtract {penaltyText} for each following exacts word: {string.Join(", ", BannedKeywords)}.";
+            var decision = shouldReject ? "rejected" : autoApproved ? "auto_approved" : "pending_manual_review";
+            var penaltyText = (profile.PenaltyPerViolation * 10).ToString("0.00", CultureInfo.InvariantCulture);
+            var rejectionThresholdText = ManualReviewThreshold.ToString("0.00", CultureInfo.InvariantCulture);
+            var autoThresholdText = AutoApproveThreshold.ToString("0.00", CultureInfo.InvariantCulture);
+            var instruction =
+                $"Initial score is 10.00. Each detected word subtracts {penaltyText} points. Scores >= {autoThresholdText} are auto-approved, scores between {rejectionThresholdText} and {autoThresholdText} require moderator review, and scores below {rejectionThresholdText} are rejected.";
 
+            var summary = new
+            {
+                score = Math.Round(score, 2),
+                decision,
+                violations = violations.Count
+            };
+
+            var sanitizedContent = ComposeContent(primaryContent, secondaryContent);
             var payload = new ChatCompletionsRequest
             {
                 Model = _settings.ChatModel,
                 Temperature = 0,
-                MaxTokens = 500,
+                MaxTokens = 400,
                 Messages = new[]
                 {
                     new ChatMessage
                     {
                         Role = "system",
-                        Content = "You are an assistant that explains automated content moderation decisions. Reply with a JSON object that contains two string properties named 'english' and 'vietnamese'. The English field must give a concise factual explanation mentioning every detected word. The Vietnamese field must be a natural translation of the same explanation."
+                        Content = "You explain automated moderation results. Respond with JSON containing 'english' and 'vietnamese'. NEVER repeat or hint at the prohibited words. Use neutral phrases such as 'inappropriate vocabulary'. Mention the score/threshold and the final decision (auto approved / pending moderator / rejected)."
                     },
                     new ChatMessage
                     {
                         Role = "user",
-                        Content = BuildModerationPrompt(profile, keywordInstruction, penaltyText, thresholdText, primaryContent, secondaryContent, violations, score, shouldReject, sanitizedContent)
+                        Content = BuildModerationPrompt(profile, instruction, summary, sanitizedContent)
                     }
                 }
             };
 
-            using var request = new HttpRequestMessage(HttpMethod.Post, "chat/completions");
-            request.Content = new StringContent(JsonSerializer.Serialize(payload, _jsonOptions), Encoding.UTF8, "application/json");
-            using var response = await _httpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, ct);
-
-            if (!response.IsSuccessStatusCode)
-            {
-                var failureBody = await response.Content.ReadAsStringAsync(ct);
-                throw new InvalidOperationException($"OpenAI chat completion failed with status {(int)response.StatusCode}: {failureBody}");
-            }
-
-            var envelope = await response.Content.ReadFromJsonAsync<ChatCompletionsResponse>(_jsonOptions, ct)
-                          ?? throw new InvalidOperationException("OpenAI chat completion returned an empty response.");
-
-            var content = envelope.Choices?
-                               .Select(c => c.Message?.Content)
-                               .FirstOrDefault(c => !string.IsNullOrWhiteSpace(c));
-
-            if (string.IsNullOrWhiteSpace(content))
-            {
-                return BuildBilingualFallbackExplanation(profile, violations, score, shouldReject);
-            }
-
-            content = content.Trim();
             try
             {
-                using var doc = JsonDocument.Parse(content);
-                var hasEnglish = doc.RootElement.TryGetProperty("english", out var englishProp);
-                var hasVietnamese = doc.RootElement.TryGetProperty("vietnamese", out var vietnameseProp);
-                if (hasEnglish || hasVietnamese)
+                using var request = new HttpRequestMessage(HttpMethod.Post, "chat/completions");
+                request.Content = new StringContent(JsonSerializer.Serialize(payload, _jsonOptions), Encoding.UTF8, "application/json");
+                using var response = await _httpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, ct);
+
+                if (!response.IsSuccessStatusCode)
                 {
-                    var english = hasEnglish && englishProp.ValueKind != JsonValueKind.Null ? englishProp.GetString() : null;
-                    var vietnamese = hasVietnamese && vietnameseProp.ValueKind != JsonValueKind.Null ? vietnameseProp.GetString() : null;
-                    return BuildBilingualExplanation(english, vietnamese);
+                    var failureBody = await response.Content.ReadAsStringAsync(ct);
+                    throw new InvalidOperationException($"OpenAI chat completion failed with status {(int)response.StatusCode}: {failureBody}");
+                }
+
+                var envelope = await response.Content.ReadFromJsonAsync<ChatCompletionsResponse>(_jsonOptions, ct)
+                              ?? throw new InvalidOperationException("OpenAI chat completion returned an empty response.");
+
+                var content = envelope.Choices?
+                                   .Select(c => c.Message?.Content)
+                                   .FirstOrDefault(c => !string.IsNullOrWhiteSpace(c));
+
+                if (!string.IsNullOrWhiteSpace(content))
+                {
+                    using var doc = JsonDocument.Parse(content);
+                    if (doc.RootElement.TryGetProperty("english", out var englishProp) &&
+                        doc.RootElement.TryGetProperty("vietnamese", out var vietnameseProp))
+                    {
+                        var english = englishProp.GetString();
+                        var vietnamese = vietnameseProp.GetString();
+                        if (!string.IsNullOrWhiteSpace(english) && !string.IsNullOrWhiteSpace(vietnamese))
+                        {
+                            return $"English:\n{english.Trim()}\n\nTiếng Việt:\n{vietnamese.Trim()}";
+                        }
+                    }
                 }
             }
-            catch (JsonException)
+            catch
             {
-                // Ignore parse failure and fall back.
+                // Fallback below.
             }
 
-            return BuildBilingualFallbackExplanation(profile, violations, score, shouldReject);
+            return BuildDecisionExplanation(profile, score, shouldReject, autoApproved);
         }
 
-        private static string BuildModerationPrompt(
-            ModerationProfile profile,
-            string keywordInstruction,
-            string penaltyText,
-            string thresholdText,
-            string primaryContent,
-            string? secondaryContent,
-            IReadOnlyList<ModerationViolation> violations,
-            double score,
-            bool shouldReject,
-            string sanitizedContent)
+        private static string BuildModerationPrompt(ModerationProfile profile, string instruction, object summary, string sanitizedContent)
         {
-            var summary = new
-            {
-                score = Math.Round(score, 2),
-                shouldReject,
-                violations = violations.Select(v => new
-                {
-                    word = v.Word,
-                    count = v.Count,
-                    samples = v.Samples
-                })
-            };
-
             var sb = new StringBuilder();
-            sb.AppendLine(keywordInstruction);
-            sb.AppendLine($"Initial score is 1.00. Each occurrence of a listed word reduces the score by {penaltyText}. The score cannot be lower than 0. The {profile.ContentType} is rejected if the final score is below {thresholdText}.");
+            sb.AppendLine(instruction);
             sb.AppendLine($"Content type: {profile.ContentType}");
-            sb.AppendLine($"{profile.PrimaryLabel}: {(string.IsNullOrWhiteSpace(primaryContent) ? "(empty)" : primaryContent)}");
-            sb.AppendLine($"{profile.SecondaryLabel}: {(string.IsNullOrWhiteSpace(secondaryContent) ? "(empty)" : secondaryContent)}");
-            sb.AppendLine("Summary produced by the rule:");
+            sb.AppendLine("Summary:");
             sb.AppendLine(JsonSerializer.Serialize(summary, new JsonSerializerOptions { Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping }));
-            sb.AppendLine("Sanitized content (detected words masked with asterisks):");
+            sb.AppendLine("Sanitized excerpt (with sensitive words masked):");
             sb.AppendLine(string.IsNullOrWhiteSpace(sanitizedContent) ? "(empty)" : sanitizedContent);
-            sb.AppendLine("Explain the decision to the author in English and Vietnamese. Mention every detected word. If no words were detected, say that the content is clean.");
-            sb.AppendLine("Respond ONLY in JSON with this shape:");
-            sb.Append("{\"english\":\"Short English explanation\",\"vietnamese\":\"Short Vietnamese explanation\"}");
+            sb.AppendLine("Remember: do NOT repeat or reveal blocked words. Just explain the score and next step.");
             return sb.ToString();
         }
 
-        private static string BuildBilingualExplanation(string? english, string? vietnamese)
+        private static string BuildDecisionExplanation(ModerationProfile profile, double score, bool shouldReject, bool autoApproved)
         {
-            var englishText = string.IsNullOrWhiteSpace(english) ? "No explanation provided." : english.Trim();
-            var vietnameseText = string.IsNullOrWhiteSpace(vietnamese) ? "Không có diễn giải bằng tiếng Việt." : vietnamese.Trim();
-            return $"English:\n{englishText}\n\nTiếng Việt:\n{vietnameseText}";
-        }
+            string english;
+            string vietnamese;
 
-        private static string BuildFallbackExplanationEnglish(ModerationProfile profile, IReadOnlyList<ModerationViolation> violations, double score, bool shouldReject)
-        {
-            if (violations.Count == 0)
+            if (shouldReject)
             {
-                return $"No banned words were detected. Final score remains {score:0.00}.";
+                english = $"Automated moderation scored {score:0.00}/10, which is below {ManualReviewThreshold:0.00}, so this {profile.ContentType} was rejected.";
+                vietnamese = $"Điểm kiểm duyệt tự động là {score:0.00}/10 (thấp hơn {ManualReviewThreshold:0.00}) nên nội dung {profile.ContentType} bị từ chối.";
+            }
+            else if (autoApproved)
+            {
+                english = $"Automated moderation scored {score:0.00}/10, meeting the auto-approval threshold of {AutoApproveThreshold:0.00}, so the {profile.ContentType} was published immediately.";
+                vietnamese = $"Điểm kiểm duyệt tự động là {score:0.00}/10 (đạt ngưỡng tự duyệt {AutoApproveThreshold:0.00}) nên nội dung {profile.ContentType} được xuất bản ngay.";
+            }
+            else
+            {
+                english = $"Automated moderation scored {score:0.00}/10, which is below {AutoApproveThreshold:0.00} but at or above {ManualReviewThreshold:0.00}, so the {profile.ContentType} was forwarded to a moderator.";
+                vietnamese = $"Điểm kiểm duyệt tự động là {score:0.00}/10 (thấp hơn {AutoApproveThreshold:0.00} nhưng không thấp hơn {ManualReviewThreshold:0.00}) nên nội dung {profile.ContentType} được chuyển cho moderator duyệt.";
             }
 
-            var words = violations.Select(v => $"{v.Word} (x{v.Count})");
-            var summary = string.Join(", ", words);
-            var threshold = profile.RejectThreshold.ToString("0.00", CultureInfo.InvariantCulture);
-            var decision = shouldReject
-                ? $"Content is rejected because the score dropped below {threshold}."
-                : "Content passes the automated moderation.";
-            return $"Detected banned words: {summary}. Final score is {score:0.00}. {decision}";
-        }
-
-        private static string BuildFallbackExplanationVietnamese(ModerationProfile profile, IReadOnlyList<ModerationViolation> violations, double score, bool shouldReject)
-        {
-            if (violations.Count == 0)
-            {
-                return $"Không phát hiện từ bị cấm. Điểm cuối cùng vẫn là {score:0.00}.";
-            }
-
-            var words = violations.Select(v => $"{v.Word} (x{v.Count})");
-            var summary = string.Join(", ", words);
-            var threshold = profile.RejectThreshold.ToString("0.00", CultureInfo.InvariantCulture);
-            var decision = shouldReject
-                ? $"Nội dung bị từ chối vì điểm số thấp hơn ngưỡng {threshold}."
-                : "Nội dung vượt qua kiểm duyệt tự động.";
-            return $"Phát hiện các từ bị cấm: {summary}. Điểm cuối cùng là {score:0.00}. {decision}";
-        }
-
-        private static string BuildBilingualFallbackExplanation(ModerationProfile profile, IReadOnlyList<ModerationViolation> violations, double score, bool shouldReject)
-        {
-            var english = BuildFallbackExplanationEnglish(profile, violations, score, shouldReject);
-            var vietnamese = BuildFallbackExplanationVietnamese(profile, violations, score, shouldReject);
-            return BuildBilingualExplanation(english, vietnamese);
+            return $"English:\n{english}\n\nTiếng Việt:\n{vietnamese}";
         }
 
         private ScanResult ScanContent(string content)
@@ -541,5 +507,6 @@ namespace Service.Helpers
         }
     }
 }
+
 
 
