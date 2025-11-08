@@ -237,8 +237,6 @@ namespace Service.Services
             return MapChapter(chapter, approvals);
         }
 
-<<<<<<< Updated upstream
-=======
         public async Task<ChapterResponse> UpdateDraftAsync(Guid authorAccountId, Guid storyId, Guid chapterId, ChapterUpdateRequest request, CancellationToken ct = default)
         {
             var author = await _storyRepository.GetAuthorAsync(authorAccountId, ct)
@@ -336,7 +334,6 @@ namespace Service.Services
             return MapChapter(chapter, approvals);
         }
 
->>>>>>> Stashed changes
         private static IReadOnlyList<string>? NormalizeChapterStatuses(string? status)
         {
             if (string.IsNullOrWhiteSpace(status))
