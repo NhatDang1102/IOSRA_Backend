@@ -4,8 +4,10 @@ using Contract.DTOs.Settings;
 using FirebaseAdmin;
 using Google.Apis.Auth.OAuth2;
 using Main.Models;
+using Main.SignalR;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -128,7 +130,13 @@ namespace Main
             {
                 options.AddPolicy(corsPolicyName, policy =>
                 {
-                    policy.AllowAnyOrigin().AllowAnyHeader().AllowAnyMethod();
+                    policy
+                        .WithOrigins(
+                            "http://localhost:5500",
+                            "http://127.0.0.1:5500")
+                        .AllowAnyHeader()
+                        .AllowAnyMethod()
+                        .AllowCredentials();
                 });
             });
 
@@ -178,6 +186,10 @@ namespace Main
                     return new BadRequestObjectResult(response);
                 };
             });
+
+            services.AddSignalR();
+            services.AddSingleton<IUserIdProvider, AccountUserIdProvider>();
+            services.AddSingleton<INotificationDispatcher, SignalRNotificationDispatcher>();
 
             return services;
         }

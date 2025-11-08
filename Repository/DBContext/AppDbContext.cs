@@ -47,6 +47,7 @@ public partial class AppDbContext : DbContext
     public virtual DbSet<favorite_story> favvorite_stories { get; set; }
 
     public virtual DbSet<follow> follows { get; set; }
+    public virtual DbSet<notification> notifications { get; set; }
 
     public virtual DbSet<language_list> language_lists { get; set; }
 
@@ -325,6 +326,22 @@ public partial class AppDbContext : DbContext
             entity.HasOne(d => d.followee).WithMany(p => p.follows).HasConstraintName("fk_follow_followee");
 
             entity.HasOne(d => d.follower).WithMany(p => p.follows).HasConstraintName("fk_follow_follower");
+        });
+
+        modelBuilder.Entity<notification>(entity =>
+        {
+            entity.HasKey(e => e.notification_id).HasName("PRIMARY");
+            entity.HasIndex(e => new { e.recipient_id, e.created_at }, "ix_notifications_recipient_created");
+
+            entity.Property(e => e.notification_id).ValueGeneratedNever();
+            entity.Property(e => e.created_at).HasDefaultValueSql("CURRENT_TIMESTAMP");
+            entity.Property(e => e.type).HasDefaultValueSql("'general'");
+
+            entity.HasOne(d => d.recipient)
+                .WithMany()
+                .HasForeignKey(d => d.recipient_id)
+                .OnDelete(DeleteBehavior.Cascade)
+                .HasConstraintName("fk_notifications_recipient");
         });
 
         modelBuilder.Entity<language_list>(entity =>
