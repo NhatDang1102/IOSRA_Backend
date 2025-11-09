@@ -52,6 +52,7 @@ namespace Service
             services.AddScoped<IOperationModService, OperationModService>();
             services.AddScoped<IProfileService, ProfileService>();
             services.AddScoped<IPublicProfileService, PublicProfileService>();
+            services.AddScoped<IAuthorFollowService, AuthorFollowService>();
             services.AddScoped<IStoryHighlightService, StoryHighlightService>();
             services.AddScoped<ITagService, TagService>();
             services.AddScoped<IAuthorStoryService, AuthorStoryService>();
@@ -62,6 +63,8 @@ namespace Service
             services.AddScoped<IStoryModerationService, StoryModerationService>();
             services.AddScoped<IStoryRatingService, StoryRatingService>();
             services.AddScoped<IChapterCommentService, ChapterCommentService>();
+            services.AddScoped<INotificationService, NotificationService>();
+            services.AddScoped<IFollowerNotificationService, FollowerNotificationService>();
             services.AddHostedService<StoryWeeklyViewSyncJob>();
 
             return services;

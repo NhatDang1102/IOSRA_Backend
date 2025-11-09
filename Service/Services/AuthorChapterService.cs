@@ -21,6 +21,7 @@ namespace Service.Services
         private readonly IAuthorStoryRepository _storyRepository;
         private readonly IChapterContentStorage _contentStorage;
         private readonly IOpenAiModerationService _openAiModerationService;
+        private readonly IFollowerNotificationService _followerNotificationService;
 
         private static readonly string[] AuthorChapterAllowedStatuses = { "draft", "pending", "rejected", "published", "hidden", "removed" };
 
@@ -28,12 +29,14 @@ namespace Service.Services
             IAuthorChapterRepository chapterRepository,
             IAuthorStoryRepository storyRepository,
             IChapterContentStorage contentStorage,
-            IOpenAiModerationService openAiModerationService)
+            IOpenAiModerationService openAiModerationService,
+            IFollowerNotificationService followerNotificationService)
         {
             _chapterRepository = chapterRepository;
             _storyRepository = storyRepository;
             _contentStorage = contentStorage;
             _openAiModerationService = openAiModerationService;
+            _followerNotificationService = followerNotificationService;
         }
 
         public async Task<ChapterResponse> CreateAsync(Guid authorAccountId, Guid storyId, ChapterCreateRequest request, CancellationToken ct = default)
@@ -199,6 +202,7 @@ namespace Service.Services
 
             var shouldReject = moderation.ShouldReject || aiScoreDecimal < 5m;
             var autoApprove = !shouldReject && aiScoreDecimal >= 7m;
+            var notifyFollowers = false;
 
             if (shouldReject)
             {
@@ -223,6 +227,7 @@ namespace Service.Services
                 chapter.published_at ??= TimezoneConverter.VietnamNow;
                 await _chapterRepository.UpdateAsync(chapter, ct);
                 await UpsertChapterApprovalAsync(chapter, "approved", aiScoreDecimal, moderation.Explanation, ct);
+                notifyFollowers = true;
             }
             else
             {
@@ -234,6 +239,21 @@ namespace Service.Services
             }
 
             var approvals = await _chapterRepository.GetContentApprovalsForChapterAsync(chapter.chapter_id, ct);
+
+            if (notifyFollowers)
+            {
+                var authorName = story.author?.account.username ?? "Tác giả";
+                await _followerNotificationService.NotifyChapterPublishedAsync(
+                    story.author_id,
+                    authorName,
+                    story.story_id,
+                    story.title,
+                    chapter.chapter_id,
+                    chapter.title,
+                    (int)chapter.chapter_no,
+                    ct);
+            }
+
             return MapChapter(chapter, approvals);
         }
 

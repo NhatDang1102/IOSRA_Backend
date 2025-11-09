@@ -10,6 +10,7 @@ using Repository.Entities;
 using Repository.Interfaces;
 using Repository.DataModels;
 using Repository.Utils;
+using Service.Constants;
 using Service.Exceptions;
 using Service.Interfaces;
 
@@ -22,15 +23,18 @@ namespace Service.Services
         private readonly IStoryRatingRepository _ratingRepository;
         private readonly IStoryCatalogRepository _storyCatalogRepository;
         private readonly IProfileRepository _profileRepository;
+        private readonly INotificationService _notificationService;
 
         public StoryRatingService(
             IStoryRatingRepository ratingRepository,
             IStoryCatalogRepository storyCatalogRepository,
-            IProfileRepository profileRepository)
+            IProfileRepository profileRepository,
+            INotificationService notificationService)
         {
             _ratingRepository = ratingRepository;
             _storyCatalogRepository = storyCatalogRepository;
             _profileRepository = profileRepository;
+            _notificationService = notificationService;
         }
 
         public async Task<StoryRatingSummaryResponse> GetAsync(Guid storyId, Guid? viewerId, int page, int pageSize, CancellationToken ct = default)
@@ -98,6 +102,8 @@ namespace Service.Services
 
             var persisted = await _ratingRepository.GetDetailsAsync(story.story_id, reader.account_id, ct)
                             ?? throw new InvalidOperationException("Failed to load rating after save.");
+
+            await NotifyAuthorRatingAsync(story, reader, request.Score, ct);
             return MapRating(persisted);
         }
 
@@ -133,6 +139,31 @@ namespace Service.Services
                 throw new AppException("StoryNotFound", "Story was not found or cannot be rated.", 404);
             }
             return story;
+        }
+
+        private async Task NotifyAuthorRatingAsync(story story, reader reader, byte score, CancellationToken ct)
+        {
+            var author = story.author;
+            var authorAccount = author?.account;
+            if (authorAccount == null || authorAccount.account_id == reader.account_id)
+            {
+                return;
+            }
+
+            var readerName = reader.account.username;
+            var title = $"{readerName} vừa rating truyện của bạn";
+            var message = $"{readerName} đã chấm {score}/5 cho \"{story.title}\".";
+
+            await _notificationService.CreateAsync(new NotificationCreateModel(
+                authorAccount.account_id,
+                NotificationTypes.StoryRating,
+                title,
+                message,
+                new
+                {
+                    storyId = story.story_id,
+                    score
+                }), ct);
         }
 
         private static int NormalizePage(int page) => page <= 0 ? 1 : page;

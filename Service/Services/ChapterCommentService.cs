@@ -8,6 +8,7 @@ using Contract.DTOs.Respond.Common;
 using Repository.Entities;
 using Repository.Interfaces;
 using Repository.Utils;
+using Service.Constants;
 using Service.Exceptions;
 using Service.Interfaces;
 
@@ -22,15 +23,18 @@ namespace Service.Services
         private readonly IChapterCommentRepository _commentRepository;
         private readonly IStoryCatalogRepository _storyCatalogRepository;
         private readonly IProfileRepository _profileRepository;
+        private readonly INotificationService _notificationService;
 
         public ChapterCommentService(
             IChapterCommentRepository commentRepository,
             IStoryCatalogRepository storyCatalogRepository,
-            IProfileRepository profileRepository)
+            IProfileRepository profileRepository,
+            INotificationService notificationService)
         {
             _commentRepository = commentRepository;
             _storyCatalogRepository = storyCatalogRepository;
             _profileRepository = profileRepository;
+            _notificationService = notificationService;
         }
 
         public async Task<PagedResult<ChapterCommentResponse>> GetByChapterAsync(Guid chapterId, int page, int pageSize, CancellationToken ct = default)
@@ -131,6 +135,8 @@ namespace Service.Services
             await _commentRepository.AddAsync(comment, ct);
             var saved = await _commentRepository.GetAsync(comment.chapter_id, comment.comment_id, ct)
                         ?? throw new InvalidOperationException("Failed to load comment after creation.");
+
+            await NotifyAuthorCommentAsync(chapter, reader, saved, ct);
             return MapPublicComment(saved);
         }
 
@@ -206,6 +212,49 @@ namespace Service.Services
             }
 
             return chapter;
+        }
+
+        private async Task NotifyAuthorCommentAsync(chapter chapter, reader commenter, chapter_comment comment, CancellationToken ct)
+        {
+            var story = chapter.story;
+            var author = story?.author;
+            var authorAccount = author?.account;
+            if (story == null || authorAccount == null)
+            {
+                return;
+            }
+
+            if (authorAccount.account_id == commenter.account_id)
+            {
+                return;
+            }
+
+            var commenterName = commenter.account.username;
+            var chapterNo = (int)chapter.chapter_no;
+            var title = $"{commenterName} vừa bình luận trên truyện của bạn";
+            var message = $"{commenterName}: \"{Truncate(comment.content, 80)}\" (Chương {chapterNo} - \"{chapter.title}\").";
+
+            await _notificationService.CreateAsync(new NotificationCreateModel(
+                authorAccount.account_id,
+                NotificationTypes.ChapterComment,
+                title,
+                message,
+                new
+                {
+                    storyId = story.story_id,
+                    chapterId = chapter.chapter_id,
+                    commentId = comment.comment_id
+                }), ct);
+        }
+
+        private static string Truncate(string value, int maxLength)
+        {
+            if (string.IsNullOrEmpty(value) || value.Length <= maxLength)
+            {
+                return value;
+            }
+
+            return value.Substring(0, maxLength) + "...";
         }
 
         private static ChapterCommentResponse MapPublicComment(chapter_comment comment)

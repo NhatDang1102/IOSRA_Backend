@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="vi">
+  <head>
+    <meta charset="utf-8" />
+    <title>Notification Tester</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/7.0.5/signalr.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <style>
+      body {
+        font-family: system-ui, sans-serif;
+        margin: 1.5rem;
+      }
+      textarea {
+        width: 100%;
+        min-height: 4rem;
+      }
+      pre {
+        background: #111;
+        color: #0f0;
+        padding: 1rem;
+        min-height: 300px;
+        overflow: auto;
+      }
+      .status {
+        margin: 0.5rem 0 1rem;
+        font-weight: 600;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Realtime Notification Tester</h1>
+    <p>Dán JWT (access token) của người nhận vào ô dưới rồi bấm kết nối.</p>
+    <label for="token">JWT:</label>
+    <textarea id="token" placeholder="eyJhbGciOi..."></textarea>
+    <br />
+    <label>
+      Hub URL:
+      <input id="hubUrl" type="text" value="https://localhost:7125/hubs/notifications" style="width: 100%;" />
+    </label>
+    <div class="status" id="status">Chưa kết nối</div>
+    <button id="connectBtn">Kết nối</button>
+    <button id="disconnectBtn" disabled>Ngắt kết nối</button>
+    <h2>Log</h2>
+    <pre id="log"></pre>
+
+    <script>
+      const statusEl = document.getElementById("status");
+      const logEl = document.getElementById("log");
+      const connectBtn = document.getElementById("connectBtn");
+      const disconnectBtn = document.getElementById("disconnectBtn");
+
+      let connection = null;
+
+      const log = (message) => {
+        const timestamp = new Date().toLocaleTimeString();
+        logEl.textContent += `[${timestamp}] ${message}\n`;
+        logEl.scrollTop = logEl.scrollHeight;
+      };
+
+      const setStatus = (text, isError = false) => {
+        statusEl.textContent = text;
+        statusEl.style.color = isError ? "#c00" : "#0a0";
+      };
+
+      connectBtn.addEventListener("click", async () => {
+        const token = document.getElementById("token").value.trim();
+        const hubUrl = document.getElementById("hubUrl").value.trim();
+
+        if (!token) {
+          alert("Vui lòng dán JWT trước.");
+          return;
+        }
+
+        if (connection) {
+          await connection.stop();
+        }
+
+        connection = new signalR.HubConnectionBuilder()
+          .withUrl(hubUrl, {
+            accessTokenFactory: () => token,
+          })
+          .withAutomaticReconnect()
+          .build();
+
+        connection.on("notificationReceived", (notification) => {
+          log(`📬 ${JSON.stringify(notification, null, 2)}`);
+        });
+
+        connection.onclose((error) => {
+          setStatus(error ? "Mất kết nối (error)" : "Đã ngắt kết nối", !!error);
+          disconnectBtn.disabled = true;
+          connectBtn.disabled = false;
+          if (error) {
+            log(`⚠️ ${error}`);
+          }
+        });
+
+        try {
+          await connection.start();
+          setStatus("Đang lắng nghe realtime...");
+          log("✅ Đã kết nối, chờ thông báo...");
+          connectBtn.disabled = true;
+          disconnectBtn.disabled = false;
+        } catch (err) {
+          setStatus("Kết nối thất bại", true);
+          log(`❌ ${err}`);
+        }
+      });
+
+      disconnectBtn.addEventListener("click", async () => {
+        if (connection) {
+          await connection.stop();
+          connection = null;
+          setStatus("Đã ngắt kết nối");
+          log("⛔ Đã ngắt kết nối.");
+          disconnectBtn.disabled = true;
+          connectBtn.disabled = false;
+        }
+      });
+    </script>
+  </body>
+</html>

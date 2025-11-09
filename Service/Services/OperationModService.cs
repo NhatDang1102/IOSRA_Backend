@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using Contract.DTOs.Request.OperationMod;
 using Contract.DTOs.Respond.OperationMod;
 using Repository.Interfaces;
+using Service.Constants;
 using Service.Exceptions;
 using Service.Interfaces;
 
@@ -14,10 +15,12 @@ namespace Service.Implementations
     public class OperationModService : IOperationModService
     {
         private readonly IOpRequestRepository _opRepo;
+        private readonly INotificationService _notificationService;
 
-        public OperationModService(IOpRequestRepository opRepo)
+        public OperationModService(IOpRequestRepository opRepo, INotificationService notificationService)
         {
             _opRepo = opRepo;
+            _notificationService = notificationService;
         }
 
         public async Task<List<OpRequestItemResponse>> ListAsync(string? status, CancellationToken ct = default)
@@ -62,6 +65,17 @@ namespace Service.Implementations
 
             await _opRepo.AddAccountRoleIfNotExistsAsync(request.requester_id, authorRoleId.Value, ct);
             await _opRepo.SetRequestApprovedAsync(request.request_id, omodAccountId, ct);
+
+            await _notificationService.CreateAsync(new NotificationCreateModel(
+                request.requester_id,
+                NotificationTypes.OperationRequest,
+                "Yêu cầu trở thành tác giả được chấp thuận",
+                "Chúc mừng! Đội vận hành đã phê duyệt yêu cầu trở thành tác giả của bạn.",
+                new
+                {
+                    requestId = request.request_id,
+                    status = "approved"
+                }), ct);
         }
 
         public async Task RejectAsync(Guid requestId, Guid omodAccountId, RejectAuthorUpgradeRequest req, CancellationToken ct = default)
@@ -75,6 +89,20 @@ namespace Service.Implementations
             }
 
             await _opRepo.SetRequestRejectedAsync(requestId, omodAccountId, req.Reason, ct);
+
+            await _notificationService.CreateAsync(new NotificationCreateModel(
+                entity.requester_id,
+                NotificationTypes.OperationRequest,
+                "Yêu cầu trở thành tác giả bị từ chối",
+                string.IsNullOrWhiteSpace(req.Reason)
+                    ? "Rất tiếc! Yêu cầu trở thành tác giả của bạn đã bị từ chối."
+                    : $"Yêu cầu trở thành tác giả của bạn đã bị từ chối: {req.Reason}",
+                new
+                {
+                    requestId = entity.request_id,
+                    status = "rejected",
+                    reason = req.Reason
+                }), ct);
         }
     }
 }
