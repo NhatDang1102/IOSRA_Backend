@@ -22,7 +22,7 @@ namespace Repository.Repositories
 
         public Task<chapter?> GetChapterWithStoryAsync(Guid chapterId, CancellationToken ct = default)
             => _db.chapters
-                  .Include(c => c.story)
+                  .Include(c => c.story).ThenInclude(s => s.author).ThenInclude(a => a.account)
                   .FirstOrDefaultAsync(c => c.chapter_id == chapterId, ct);
 
         public async Task<(List<chapter_comment> Items, int Total)> GetByChapterAsync(Guid chapterId, int page, int pageSize, CancellationToken ct = default)

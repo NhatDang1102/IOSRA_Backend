@@ -23,6 +23,8 @@ namespace Repository
             services.AddScoped<IStoryWeeklyViewRepository, StoryWeeklyViewRepository>();
             services.AddScoped<IStoryRatingRepository, StoryRatingRepository>();
             services.AddScoped<IChapterCommentRepository, ChapterCommentRepository>();
+            services.AddScoped<IAuthorFollowRepository, AuthorFollowRepository>();
+            services.AddScoped<INotificationRepository, NotificationRepository>();
 
             return services;
         }

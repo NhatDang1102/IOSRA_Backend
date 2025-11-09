@@ -3,6 +3,7 @@ using Contract.DTOs.Respond.Chapter;
 using Repository.Entities;
 using Repository.Interfaces;
 using Repository.Utils;
+using Service.Constants;
 using Service.Exceptions;
 using Service.Interfaces;
 using System;
@@ -17,11 +18,19 @@ namespace Service.Services
     {
         private readonly IChapterModerationRepository _chapterRepository;
         private readonly IMailSender _mailSender;
+        private readonly INotificationService _notificationService;
+        private readonly IFollowerNotificationService _followerNotificationService;
 
-        public ChapterModerationService(IChapterModerationRepository chapterRepository, IMailSender mailSender)
+        public ChapterModerationService(
+            IChapterModerationRepository chapterRepository,
+            IMailSender mailSender,
+            INotificationService notificationService,
+            IFollowerNotificationService followerNotificationService)
         {
             _chapterRepository = chapterRepository;
             _mailSender = mailSender;
+            _notificationService = notificationService;
+            _followerNotificationService = followerNotificationService;
         }
 
         private static readonly string[] AllowedStatuses = { "pending", "published", "rejected" };
@@ -100,8 +109,8 @@ namespace Service.Services
                 chapter.published_at = null;
                 if (!string.IsNullOrWhiteSpace(humanNote))
                 {
-                approval.ai_feedback = humanNote;
-            }
+                    approval.ai_feedback = humanNote;
+                }
             }
 
             chapter.updated_at = TimezoneConverter.VietnamNow;
@@ -112,6 +121,8 @@ namespace Service.Services
             var author = story.author ?? throw new InvalidOperationException("Story author navigation was not loaded.");
             var authorAccount = author.account ?? throw new InvalidOperationException("Author account navigation was not loaded.");
 
+            var statusText = request.Approve ? "approved" : "rejected";
+
             if (request.Approve)
             {
                 await _mailSender.SendChapterApprovedEmailAsync(authorAccount.email, story.title, chapter.title);
@@ -119,6 +130,44 @@ namespace Service.Services
             else
             {
                 await _mailSender.SendChapterRejectedEmailAsync(authorAccount.email, story.title, chapter.title, approval.moderator_feedback);
+            }
+
+            var title = request.Approve
+                ? $"Chương \"{chapter.title}\" đã được duyệt"
+                : $"Chương \"{chapter.title}\" bị từ chối";
+
+            var message = request.Approve
+                ? $"Ban kiểm duyệt đã phê duyệt chương \"{chapter.title}\" thuộc truyện \"{story.title}\"."
+                : string.IsNullOrWhiteSpace(humanNote)
+                    ? $"Ban kiểm duyệt đã từ chối chương \"{chapter.title}\". Vui lòng kiểm tra lại nội dung."
+                    : $"Ban kiểm duyệt đã từ chối chương \"{chapter.title}\": {humanNote}";
+
+            await _notificationService.CreateAsync(new NotificationCreateModel(
+                authorAccount.account_id,
+                NotificationTypes.ChapterDecision,
+                title,
+                message,
+                new
+                {
+                    reviewId = approval.review_id,
+                    storyId = story.story_id,
+                    chapterId = chapter.chapter_id,
+                    status = statusText,
+                    moderatorNote = humanNote
+                }), ct);
+
+            if (request.Approve)
+            {
+                var authorName = authorAccount.username;
+                await _followerNotificationService.NotifyChapterPublishedAsync(
+                    authorAccount.account_id,
+                    authorName,
+                    story.story_id,
+                    story.title,
+                    chapter.chapter_id,
+                    chapter.title,
+                    (int)chapter.chapter_no,
+                    ct);
             }
         }
 

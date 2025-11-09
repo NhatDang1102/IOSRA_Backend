@@ -53,6 +53,7 @@ app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
+app.MapHub<Main.Hubs.NotificationsHub>("/hubs/notifications");
 app.MapGet("/", () => Results.Ok(new { ok = true, time = TimezoneConverter.VietnamNow }));
 
 app.Run();

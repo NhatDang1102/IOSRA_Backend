@@ -20,6 +20,7 @@ namespace Service.Services
         private readonly IImageUploader _imageUploader;
         private readonly IOpenAiImageService _openAiImageService;
         private readonly IOpenAiModerationService _openAiModerationService;
+        private readonly IFollowerNotificationService _followerNotificationService;
 
         private static readonly string[] AllowedCoverModes = { "upload", "generate" };
         private static readonly string[] AuthorListAllowedStatuses = { "draft", "pending", "rejected", "published", "completed", "hidden", "removed" };
@@ -32,12 +33,14 @@ namespace Service.Services
             IAuthorStoryRepository storyRepository,
             IImageUploader imageUploader,
             IOpenAiImageService openAiImageService,
-            IOpenAiModerationService openAiModerationService)
+            IOpenAiModerationService openAiModerationService,
+            IFollowerNotificationService followerNotificationService)
         {
             _storyRepository = storyRepository;
             _imageUploader = imageUploader;
             _openAiImageService = openAiImageService;
             _openAiModerationService = openAiModerationService;
+            _followerNotificationService = followerNotificationService;
         }
 
         public async Task<StoryResponse> CreateAsync(Guid authorAccountId, StoryCreateRequest request, CancellationToken ct = default)
@@ -155,6 +158,8 @@ namespace Service.Services
             var now = TimezoneConverter.VietnamNow;
 
             story.updated_at = now;
+            var initialStatus = story.status;
+            var notifyFollowers = false;
 
             if (aiResult.ShouldReject || aiScore < 5m)
             {
@@ -190,6 +195,7 @@ namespace Service.Services
                 await _storyRepository.UpdateStoryAsync(story, ct);
 
                 await UpsertStoryApprovalAsync(story.story_id, "approved", aiScore, aiNote, ct);
+                notifyFollowers = !string.Equals(initialStatus, "published", StringComparison.OrdinalIgnoreCase);
             }
             else
             {
@@ -203,6 +209,12 @@ namespace Service.Services
             var saved = await _storyRepository.GetStoryForAuthorAsync(story.story_id, author.account_id, ct)
                         ?? throw new InvalidOperationException("Failed to load story after submission.");
             var approvals = await _storyRepository.GetContentApprovalsForStoryAsync(saved.story_id, ct);
+
+            if (notifyFollowers)
+            {
+                var authorName = author.account.username;
+                await _followerNotificationService.NotifyStoryPublishedAsync(author.account_id, authorName, story.story_id, story.title, ct);
+            }
 
             return MapStory(saved, approvals);
         }
