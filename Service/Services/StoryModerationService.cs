@@ -3,6 +3,7 @@ using Contract.DTOs.Respond.Story;
 using Repository.Entities;
 using Repository.Interfaces;
 using Repository.Utils;
+using Service.Constants;
 using Service.Exceptions;
 using Service.Interfaces;
 using System;
@@ -17,11 +18,19 @@ namespace Service.Services
     {
         private readonly IStoryModerationRepository _storyRepository;
         private readonly IMailSender _mailSender;
+        private readonly INotificationService _notificationService;
+        private readonly IFollowerNotificationService _followerNotificationService;
 
-        public StoryModerationService(IStoryModerationRepository storyRepository, IMailSender mailSender)
+        public StoryModerationService(
+            IStoryModerationRepository storyRepository,
+            IMailSender mailSender,
+            INotificationService notificationService,
+            IFollowerNotificationService followerNotificationService)
         {
             _storyRepository = storyRepository;
             _mailSender = mailSender;
+            _notificationService = notificationService;
+            _followerNotificationService = followerNotificationService;
         }
 
         private static readonly string[] AllowedStatuses = { "pending", "published", "rejected" };
@@ -106,7 +115,10 @@ namespace Service.Services
 
             await _storyRepository.SaveChangesAsync(ct);
 
-            var authorEmail = story.author.account.email;
+            var authorAccount = story.author.account;
+            var authorEmail = authorAccount.email;
+            var statusText = request.Approve ? "approved" : "rejected";
+
             if (request.Approve)
             {
                 await _mailSender.SendStoryApprovedEmailAsync(authorEmail, story.title);
@@ -114,6 +126,35 @@ namespace Service.Services
             else
             {
                 await _mailSender.SendStoryRejectedEmailAsync(authorEmail, story.title, approval.moderator_feedback);
+            }
+
+            var title = request.Approve
+                ? $"Truyện \"{story.title}\" đã được duyệt"
+                : $"Truyện \"{story.title}\" bị từ chối";
+
+            var message = request.Approve
+                ? "Ban kiểm duyệt đã phê duyệt truyện của bạn. Bạn có thể tiếp tục đăng chương mới."
+                : string.IsNullOrWhiteSpace(humanNote)
+                    ? "Ban kiểm duyệt đã từ chối truyện của bạn. Vui lòng kiểm tra lại nội dung."
+                    : $"Ban kiểm duyệt đã từ chối truyện của bạn: {humanNote}";
+
+            await _notificationService.CreateAsync(new NotificationCreateModel(
+                authorAccount.account_id,
+                NotificationTypes.StoryDecision,
+                title,
+                message,
+                new
+                {
+                    reviewId = approval.review_id,
+                    storyId = story.story_id,
+                    status = statusText,
+                    moderatorNote = humanNote
+                }), ct);
+
+            if (request.Approve)
+            {
+                var authorName = authorAccount.username;
+                await _followerNotificationService.NotifyStoryPublishedAsync(authorAccount.account_id, authorName, story.story_id, story.title, ct);
             }
         }
 

@@ -8,5 +8,8 @@ namespace Service.Constants
         public const string NewStory = "new_story";
         public const string NewChapter = "new_chapter";
         public const string General = "general";
+        public const string NewFollower = "new_follower";
+        public const string ChapterComment = "chapter_comment";
+        public const string StoryRating = "story_rating";
     }
 }

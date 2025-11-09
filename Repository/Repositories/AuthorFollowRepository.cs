@@ -83,5 +83,14 @@ namespace Repository.Repositories
 
             return (items, total);
         }
+
+        public async Task<IReadOnlyList<Guid>> GetFollowerIdsForNotificationsAsync(Guid authorId, CancellationToken ct = default)
+        {
+            return await _db.follows
+                .AsNoTracking()
+                .Where(f => f.followee_id == authorId && (f.noti_new_story ?? true))
+                .Select(f => f.follower_id)
+                .ToListAsync(ct);
+        }
     }
 }

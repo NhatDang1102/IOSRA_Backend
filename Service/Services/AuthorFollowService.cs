@@ -9,6 +9,7 @@ using Contract.DTOs.Respond.Follow;
 using Repository.Entities;
 using Repository.Interfaces;
 using Repository.Utils;
+using Service.Constants;
 using Service.Exceptions;
 using Service.Interfaces;
 
@@ -21,15 +22,18 @@ namespace Service.Services
         private readonly IAuthorFollowRepository _followRepository;
         private readonly IProfileRepository _profileRepository;
         private readonly IAuthorStoryRepository _authorStoryRepository;
+        private readonly INotificationService _notificationService;
 
         public AuthorFollowService(
             IAuthorFollowRepository followRepository,
             IProfileRepository profileRepository,
-            IAuthorStoryRepository authorStoryRepository)
+            IAuthorStoryRepository authorStoryRepository,
+            INotificationService notificationService)
         {
             _followRepository = followRepository;
             _profileRepository = profileRepository;
             _authorStoryRepository = authorStoryRepository;
+            _notificationService = notificationService;
         }
 
         public async Task<AuthorFollowStatusResponse> FollowAsync(Guid readerAccountId, Guid authorAccountId, AuthorFollowRequest request, CancellationToken ct = default)
@@ -57,6 +61,18 @@ namespace Service.Services
             var entity = await _followRepository.AddAsync(reader.account_id, author.account_id, notifications, ct);
             IncrementFollowerCount(author, +1);
             await _authorStoryRepository.SaveChangesAsync(ct);
+
+            await _notificationService.CreateAsync(new NotificationCreateModel(
+                author.account_id,
+                NotificationTypes.NewFollower,
+                "Bạn có follower mới",
+                $"{reader.account.username} vừa follow bạn.",
+                new
+                {
+                    followerId = reader.account_id,
+                    followerUsername = reader.account.username
+                }), ct);
+
             return MapStatus(entity);
         }
 
