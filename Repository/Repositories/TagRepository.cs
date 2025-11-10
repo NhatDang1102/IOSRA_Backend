@@ -93,5 +93,36 @@ namespace Repository.Repositories
                 .OrderBy(t => t.tag_name)
                 .ToListAsync(ct);
         }
+
+        public async Task<List<tag>> SearchAsync(string term, int limit, CancellationToken ct = default)
+        {
+            if (string.IsNullOrWhiteSpace(term)) return new List<tag>();
+            limit = Math.Clamp(limit <= 0 ? 20 : limit, 1, 50);
+
+            var q = term.Trim();
+
+            // 1) Ưu tiên bắt đầu bằng q
+            var starts = await _db.tags
+                .Where(t => t.tag_name.StartsWith(q))     
+                .OrderBy(t => t.tag_name)
+                .Take(limit)
+                .ToListAsync(ct);
+
+            if (starts.Count >= limit) return starts;
+
+            // 2) Bổ sung phần còn thiếu với Contains (loại trùng)
+            var takenIds = starts.Select(t => t.tag_id).ToHashSet();
+            var remain = limit - starts.Count;
+
+            var contains = await _db.tags
+                .Where(t => t.tag_name.Contains(q) && !takenIds.Contains(t.tag_id))
+                .OrderBy(t => t.tag_name)
+                .Take(remain)
+                .ToListAsync(ct);
+
+            starts.AddRange(contains);
+            return starts;
+        }
+
     }
 }
