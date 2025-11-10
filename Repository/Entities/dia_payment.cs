@@ -8,17 +8,21 @@ namespace Repository.Entities;
 
 [Table("dia_payment")]
 [Index("wallet_id", Name = "ix_topup_wallet")]
+[Index("order_code", Name = "ix_topup_ordercode", IsUnique = true)]
 public partial class dia_payment
 {
     [Key]
-    
+
     public Guid topup_id { get; set; }
 
-    
+
     public Guid wallet_id { get; set; }
 
     [StringLength(50)]
     public string provider { get; set; } = null!;
+
+    [StringLength(50)]
+    public string order_code { get; set; } = null!;
 
     public ulong amount_vnd { get; set; }
 

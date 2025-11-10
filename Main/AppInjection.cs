@@ -13,6 +13,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
+using Net.payOS;
 using Repository.DBContext;
 using Repository.Utils;
 using Service.Helpers;
@@ -125,6 +126,11 @@ namespace Main
 
             var redis = configuration.GetSection("Redis");
             services.AddSingleton<IConnectionMultiplexer>(ConnectionMultiplexer.Connect($"{redis["Host"]}:{redis["Port"]}"));
+
+            var payOsClientId = configuration["Environment:PAYOS_CLIENT_ID"] ?? throw new Exception("PAYOS_CLIENT_ID not found");
+            var payOsApiKey = configuration["Environment:PAYOS_API_KEY"] ?? throw new Exception("PAYOS_API_KEY not found");
+            var payOsChecksumKey = configuration["Environment:PAYOS_CHECKSUM_KEY"] ?? throw new Exception("PAYOS_CHECKSUM_KEY not found");
+            services.AddSingleton(new PayOS(payOsClientId, payOsApiKey, payOsChecksumKey));
 
             services.AddCors(options =>
             {
