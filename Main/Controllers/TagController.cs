@@ -1,8 +1,10 @@
-using System;
 using Contract.DTOs.Request.Tag;
+using Contract.DTOs.Respond.Tag;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Service.Implementations;
 using Service.Interfaces;
+using System;
 
 namespace Main.Controllers;
 
@@ -24,12 +26,27 @@ public class TagController : AppControllerBase
         return Ok(data);
     }
 
+    [HttpGet("top")]
+    [AllowAnonymous]
+    public async Task<ActionResult<List<TagOptionResponse>>> Top([FromQuery] int limit = 50, CancellationToken ct = default)
+    {
+        return Ok(await _tag.GetTopOptionsAsync(limit, ct));
+    }
+
+
     [HttpPost]
     [Authorize(Roles = "cmod,CONTENT_MOD,admin,ADMIN")]
     public async Task<IActionResult> Create([FromBody] TagCreateRequest req, CancellationToken ct)
     {
         var result = await _tag.CreateAsync(req, ct);
         return Ok(result);
+    }
+
+    [HttpPost("resolve")]
+    [AllowAnonymous]
+    public async Task<ActionResult<List<TagOptionResponse>>> Resolve([FromBody] TagResolveRequest body, CancellationToken ct = default)
+    {
+        return Ok(await _tag.ResolveOptionsAsync(body, ct));
     }
 
     [HttpPut("{tagId:guid}")]

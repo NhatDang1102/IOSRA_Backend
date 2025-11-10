@@ -15,5 +15,7 @@ namespace Repository.Interfaces
         Task UpdateAsync(tag entity, CancellationToken ct = default);
         Task<bool> HasStoriesAsync(Guid tagId, CancellationToken ct = default);
         Task DeleteAsync(tag entity, CancellationToken ct = default);
+        Task<List<tag>> GetTopAsync(int limit, CancellationToken ct = default);
+        Task<List<tag>> ResolveAsync(IEnumerable<Guid> ids, CancellationToken ct = default);
     }
 }

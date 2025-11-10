@@ -10,5 +10,7 @@ namespace Service.Interfaces
         Task<TagResponse> CreateAsync(TagCreateRequest req, CancellationToken ct = default);
         Task<TagResponse> UpdateAsync(Guid tagId, TagUpdateRequest req, CancellationToken ct = default);
         Task DeleteAsync(Guid tagId, CancellationToken ct = default);
+        Task<List<TagOptionResponse>> GetTopOptionsAsync(int limit, CancellationToken ct = default);
+        Task<List<TagOptionResponse>> ResolveOptionsAsync(TagResolveRequest request, CancellationToken ct = default);
     }
 }

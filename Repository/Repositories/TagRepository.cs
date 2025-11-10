@@ -1,4 +1,4 @@
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using Repository.DBContext;
 using Repository.Entities;
 using Repository.Interfaces;
@@ -62,6 +62,36 @@ namespace Repository.Repositories
         {
             _db.tags.Remove(entity);
             await _db.SaveChangesAsync(ct);
+        }
+
+        public async Task<List<tag>> GetTopAsync(int limit, CancellationToken ct = default)
+        {
+            limit = Math.Clamp(limit <= 0 ? 50 : limit, 1, 100);
+
+            // Đếm số story published/completed đang gắn tag và sort theo usage desc, name asc
+            var q =
+                from t in _db.tags
+                let usage =
+                    (from st in _db.story_tags
+                     join s in _db.stories on st.story_id equals s.story_id
+                     where st.tag_id == t.tag_id
+                           && (s.status == "published" || s.status == "completed")
+                     select st).Count()
+                orderby usage descending, t.tag_name ascending
+                select t;
+
+            return await q.Take(limit).ToListAsync(ct);
+        }
+
+        public async Task<List<tag>> ResolveAsync(IEnumerable<Guid> ids, CancellationToken ct = default)
+        {
+            var set = (ids ?? Array.Empty<Guid>()).ToHashSet();
+            if (set.Count == 0) return new List<tag>();
+
+            return await _db.tags
+                .Where(t => set.Contains(t.tag_id))
+                .OrderBy(t => t.tag_name)
+                .ToListAsync(ct);
         }
     }
 }

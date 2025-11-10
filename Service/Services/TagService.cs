@@ -104,6 +104,27 @@ namespace Service.Implementations
                 throw new AppException("ValidationFailed", $"Tag name must not exceed {MaxNameLength} characters.", 400);
             }
         }
+
+        public async Task<List<TagOptionResponse>> GetTopOptionsAsync(int limit, CancellationToken ct = default)
+        {
+            var tags = await _tagRepo.GetTopAsync(limit, ct);
+            return tags.Select(t => new TagOptionResponse
+            {
+                Value = t.tag_id,
+                Label = t.tag_name
+            }).ToList();
+        }
+
+        public async Task<List<TagOptionResponse>> ResolveOptionsAsync(TagResolveRequest request, CancellationToken ct = default)
+        {
+            if (request?.Ids == null || request.Ids.Count == 0) return new();
+            var tags = await _tagRepo.ResolveAsync(request.Ids, ct);
+            return tags.Select(t => new TagOptionResponse
+            {
+                Value = t.tag_id,
+                Label = t.tag_name
+            }).ToList();
+        }
     }
 }
 
