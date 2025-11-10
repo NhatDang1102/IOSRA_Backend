@@ -124,5 +124,28 @@ namespace Repository.Repositories
             return starts;
         }
 
+        public async Task<(List<tag> Items, int Total)> GetPagedAsync(string? q, string sort, bool asc, int page, int pageSize, CancellationToken ct = default)
+        {
+            if (page <= 0) page = 1;
+            if (pageSize <= 0) pageSize = 20;
+
+            var query = _db.tags.AsQueryable();
+
+            // Nếu có chuỗi tìm kiếm
+            if (!string.IsNullOrWhiteSpace(q))
+                query = query.Where(t => t.tag_name.Contains(q));
+
+            var total = await query.CountAsync(ct);
+
+            // Sort (chỉ có name)
+            query = asc ? query.OrderBy(t => t.tag_name) : query.OrderByDescending(t => t.tag_name);
+
+            var items = await query
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
+                .ToListAsync(ct);
+
+            return (items, total);
+        }
     }
 }
