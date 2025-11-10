@@ -9,7 +9,7 @@ using Service.Interfaces;
 namespace Main.Controllers
 {
     [Route("api/[controller]")]
-    [Authorize(Roles = "omod,OPERATION_MOD,admin,ADMIN")]
+    [Authorize(Roles = "omod,OPERATION_MOD")]
     public class OperationModController : AppControllerBase
     {
         private readonly IOperationModService _service;
