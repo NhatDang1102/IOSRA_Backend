@@ -124,28 +124,45 @@ namespace Repository.Repositories
             return starts;
         }
 
-        public async Task<(List<tag> Items, int Total)> GetPagedAsync(string? q, string sort, bool asc, int page, int pageSize, CancellationToken ct = default)
+        public async Task<(List<(tag Tag, int Usage)> Items, int Total)> GetPagedAsync(string? q, string sort, bool asc, int page, int pageSize, CancellationToken ct = default)
         {
             if (page <= 0) page = 1;
             if (pageSize <= 0) pageSize = 20;
 
             var query = _db.tags.AsQueryable();
 
-            // Nếu có chuỗi tìm kiếm
             if (!string.IsNullOrWhiteSpace(q))
                 query = query.Where(t => t.tag_name.Contains(q));
 
             var total = await query.CountAsync(ct);
 
-            // Sort (chỉ có name)
+            // sort theo name . 
             query = asc ? query.OrderBy(t => t.tag_name) : query.OrderByDescending(t => t.tag_name);
 
-            var items = await query
+            var pageItems = await query
                 .Skip((page - 1) * pageSize)
                 .Take(pageSize)
                 .ToListAsync(ct);
 
-            return (items, total);
+            var ids = pageItems.Select(t => t.tag_id).ToList();
+
+            // Đếm usage các story đã published|completed
+            var usageMap = await
+            (
+                from st in _db.story_tags
+                join s in _db.stories on st.story_id equals s.story_id
+                where ids.Contains(st.tag_id)
+                      && (s.status == "published" || s.status == "completed")
+                group st by st.tag_id into g
+                select new { TagId = g.Key, Count = g.Count() }
+            )
+            .ToDictionaryAsync(x => x.TagId, x => x.Count, ct);
+
+            var result = pageItems
+                .Select(t => (Tag: t, Usage: (usageMap.TryGetValue(t.tag_id, out var c) ? c : 0)))
+                .ToList();
+
+            return (result, total);
         }
     }
 }
