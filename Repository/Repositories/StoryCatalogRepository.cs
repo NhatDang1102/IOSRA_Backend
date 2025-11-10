@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
@@ -110,6 +110,133 @@ namespace Repository.Repositories
                 .Replace("_", "\\_");
 
             return $"%{escaped}%";
+        }
+
+        public async Task<(List<story> Items, int Total)> SearchPublishedStoriesAdvancedAsync(string? query, Guid? tagId, Guid? authorId, bool? isPremium, double? minAvgRating, string? sortBy, bool sortDesc, DateTime? weekStartUtc, int page, int pageSize, CancellationToken ct = default)
+        {
+            // base query: chỉ lấy story public
+            var q = _db.stories
+                .AsNoTracking()
+                .Where(s => PublicStoryStatuses.Contains(s.status));
+
+            // text search
+            if (!string.IsNullOrWhiteSpace(query))
+            {
+                var like = BuildLikePattern(query.Trim());
+                q = q.Where(s => EF.Functions.Like(s.title, like) || EF.Functions.Like(s.desc, like));
+            }
+
+            // filter tag
+            if (tagId.HasValue)
+            {
+                q = q.Where(s => s.story_tags.Any(t => t.tag_id == tagId.Value));
+            }
+
+            // filter author
+            if (authorId.HasValue)
+            {
+                q = q.Where(s => s.author_id == authorId.Value);
+            }
+
+            // filter premium
+            if (isPremium.HasValue)
+            {
+                q = q.Where(s => s.is_premium == isPremium.Value);
+            }
+
+            // subquery: aggregate rating (avg)
+            var ratingAgg = _db.story_ratings
+                .GroupBy(r => r.story_id)
+                .Select(g => new
+                {
+                    story_id = g.Key,
+                    avg = g.Average(x => (double)x.score),
+                    cnt = g.Count()
+                });
+
+            if (minAvgRating.HasValue)
+            {
+                q = from s in q
+                    join ra in ratingAgg on s.story_id equals ra.story_id into gj
+                    from ra in gj.DefaultIfEmpty()
+                    where (ra != null ? ra.avg : 0) >= minAvgRating.Value
+                    select s;
+            }
+
+            // subquery: weekly views (cho sort WeeklyViews)
+            IQueryable<dynamic> viewAgg = Enumerable.Empty<dynamic>().AsQueryable();
+            if (string.Equals(sortBy, "weeklyViews", StringComparison.OrdinalIgnoreCase))
+            {
+                if (!weekStartUtc.HasValue)
+                {
+                    // fallback: dùng đúng giá trị trong DB nếu caller không truyền
+                    weekStartUtc = DateTime.UtcNow.Date;
+                }
+
+                var wk = weekStartUtc.Value;
+                viewAgg = _db.story_weekly_views
+                    .Where(v => v.week_start_utc == wk)
+                    .Select(v => new { v.story_id, views = (long)v.view_count });
+            }
+
+            // sort
+            if (string.Equals(sortBy, "weeklyViews", StringComparison.OrdinalIgnoreCase))
+            {
+                if (!weekStartUtc.HasValue)
+                    weekStartUtc = DateTime.UtcNow.Date;
+
+                var wk = weekStartUtc.Value;
+
+                var joined =
+                    from s in q
+                    join vw in _db.story_weekly_views.Where(v => v.week_start_utc == wk)
+                        on s.story_id equals vw.story_id into gj
+                    from vw in gj.DefaultIfEmpty()
+                    select new { s, views = (vw != null ? vw.view_count : 0UL) };
+
+                q = (sortDesc
+                    ? joined.OrderByDescending(x => x.views)
+                    : joined.OrderBy(x => x.views))
+                    .Select(x => x.s);
+            }
+            else if (string.Equals(sortBy, "topRated", StringComparison.OrdinalIgnoreCase))
+            {
+                var joined =
+                    from s in q
+                    join ra in ratingAgg on s.story_id equals ra.story_id into gj
+                    from ra in gj.DefaultIfEmpty()
+                    select new { s, avg = (double?)(ra != null ? ra.avg : 0) ?? 0 };
+
+                q = (sortDesc
+                    ? joined.OrderByDescending(x => x.avg)
+                    : joined.OrderBy(x => x.avg))
+                    .Select(x => x.s);
+            }
+            else if (string.Equals(sortBy, "mostChapters", StringComparison.OrdinalIgnoreCase))
+            {
+                q = (sortDesc
+                    ? q.OrderByDescending(s => s.chapters.Count(c => c.status == "published"))
+                    : q.OrderBy(s => s.chapters.Count(c => c.status == "published")));
+            }
+            else
+            {
+                q = (sortDesc
+                    ? q.OrderByDescending(s => s.published_at)
+                    : q.OrderBy(s => s.published_at));
+            }
+
+            // total
+            var total = await q.CountAsync(ct);
+
+            // page
+            var items = await q
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
+                .Include(s => s.author).ThenInclude(a => a.account)
+                .Include(s => s.story_tags).ThenInclude(st => st.tag)
+                .ToListAsync(ct);
+
+            return (items, total);
         }
     }
 }
