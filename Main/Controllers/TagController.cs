@@ -33,6 +33,16 @@ public class TagController : AppControllerBase
         return Ok(await _tag.GetTopOptionsAsync(limit, ct));
     }
 
+    [HttpGet("options")]
+    [AllowAnonymous]
+    public async Task<ActionResult<List<TagOptionResponse>>> Options(
+    [FromQuery] string q,
+    [FromQuery] int limit = 20,
+    CancellationToken ct = default)
+    {
+        var data = await _tag.GetOptionsAsync(q, limit, ct);
+        return Ok(data);
+    }
 
     [HttpPost]
     [Authorize(Roles = "cmod,CONTENT_MOD,admin,ADMIN")]
