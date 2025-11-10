@@ -150,17 +150,22 @@ namespace Repository.Repositories
                 .Select(g => new
                 {
                     story_id = g.Key,
-                    avg = g.Average(x => (double)x.score),
-                    cnt = g.Count()
+                    avg = g.Average(x => (double?)x.score),
                 });
 
             if (minAvgRating.HasValue)
             {
-                q = from s in q
+                var min = minAvgRating.Value;
+
+                var joined =
+                    from s in q
                     join ra in ratingAgg on s.story_id equals ra.story_id into gj
                     from ra in gj.DefaultIfEmpty()
-                    where (ra != null ? ra.avg : 0) >= minAvgRating.Value
-                    select s;
+                    select new { s, avg = (ra.avg ?? 0.0) };   
+
+                q = joined
+                    .Where(x => x.avg >= min)
+                    .Select(x => x.s);
             }
 
             // subquery: weekly views (cho sort WeeklyViews)
