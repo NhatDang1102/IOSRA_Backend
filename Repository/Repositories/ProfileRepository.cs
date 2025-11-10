@@ -18,7 +18,9 @@ namespace Repository.Repositories
             => _db.accounts.FirstOrDefaultAsync(a => a.account_id == accountId, ct);
 
         public Task<reader?> GetReaderByIdAsync(Guid accountId, CancellationToken ct = default)
-            => _db.readers.FirstOrDefaultAsync(r => r.account_id == accountId, ct);
+            => _db.readers
+                .Include(r => r.account)
+                .FirstOrDefaultAsync(r => r.account_id == accountId, ct);
 
         public async Task UpdateReaderProfileAsync(Guid accountId, string? bio, string? gender, DateOnly? birthday, CancellationToken ct = default)
         {
