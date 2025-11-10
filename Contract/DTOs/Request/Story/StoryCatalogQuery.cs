@@ -33,7 +33,7 @@ namespace Contract.DTOs.Request.Story
         public Guid? AuthorId { get; set; }
 
         //add filter
-        public bool? isPremium { get; set; }
+        public bool? IsPremium { get; set; }
         public double? MinAvgRating { get; set; }
 
         //add sort

@@ -49,6 +49,17 @@ namespace Main.Controllers
             return Ok(result);
         }
 
+        // API mới: filter + search nâng cao (public)
+        [HttpGet("advance-filter")]
+        [AllowAnonymous]
+        public async Task<ActionResult<PagedResult<StoryCatalogListItemResponse>>> Filter(
+            [FromQuery] StoryCatalogQuery query,
+            CancellationToken ct)
+        {
+            var result = await _storyCatalogService.GetStoriesAdvancedAsync(query, ct); // ⬅️ advanced
+            return Ok(result);
+        }
+
         // API lấy danh sách truyện mới nhất (cached trong Redis)
         [HttpGet("latest")]
         public async Task<ActionResult<IReadOnlyList<StoryCatalogListItemResponse>>> Latest([FromQuery] int limit = 10, CancellationToken ct = default)

@@ -37,7 +37,7 @@ namespace Service.Services
                 query.Query,
                 query.TagId,
                 query.AuthorId,
-                query.isPremium,
+                query.IsPremium,
                 query.MinAvgRating,
                 query.SortBy.ToString(),
                 query.SortDir == SortDir.Desc,
