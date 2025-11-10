@@ -1,20 +1,30 @@
+﻿using Swashbuckle.AspNetCore.Annotations;
 using System;
 using System.ComponentModel.DataAnnotations;
+using System.Runtime.Serialization;
 
 namespace Contract.DTOs.Request.Story
 {
+    [SwaggerSchema("Tiêu chí sắp xếp danh sách truyện")]
     public enum StorySortBy
     {
-        Newest,
-        WeeklyViews,
-        TopRated,
-        MostChapters
+        [EnumMember(Value = "Newest")]
+        Newest = 0,
+        [EnumMember(Value = "WeeklyViews")]
+        WeeklyViews = 1,
+        [EnumMember(Value = "TopRated")]
+        TopRated = 2,
+        [EnumMember(Value = "MostChapters")]
+        MostChapters = 3
     }
 
+    [SwaggerSchema("Chiều sắp xếp")]
     public enum SortDir
     {
-        Asc,
-        Desc
+        [EnumMember(Value = "Asc")]
+        Asc = 0,
+        [EnumMember(Value = "Desc")]
+        Desc = 1
     }
 
     public class StoryCatalogQuery
