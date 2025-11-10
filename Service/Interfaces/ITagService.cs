@@ -1,6 +1,7 @@
-using System;
 using Contract.DTOs.Request.Tag;
+using Contract.DTOs.Respond.Common;
 using Contract.DTOs.Respond.Tag;
+using System;
 
 namespace Service.Interfaces
 {
@@ -13,5 +14,6 @@ namespace Service.Interfaces
         Task<List<TagOptionResponse>> GetTopOptionsAsync(int limit, CancellationToken ct = default);
         Task<List<TagOptionResponse>> ResolveOptionsAsync(TagResolveRequest request, CancellationToken ct = default);
         Task<List<TagOptionResponse>> GetOptionsAsync(string q, int limit, CancellationToken ct = default);
+        Task<PagedResult<TagPagedItem>> GetPagedAsync(string? q, string sort, bool asc, int page, int pageSize, CancellationToken ct = default);
     }
 }

@@ -1,5 +1,6 @@
 using System;
 using Contract.DTOs.Request.Tag;
+using Contract.DTOs.Respond.Common;
 using Contract.DTOs.Respond.Tag;
 using Repository.Interfaces;
 using Service.Exceptions;
@@ -135,6 +136,26 @@ namespace Service.Implementations
                 Value = t.tag_id,
                 Label = t.tag_name
             }).ToList();
+        }
+
+        public async Task<PagedResult<TagPagedItem>> GetPagedAsync(string? q, string sort, bool asc, int page, int pageSize, CancellationToken ct = default)
+        {
+            var (items, total) = await _tagRepo.GetPagedAsync(q, sort, asc, page, pageSize, ct);
+
+            var data = items.Select(x => new TagPagedItem
+            {
+                TagId = x.Tag.tag_id,
+                Name = x.Tag.tag_name,
+                Usage = x.Usage
+            }).ToList();
+
+            return new PagedResult<TagPagedItem>
+            {
+                Items = data,
+                Total = total,
+                Page = page,
+                PageSize = pageSize
+            };
         }
     }
 }

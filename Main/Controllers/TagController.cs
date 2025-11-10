@@ -1,4 +1,5 @@
 using Contract.DTOs.Request.Tag;
+using Contract.DTOs.Respond.Common;
 using Contract.DTOs.Respond.Tag;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -42,6 +43,18 @@ public class TagController : AppControllerBase
     {
         var data = await _tag.GetOptionsAsync(q, limit, ct);
         return Ok(data);
+    }
+
+    [HttpGet("paged")]
+    [Authorize(Roles = "cmod,CONTENT_MOD,admin,ADMIN")]
+    public async Task<ActionResult<PagedResult<TagPagedItem>>> GetPaged(
+    [FromQuery] string? q,
+    [FromQuery] bool asc = true,
+    [FromQuery] int page = 1,
+    [FromQuery] int pageSize = 20,
+    CancellationToken ct = default)
+    {
+        return Ok(await _tag.GetPagedAsync(q, "name", asc, page, pageSize, ct));
     }
 
     [HttpPost]
