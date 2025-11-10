@@ -125,6 +125,17 @@ namespace Service.Implementations
                 Label = t.tag_name
             }).ToList();
         }
+
+        public async Task<List<TagOptionResponse>> GetOptionsAsync(string q, int limit, CancellationToken ct = default)
+        {
+            if (string.IsNullOrWhiteSpace(q)) return new();
+            var rows = await _tagRepo.SearchAsync(q, limit, ct);
+            return rows.Select(t => new TagOptionResponse
+            {
+                Value = t.tag_id,
+                Label = t.tag_name
+            }).ToList();
+        }
     }
 }
 

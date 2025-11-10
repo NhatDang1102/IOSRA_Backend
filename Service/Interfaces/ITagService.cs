@@ -12,5 +12,6 @@ namespace Service.Interfaces
         Task DeleteAsync(Guid tagId, CancellationToken ct = default);
         Task<List<TagOptionResponse>> GetTopOptionsAsync(int limit, CancellationToken ct = default);
         Task<List<TagOptionResponse>> ResolveOptionsAsync(TagResolveRequest request, CancellationToken ct = default);
+        Task<List<TagOptionResponse>> GetOptionsAsync(string q, int limit, CancellationToken ct = default);
     }
 }
