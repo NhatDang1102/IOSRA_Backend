@@ -3,6 +3,20 @@ using System.ComponentModel.DataAnnotations;
 
 namespace Contract.DTOs.Request.Story
 {
+    public enum StorySortBy
+    {
+        Newest,
+        WeeklyViews,
+        TopRated,
+        MostChapters
+    }
+
+    public enum SortDir
+    {
+        Asc,
+        Desc
+    }
+
     public class StoryCatalogQuery
     {
         [Range(1, int.MaxValue)]
@@ -17,5 +31,15 @@ namespace Contract.DTOs.Request.Story
         public Guid? TagId { get; set; }
 
         public Guid? AuthorId { get; set; }
+
+        //add filter
+        public bool? IsPremium { get; set; }
+        public double? MinAvgRating { get; set; }
+
+        //add sort
+        public StorySortBy SortBy { get; set; } = StorySortBy.Newest;
+        public SortDir SortDir { get; set; } = SortDir.Desc;
     }
+
+
 }

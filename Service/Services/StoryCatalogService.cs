@@ -24,6 +24,56 @@ namespace Service.Services
             _chapterRepository = chapterRepository;
         }
 
+        public async Task<PagedResult<StoryCatalogListItemResponse>> GetStoriesAdvancedAsync(StoryCatalogQuery query, CancellationToken ct = default)
+        {
+            // validate page info
+            if (query.Page < 1 || query.PageSize < 1)
+                throw new AppException("ValidationFailed", "Page and PageSize must be positive integers.", 400);
+
+            // calculate start of week for sorting WeeklyViews
+            var weekStartUtc = StoryViewTimeHelper.GetCurrentWeekStartUtc();
+
+            var (stories, total) = await _storyRepository.SearchPublishedStoriesAdvancedAsync(
+                query.Query,
+                query.TagId,
+                query.AuthorId,
+                query.IsPremium,
+                query.MinAvgRating,
+                query.SortBy.ToString(),
+                query.SortDir == SortDir.Desc,
+                weekStartUtc,
+                query.Page,
+                query.PageSize,
+                ct
+            );
+
+            if (stories.Count == 0)
+            {
+                return new PagedResult<StoryCatalogListItemResponse>
+                {
+                    Items = Array.Empty<StoryCatalogListItemResponse>(),
+                    Total = total,
+                    Page = query.Page,
+                    PageSize = query.PageSize
+                };
+            }
+
+            var storyIds = stories.Select(s => s.story_id).ToArray();
+            var chapterCounts = await _chapterRepository.GetPublishedChapterCountsByStoryIdsAsync(storyIds, ct);
+
+            var items = stories
+                .Select(s => StoryCatalogMapper.ToListItemResponse(s, chapterCounts))
+                .ToList();
+
+            return new PagedResult<StoryCatalogListItemResponse>
+            {
+                Items = items,
+                Total = total,
+                Page = query.Page,
+                PageSize = query.PageSize
+            };
+        }
+
         public async Task<PagedResult<StoryCatalogListItemResponse>> GetStoriesAsync(StoryCatalogQuery query, CancellationToken ct = default)
         {
             if (query.Page < 1 || query.PageSize < 1)
