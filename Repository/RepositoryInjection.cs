@@ -25,6 +25,7 @@ namespace Repository
             services.AddScoped<IChapterCommentRepository, ChapterCommentRepository>();
             services.AddScoped<IAuthorFollowRepository, AuthorFollowRepository>();
             services.AddScoped<INotificationRepository, NotificationRepository>();
+            services.AddScoped<IChapterPricingRepository, ChapterPricingRepository>();
 
             return services;
         }

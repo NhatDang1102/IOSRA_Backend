@@ -22,6 +22,7 @@ namespace Service.Services
         private readonly IChapterContentStorage _contentStorage;
         private readonly IOpenAiModerationService _openAiModerationService;
         private readonly IFollowerNotificationService _followerNotificationService;
+        private readonly IChapterPricingService _chapterPricingService;
 
         private static readonly string[] AuthorChapterAllowedStatuses = { "draft", "pending", "rejected", "published", "hidden", "removed" };
 
@@ -30,13 +31,15 @@ namespace Service.Services
             IAuthorStoryRepository storyRepository,
             IChapterContentStorage contentStorage,
             IOpenAiModerationService openAiModerationService,
-            IFollowerNotificationService followerNotificationService)
+            IFollowerNotificationService followerNotificationService,
+            IChapterPricingService chapterPricingService)
         {
             _chapterRepository = chapterRepository;
             _storyRepository = storyRepository;
             _contentStorage = contentStorage;
             _openAiModerationService = openAiModerationService;
             _followerNotificationService = followerNotificationService;
+            _chapterPricingService = chapterPricingService;
         }
 
         public async Task<ChapterResponse> CreateAsync(Guid authorAccountId, Guid storyId, ChapterCreateRequest request, CancellationToken ct = default)
@@ -92,7 +95,7 @@ namespace Service.Services
                 throw new AppException("ChapterContentEmpty", "Chapter content must include words.", 400);
             }
 
-            var price = CalculatePrice(wordCount);
+            var price = await _chapterPricingService.GetPriceAsync(wordCount, ct);
             var chapterNumber = await _chapterRepository.GetNextChapterNumberAsync(story.story_id, ct);
             var chapterId = Guid.NewGuid();
             var accessType = story.is_premium ? "coin" : "free";
@@ -316,7 +319,7 @@ namespace Service.Services
                     throw new AppException("ChapterContentEmpty", "Chapter content must include words.", 400);
                 }
 
-                var price = CalculatePrice(wordCount);
+                var price = await _chapterPricingService.GetPriceAsync(wordCount, ct);
                 string? newContentKey = null;
                 try
                 {
@@ -499,15 +502,6 @@ namespace Service.Services
             return matches.Count;
         }
 
-        private static int CalculatePrice(int wordCount)
-        {
-            if (wordCount <= 3000) return 5;
-            if (wordCount <= 4000) return 6;
-            if (wordCount <= 5000) return 7;
-            if (wordCount <= 6000) return 8;
-            if (wordCount <= 7000) return 9;
-            return 10;
-        }
     }
 }
 

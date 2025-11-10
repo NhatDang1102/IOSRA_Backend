@@ -48,6 +48,7 @@ public partial class AppDbContext : DbContext
 
     public virtual DbSet<follow> follows { get; set; }
     public virtual DbSet<notification> notifications { get; set; }
+    public virtual DbSet<chapter_price_rule> chapter_price_rules { get; set; }
 
     public virtual DbSet<language_list> language_lists { get; set; }
 
@@ -342,6 +343,13 @@ public partial class AppDbContext : DbContext
                 .HasForeignKey(d => d.recipient_id)
                 .OnDelete(DeleteBehavior.Cascade)
                 .HasConstraintName("fk_notifications_recipient");
+        });
+
+        modelBuilder.Entity<chapter_price_rule>(entity =>
+        {
+            entity.HasKey(e => e.rule_id).HasName("PRIMARY");
+            entity.Property(e => e.rule_id).ValueGeneratedNever();
+            entity.Property(e => e.created_at).HasDefaultValueSql("CURRENT_TIMESTAMP");
         });
 
         modelBuilder.Entity<language_list>(entity =>
