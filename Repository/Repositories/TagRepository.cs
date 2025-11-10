@@ -1,4 +1,4 @@
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using Repository.DBContext;
 using Repository.Entities;
 using Repository.Interfaces;
@@ -62,6 +62,107 @@ namespace Repository.Repositories
         {
             _db.tags.Remove(entity);
             await _db.SaveChangesAsync(ct);
+        }
+
+        public async Task<List<tag>> GetTopAsync(int limit, CancellationToken ct = default)
+        {
+            limit = Math.Clamp(limit <= 0 ? 50 : limit, 1, 100);
+
+            // Đếm số story published/completed đang gắn tag và sort theo usage desc, name asc
+            var q =
+                from t in _db.tags
+                let usage =
+                    (from st in _db.story_tags
+                     join s in _db.stories on st.story_id equals s.story_id
+                     where st.tag_id == t.tag_id
+                           && (s.status == "published" || s.status == "completed")
+                     select st).Count()
+                orderby usage descending, t.tag_name ascending
+                select t;
+
+            return await q.Take(limit).ToListAsync(ct);
+        }
+
+        public async Task<List<tag>> ResolveAsync(IEnumerable<Guid> ids, CancellationToken ct = default)
+        {
+            var set = (ids ?? Array.Empty<Guid>()).ToHashSet();
+            if (set.Count == 0) return new List<tag>();
+
+            return await _db.tags
+                .Where(t => set.Contains(t.tag_id))
+                .OrderBy(t => t.tag_name)
+                .ToListAsync(ct);
+        }
+
+        public async Task<List<tag>> SearchAsync(string term, int limit, CancellationToken ct = default)
+        {
+            if (string.IsNullOrWhiteSpace(term)) return new List<tag>();
+            limit = Math.Clamp(limit <= 0 ? 20 : limit, 1, 50);
+
+            var q = term.Trim();
+
+            // 1) Ưu tiên bắt đầu bằng q
+            var starts = await _db.tags
+                .Where(t => t.tag_name.StartsWith(q))     
+                .OrderBy(t => t.tag_name)
+                .Take(limit)
+                .ToListAsync(ct);
+
+            if (starts.Count >= limit) return starts;
+
+            // 2) Bổ sung phần còn thiếu với Contains (loại trùng)
+            var takenIds = starts.Select(t => t.tag_id).ToHashSet();
+            var remain = limit - starts.Count;
+
+            var contains = await _db.tags
+                .Where(t => t.tag_name.Contains(q) && !takenIds.Contains(t.tag_id))
+                .OrderBy(t => t.tag_name)
+                .Take(remain)
+                .ToListAsync(ct);
+
+            starts.AddRange(contains);
+            return starts;
+        }
+
+        public async Task<(List<(tag Tag, int Usage)> Items, int Total)> GetPagedAsync(string? q, string sort, bool asc, int page, int pageSize, CancellationToken ct = default)
+        {
+            if (page <= 0) page = 1;
+            if (pageSize <= 0) pageSize = 20;
+
+            var query = _db.tags.AsQueryable();
+
+            if (!string.IsNullOrWhiteSpace(q))
+                query = query.Where(t => t.tag_name.Contains(q));
+
+            var total = await query.CountAsync(ct);
+
+            // sort theo name . 
+            query = asc ? query.OrderBy(t => t.tag_name) : query.OrderByDescending(t => t.tag_name);
+
+            var pageItems = await query
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
+                .ToListAsync(ct);
+
+            var ids = pageItems.Select(t => t.tag_id).ToList();
+
+            // Đếm usage các story đã published|completed
+            var usageMap = await
+            (
+                from st in _db.story_tags
+                join s in _db.stories on st.story_id equals s.story_id
+                where ids.Contains(st.tag_id)
+                      && (s.status == "published" || s.status == "completed")
+                group st by st.tag_id into g
+                select new { TagId = g.Key, Count = g.Count() }
+            )
+            .ToDictionaryAsync(x => x.TagId, x => x.Count, ct);
+
+            var result = pageItems
+                .Select(t => (Tag: t, Usage: (usageMap.TryGetValue(t.tag_id, out var c) ? c : 0)))
+                .ToList();
+
+            return (result, total);
         }
     }
 }
