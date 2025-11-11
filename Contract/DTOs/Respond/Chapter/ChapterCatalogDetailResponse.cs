@@ -13,6 +13,6 @@ namespace Contract.DTOs.Respond.Chapter
         public string AccessType { get; set; } = null!;
         public bool IsLocked { get; set; }
         public DateTime? PublishedAt { get; set; }
-        public string? Content { get; set; }
+        public string ContentUrl { get; set; } = null!;
     }
 }

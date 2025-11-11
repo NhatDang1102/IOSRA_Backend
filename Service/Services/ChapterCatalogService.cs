@@ -16,16 +16,13 @@ namespace Service.Services
     {
         private readonly IChapterCatalogRepository _chapterRepository;
         private readonly IStoryCatalogRepository _storyRepository;
-        private readonly IChapterContentStorage _contentStorage;
 
         public ChapterCatalogService(
             IChapterCatalogRepository chapterRepository,
-            IStoryCatalogRepository storyRepository,
-            IChapterContentStorage contentStorage)
+            IStoryCatalogRepository storyRepository)
         {
             _chapterRepository = chapterRepository;
             _storyRepository = storyRepository;
-            _contentStorage = contentStorage;
         }
 
         public async Task<PagedResult<ChapterCatalogListItemResponse>> GetChaptersAsync(ChapterCatalogQuery query, CancellationToken ct = default)
@@ -78,8 +75,6 @@ namespace Service.Services
                 throw new AppException("ChapterContentMissing", "Chapter content is not available.", 500);
             }
 
-            var content = await _contentStorage.DownloadAsync(chapter.content_url, ct);
-
             return new ChapterCatalogDetailResponse
             {
                 ChapterId = chapter.chapter_id,
@@ -91,7 +86,7 @@ namespace Service.Services
                 AccessType = chapter.access_type,
                 IsLocked = false,
                 PublishedAt = chapter.published_at,
-                Content = content
+                ContentUrl = chapter.content_url
             };
         }
     }
