@@ -150,17 +150,22 @@ namespace Repository.Repositories
                 .Select(g => new
                 {
                     story_id = g.Key,
-                    avg = g.Average(x => (double)x.score),
-                    cnt = g.Count()
+                    avg = g.Average(x => (double?)x.score),
                 });
 
             if (minAvgRating.HasValue)
             {
-                q = from s in q
+                var min = minAvgRating.Value;
+
+                var joined =
+                    from s in q
                     join ra in ratingAgg on s.story_id equals ra.story_id into gj
                     from ra in gj.DefaultIfEmpty()
-                    where (ra != null ? ra.avg : 0) >= minAvgRating.Value
-                    select s;
+                    select new { s, avg = (ra.avg ?? 0.0) };   
+
+                q = joined
+                    .Where(x => x.avg >= min)
+                    .Select(x => x.s);
             }
 
             // subquery: weekly views (cho sort WeeklyViews)
@@ -185,14 +190,15 @@ namespace Repository.Repositories
                 if (!weekStartUtc.HasValue)
                     weekStartUtc = DateTime.UtcNow.Date;
 
-                var wk = weekStartUtc.Value;
+                var w = weekStartUtc.Value;
+                var wk = new DateTime(w.Year, w.Month, w.Day, 0, 0, 0, DateTimeKind.Utc);
 
                 var joined =
                     from s in q
                     join vw in _db.story_weekly_views.Where(v => v.week_start_utc == wk)
                         on s.story_id equals vw.story_id into gj
                     from vw in gj.DefaultIfEmpty()
-                    select new { s, views = (vw != null ? vw.view_count : 0UL) };
+                    select new { s, views = (vw == null ? (decimal)0 : (decimal)vw.view_count) };
 
                 q = (sortDesc
                     ? joined.OrderByDescending(x => x.views)
@@ -201,15 +207,18 @@ namespace Repository.Repositories
             }
             else if (string.Equals(sortBy, "topRated", StringComparison.OrdinalIgnoreCase))
             {
-                var joined =
-                    from s in q
-                    join ra in ratingAgg on s.story_id equals ra.story_id into gj
-                    from ra in gj.DefaultIfEmpty()
-                    select new { s, avg = (double?)(ra != null ? ra.avg : 0) ?? 0 };
+                var rated = q.Select(s => new
+                {
+                    s,
+                    avg = _db.story_ratings
+                  .Where(r => r.story_id == s.story_id)
+                  .Select(r => (double?)r.score)   
+                  .Average() ?? 0.0               
+                });
 
                 q = (sortDesc
-                    ? joined.OrderByDescending(x => x.avg)
-                    : joined.OrderBy(x => x.avg))
+                    ? rated.OrderByDescending(x => x.avg)
+                    : rated.OrderBy(x => x.avg))
                     .Select(x => x.s);
             }
             else if (string.Equals(sortBy, "mostChapters", StringComparison.OrdinalIgnoreCase))
