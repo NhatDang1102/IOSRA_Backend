@@ -320,22 +320,29 @@ namespace Service.Services
                 }
 
                 var price = await _chapterPricingService.GetPriceAsync(wordCount, ct);
+                var previousContentKey = chapter.content_url;
                 string? newContentKey = null;
                 try
                 {
                     newContentKey = await _contentStorage.UploadAsync(story.story_id, chapter.chapter_id, content, ct);
-                    if (!string.IsNullOrWhiteSpace(chapter.content_url))
+
+                    var shouldDeleteOld = !string.IsNullOrWhiteSpace(previousContentKey)
+                        && !string.Equals(previousContentKey, newContentKey, StringComparison.Ordinal);
+                    if (shouldDeleteOld)
                     {
-                        await _contentStorage.DeleteAsync(chapter.content_url, ct);
+                        await _contentStorage.DeleteAsync(previousContentKey!, ct);
                     }
 
                     chapter.content_url = newContentKey;
                 }
                 catch
                 {
-                    if (!string.IsNullOrWhiteSpace(newContentKey))
+                    var shouldDeleteNew = !string.IsNullOrWhiteSpace(newContentKey)
+                        && (string.IsNullOrWhiteSpace(previousContentKey)
+                            || !string.Equals(previousContentKey, newContentKey, StringComparison.Ordinal));
+                    if (shouldDeleteNew)
                     {
-                        await _contentStorage.DeleteAsync(newContentKey, ct);
+                        await _contentStorage.DeleteAsync(newContentKey!, ct);
                     }
                     throw;
                 }
