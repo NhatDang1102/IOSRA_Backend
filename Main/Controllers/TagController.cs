@@ -80,11 +80,5 @@ public class TagController : AppControllerBase
         return Ok(result);
     }
 
-    [HttpDelete("{tagId:guid}")]
-    [Authorize(Roles = "cmod,CONTENT_MOD,admin,ADMIN")]
-    public async Task<IActionResult> Delete([FromRoute] Guid tagId, CancellationToken ct)
-    {
-        await _tag.DeleteAsync(tagId, ct);
-        return NoContent();
-    }
+
 }
