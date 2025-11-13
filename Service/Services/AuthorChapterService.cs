@@ -260,6 +260,32 @@ namespace Service.Services
             return MapChapter(chapter, approvals);
         }
 
+        public async Task<ChapterResponse> WithdrawAsync(Guid authorAccountId, Guid chapterId, CancellationToken ct = default)
+        {
+            var author = await _storyRepository.GetAuthorAsync(authorAccountId, ct)
+                         ?? throw new AppException("AuthorNotFound", "Author profile is not registered.", 404);
+
+            var chapter = await _chapterRepository.GetByIdAsync(chapterId, ct)
+                          ?? throw new AppException("ChapterNotFound", "Chapter was not found.", 404);
+
+            _ = await _storyRepository.GetStoryForAuthorAsync(chapter.story_id, author.account_id, ct)
+                ?? throw new AppException("StoryNotFound", "Story was not found.", 404);
+
+            if (!string.Equals(chapter.status, "rejected", StringComparison.OrdinalIgnoreCase))
+            {
+                throw new AppException("WithdrawNotAllowed", "Only rejected chapters can be withdrawn.", 400);
+            }
+
+            chapter.status = "draft";
+            chapter.submitted_at = null;
+            chapter.published_at = null;
+            chapter.updated_at = TimezoneConverter.VietnamNow;
+            await _chapterRepository.UpdateAsync(chapter, ct);
+
+            var approvals = await _chapterRepository.GetContentApprovalsForChapterAsync(chapter.chapter_id, ct);
+            return MapChapter(chapter, approvals);
+        }
+
         public async Task<ChapterResponse> UpdateDraftAsync(Guid authorAccountId, Guid storyId, Guid chapterId, ChapterUpdateRequest request, CancellationToken ct = default)
         {
             var author = await _storyRepository.GetAuthorAsync(authorAccountId, ct)

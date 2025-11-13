@@ -53,5 +53,12 @@ namespace Main.Controllers
             var chapter = await _authorChapterService.SubmitAsync(AccountId, chapterId, request, ct);
             return Ok(chapter);
         }
+
+        [HttpPost("{chapterId:guid}/withdraw")]
+        public async Task<IActionResult> Withdraw([FromRoute] Guid chapterId, CancellationToken ct)
+        {
+            var chapter = await _authorChapterService.WithdrawAsync(AccountId, chapterId, ct);
+            return Ok(chapter);
+        }
     }
 }
