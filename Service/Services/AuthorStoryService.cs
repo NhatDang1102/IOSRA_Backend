@@ -484,6 +484,7 @@ namespace Service.Services
                 .ToArray() ?? Array.Empty<StoryTagResponse>();
 
             var approval = approvals
+                .Where(a => string.Equals(a.approve_type, "story", StringComparison.OrdinalIgnoreCase))
                 .OrderByDescending(a => a.created_at)
                 .FirstOrDefault();
 
@@ -525,6 +526,7 @@ namespace Service.Services
                 .ToArray() ?? Array.Empty<StoryTagResponse>();
 
             var approval = story.content_approves?
+                .Where(a => string.Equals(a.approve_type, "story", StringComparison.OrdinalIgnoreCase))
                 .OrderByDescending(a => a.created_at)
                 .FirstOrDefault();
 
