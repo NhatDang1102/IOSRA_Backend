@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Http;
 using Moq;
 using Repository.Entities;
 using Repository.Interfaces;
+using Repository.Utils;
 using Service.Exceptions;
 using Service.Helpers;
 using Service.Interfaces;
@@ -882,5 +883,352 @@ public class AuthorStoryServiceTests
         _imgAi.VerifyNoOtherCalls();
         _modAi.VerifyNoOtherCalls();
         _followers.VerifyNoOtherCalls();
+    }
+
+    // ====================== SUBMIT FOR REVIEW ======================
+
+    // CASE: Submit – story không tồn tại -> 404 StoryNotFound
+    [Fact]
+    public async Task SubmitForReviewAsync_Should_Throw_When_Story_Not_Found()
+    {
+        var accId = Guid.NewGuid();
+        var storyId = Guid.NewGuid();
+        var author = MakeAuthor(accId);
+
+        _repo.Setup(r => r.GetAuthorAsync(accId, It.IsAny<CancellationToken>()))
+             .ReturnsAsync(author);
+
+        _repo.Setup(r => r.GetStoryForAuthorAsync(storyId, author.account_id, It.IsAny<CancellationToken>()))
+             .ReturnsAsync((story?)null);
+
+        var req = new StorySubmitRequest();
+
+        var act = () => _svc.SubmitForReviewAsync(accId, storyId, req, CancellationToken.None);
+
+        await act.Should().ThrowAsync<AppException>()
+                 .WithMessage("*Story was not found*");
+
+        _repo.VerifyAll();
+        _modAi.VerifyNoOtherCalls();
+        _followers.VerifyNoOtherCalls();
+    }
+
+    // CASE: Submit – bị AI reject (ShouldReject = true hoặc Score < 5) -> StoryRejectedByAi
+    [Fact]
+    public async Task SubmitForReviewAsync_Should_Reject_When_Ai_Fails()
+    {
+        var accId = Guid.NewGuid();
+        var author = MakeAuthor(accId, restricted: false);
+        var storyId = Guid.NewGuid();
+        var s = MakeStory(storyId, author, null);
+        s.status = "draft";
+        s.published_at = null;
+
+        _repo.Setup(r => r.GetAuthorAsync(accId, It.IsAny<CancellationToken>()))
+             .ReturnsAsync(author);
+
+        _repo.Setup(r => r.GetStoryForAuthorAsync(storyId, author.account_id, It.IsAny<CancellationToken>()))
+             .ReturnsAsync(s);
+
+        _repo.Setup(r => r.AuthorHasPendingStoryAsync(author.account_id, s.story_id, It.IsAny<CancellationToken>()))
+             .ReturnsAsync(false);
+
+        _repo.Setup(r => r.AuthorHasUncompletedPublishedStoryAsync(author.account_id, It.IsAny<CancellationToken>()))
+             .ReturnsAsync(false);
+
+        var violations = new List<ModerationViolation>
+        {
+            new("badword", 3, new List<string> { "sample 1", "sample 2" })
+        };
+
+        var aiResult = new OpenAiModerationResult(
+            ShouldReject: true,
+            Score: 4.2,
+            Violations: violations,
+            Content: "raw content",
+            SanitizedContent: "sanitized",
+            Explanation: "contains disallowed words");
+
+        _modAi.Setup(m => m.ModerateStoryAsync(s.title, s.desc, It.IsAny<CancellationToken>()))
+              .ReturnsAsync(aiResult);
+
+        _repo.Setup(r => r.UpdateStoryAsync(s, It.IsAny<CancellationToken>()))
+             .Returns(Task.CompletedTask);
+
+        _repo.Setup(r => r.GetContentApprovalForStoryAsync(s.story_id, It.IsAny<CancellationToken>()))
+             .ReturnsAsync((content_approve?)null);
+
+        _repo.Setup(r => r.AddContentApproveAsync(It.IsAny<content_approve>(), It.IsAny<CancellationToken>()))
+             .Returns(Task.CompletedTask);
+
+        var req = new StorySubmitRequest();
+
+        var act = () => _svc.SubmitForReviewAsync(accId, storyId, req, CancellationToken.None);
+
+        var ex = await act.Should().ThrowAsync<AppException>();
+        ex.Which.Message.Should().Contain("Story was rejected by automated moderation");
+
+        s.status.Should().Be("rejected");
+        s.published_at.Should().BeNull();
+
+        _repo.Verify(r => r.UpdateStoryAsync(s, It.IsAny<CancellationToken>()), Times.Once);
+        _repo.Verify(r => r.AddContentApproveAsync(It.IsAny<content_approve>(), It.IsAny<CancellationToken>()), Times.Once);
+        _followers.VerifyNoOtherCalls();
+    }
+
+    // CASE: Submit – score >= 7 -> publish, upsert approval, notify followers
+    [Fact]
+    public async Task SubmitForReviewAsync_Should_Publish_And_Notify_When_Score_High()
+    {
+        var accId = Guid.NewGuid();
+        var author = MakeAuthor(accId, restricted: false, rankName: "VIP");
+        var storyId = Guid.NewGuid();
+        var baseStory = MakeStory(storyId, author, null);
+        baseStory.status = "draft";
+        baseStory.published_at = null;
+
+        var req = new StorySubmitRequest();
+
+        _repo.Setup(r => r.GetAuthorAsync(accId, It.IsAny<CancellationToken>()))
+             .ReturnsAsync(author);
+
+        // Lần 1: lấy story để xử lý; Lần 2: load lại sau khi update
+        _repo.SetupSequence(r => r.GetStoryForAuthorAsync(storyId, author.account_id, It.IsAny<CancellationToken>()))
+             .ReturnsAsync(baseStory)
+             .ReturnsAsync(() =>
+             {
+                 var refreshed = MakeStory(storyId, author, null);
+                 refreshed.status = "published";
+                 refreshed.is_premium = true;
+                 return refreshed;
+             });
+
+        _repo.Setup(r => r.AuthorHasPendingStoryAsync(author.account_id, baseStory.story_id, It.IsAny<CancellationToken>()))
+             .ReturnsAsync(false);
+
+        _repo.Setup(r => r.AuthorHasUncompletedPublishedStoryAsync(author.account_id, It.IsAny<CancellationToken>()))
+             .ReturnsAsync(false);
+
+        var aiResult = new OpenAiModerationResult(
+            ShouldReject: false,
+            Score: 8.2,
+            Violations: Array.Empty<ModerationViolation>(),
+            Content: "ok",
+            SanitizedContent: "ok",
+            Explanation: "safe");
+
+        _modAi.Setup(m => m.ModerateStoryAsync(baseStory.title, baseStory.desc, It.IsAny<CancellationToken>()))
+              .ReturnsAsync(aiResult);
+
+        _repo.Setup(r => r.UpdateStoryAsync(baseStory, It.IsAny<CancellationToken>()))
+             .Returns(Task.CompletedTask);
+
+        _repo.Setup(r => r.GetContentApprovalForStoryAsync(baseStory.story_id, It.IsAny<CancellationToken>()))
+             .ReturnsAsync((content_approve?)null);
+
+        _repo.Setup(r => r.AddContentApproveAsync(It.IsAny<content_approve>(), It.IsAny<CancellationToken>()))
+             .Returns(Task.CompletedTask);
+
+        _repo.Setup(r => r.GetContentApprovalsForStoryAsync(storyId, It.IsAny<CancellationToken>()))
+             .ReturnsAsync(new List<content_approve>());
+
+        _followers.Setup(f => f.NotifyStoryPublishedAsync(
+                            author.account_id,
+                            author.account.username,
+                            storyId,
+                            baseStory.title,
+                            It.IsAny<CancellationToken>()))
+                  .Returns(Task.CompletedTask);
+
+        var res = await _svc.SubmitForReviewAsync(accId, storyId, req, CancellationToken.None);
+
+        res.Status.Should().Be("published");
+        res.IsPremium.Should().BeTrue();
+
+        _repo.Verify(r => r.UpdateStoryAsync(baseStory, It.IsAny<CancellationToken>()), Times.Once);
+        _followers.Verify(f => f.NotifyStoryPublishedAsync(
+                              author.account_id,
+                              author.account.username,
+                              storyId,
+                              baseStory.title,
+                              It.IsAny<CancellationToken>()),
+                          Times.Once);
+        _modAi.VerifyAll();
+    }
+
+    // CASE: Submit – 5 <= score < 7 -> chuyển sang pending, không notify followers
+    [Fact]
+    public async Task SubmitForReviewAsync_Should_Set_Pending_When_Score_Mid()
+    {
+        var accId = Guid.NewGuid();
+        var author = MakeAuthor(accId, restricted: false);
+        var storyId = Guid.NewGuid();
+        var baseStory = MakeStory(storyId, author, null);
+        baseStory.status = "draft";
+        baseStory.published_at = null;
+
+        var req = new StorySubmitRequest();
+
+        _repo.Setup(r => r.GetAuthorAsync(accId, It.IsAny<CancellationToken>()))
+             .ReturnsAsync(author);
+
+        _repo.SetupSequence(r => r.GetStoryForAuthorAsync(storyId, author.account_id, It.IsAny<CancellationToken>()))
+             .ReturnsAsync(baseStory)
+             .ReturnsAsync(() =>
+             {
+                 var refreshed = MakeStory(storyId, author, null);
+                 refreshed.status = "pending";
+                 return refreshed;
+             });
+
+        _repo.Setup(r => r.AuthorHasPendingStoryAsync(author.account_id, baseStory.story_id, It.IsAny<CancellationToken>()))
+             .ReturnsAsync(false);
+
+        _repo.Setup(r => r.AuthorHasUncompletedPublishedStoryAsync(author.account_id, It.IsAny<CancellationToken>()))
+             .ReturnsAsync(false);
+
+        var aiResult = new OpenAiModerationResult(
+            ShouldReject: false,
+            Score: 5.6,
+            Violations: Array.Empty<ModerationViolation>(),
+            Content: "borderline",
+            SanitizedContent: "borderline",
+            Explanation: "needs review");
+
+        _modAi.Setup(m => m.ModerateStoryAsync(baseStory.title, baseStory.desc, It.IsAny<CancellationToken>()))
+              .ReturnsAsync(aiResult);
+
+        _repo.Setup(r => r.UpdateStoryAsync(baseStory, It.IsAny<CancellationToken>()))
+             .Returns(Task.CompletedTask);
+
+        _repo.Setup(r => r.GetContentApprovalForStoryAsync(baseStory.story_id, It.IsAny<CancellationToken>()))
+             .ReturnsAsync((content_approve?)null);
+
+        _repo.Setup(r => r.AddContentApproveAsync(It.IsAny<content_approve>(), It.IsAny<CancellationToken>()))
+             .Returns(Task.CompletedTask);
+
+        _repo.Setup(r => r.GetContentApprovalsForStoryAsync(storyId, It.IsAny<CancellationToken>()))
+             .ReturnsAsync(new List<content_approve>());
+
+        var res = await _svc.SubmitForReviewAsync(accId, storyId, req, CancellationToken.None);
+
+        res.Status.Should().Be("pending");
+        res.IsPremium.Should().BeFalse(); // rank = Casual nên không premium
+
+        _followers.VerifyNoOtherCalls();
+        _modAi.VerifyAll();
+        _repo.Verify(r => r.UpdateStoryAsync(baseStory, It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    // ====================== COMPLETE ======================
+
+    // CASE: Complete – story không ở trạng thái published -> 400 StoryNotPublished
+    [Fact]
+    public async Task CompleteAsync_Should_Throw_When_Story_Not_Published()
+    {
+        var accId = Guid.NewGuid();
+        var author = MakeAuthor(accId);
+        var s = MakeStory(Guid.NewGuid(), author, null);
+        s.status = "draft";
+
+        _repo.Setup(r => r.GetAuthorAsync(accId, It.IsAny<CancellationToken>()))
+             .ReturnsAsync(author);
+
+        _repo.Setup(r => r.GetStoryForAuthorAsync(s.story_id, author.account_id, It.IsAny<CancellationToken>()))
+             .ReturnsAsync(s);
+
+        var act = () => _svc.CompleteAsync(accId, s.story_id, CancellationToken.None);
+
+        await act.Should().ThrowAsync<AppException>()
+                 .WithMessage("*Only published stories can be marked as completed*");
+
+        _repo.VerifyAll();
+    }
+
+    // CASE: Complete – chưa đủ chapter -> 400 StoryInsufficientChapters
+    [Fact]
+    public async Task CompleteAsync_Should_Throw_When_Insufficient_Chapters()
+    {
+        var accId = Guid.NewGuid();
+        var author = MakeAuthor(accId);
+        var s = MakeStory(Guid.NewGuid(), author, null);
+        s.status = "published";
+
+        _repo.Setup(r => r.GetAuthorAsync(accId, It.IsAny<CancellationToken>()))
+             .ReturnsAsync(author);
+
+        _repo.Setup(r => r.GetStoryForAuthorAsync(s.story_id, author.account_id, It.IsAny<CancellationToken>()))
+             .ReturnsAsync(s);
+
+        _repo.Setup(r => r.GetChapterCountAsync(s.story_id, It.IsAny<CancellationToken>()))
+             .ReturnsAsync(0);
+
+        var act = () => _svc.CompleteAsync(accId, s.story_id, CancellationToken.None);
+
+        await act.Should().ThrowAsync<AppException>()
+                 .WithMessage("*Story needs at least one chapter before completion*");
+
+        _repo.VerifyAll();
+    }
+
+    // CASE: Complete – chưa đủ thời gian publish (cooldown) -> 400 StoryCompletionCooldown
+    [Fact]
+    public async Task CompleteAsync_Should_Throw_When_Cooldown_Not_Over()
+    {
+        var accId = Guid.NewGuid();
+        var author = MakeAuthor(accId);
+        var s = MakeStory(Guid.NewGuid(), author, null);
+        s.status = "published";
+        s.published_at = TimezoneConverter.VietnamNow; // vừa publish xong
+
+        _repo.Setup(r => r.GetAuthorAsync(accId, It.IsAny<CancellationToken>()))
+             .ReturnsAsync(author);
+
+        _repo.Setup(r => r.GetStoryForAuthorAsync(s.story_id, author.account_id, It.IsAny<CancellationToken>()))
+             .ReturnsAsync(s);
+
+        _repo.Setup(r => r.GetChapterCountAsync(s.story_id, It.IsAny<CancellationToken>()))
+             .ReturnsAsync(5);
+
+        var act = () => _svc.CompleteAsync(accId, s.story_id, CancellationToken.None);
+
+        await act.Should().ThrowAsync<AppException>()
+                 .WithMessage("*Story must be published for at least 30 days before completion*");
+
+        _repo.VerifyAll();
+    }
+
+    // CASE: Complete – happy path: đủ chapter, đủ thời gian -> đổi sang completed
+    [Fact]
+    public async Task CompleteAsync_Should_Set_Status_Completed_When_Conditions_Met()
+    {
+        var accId = Guid.NewGuid();
+        var author = MakeAuthor(accId);
+        var s = MakeStory(Guid.NewGuid(), author, null);
+        s.status = "published";
+        s.published_at = DateTime.UtcNow.AddDays(-40); // đã publish lâu
+
+        _repo.Setup(r => r.GetAuthorAsync(accId, It.IsAny<CancellationToken>()))
+             .ReturnsAsync(author);
+
+        _repo.Setup(r => r.GetStoryForAuthorAsync(s.story_id, author.account_id, It.IsAny<CancellationToken>()))
+             .ReturnsAsync(s);
+
+        _repo.Setup(r => r.GetChapterCountAsync(s.story_id, It.IsAny<CancellationToken>()))
+             .ReturnsAsync(10);
+
+        _repo.Setup(r => r.GetContentApprovalsForStoryAsync(s.story_id, It.IsAny<CancellationToken>()))
+             .ReturnsAsync(new List<content_approve>());
+
+        _repo.Setup(r => r.UpdateStoryAsync(s, It.IsAny<CancellationToken>()))
+             .Returns(Task.CompletedTask);
+
+        var res = await _svc.CompleteAsync(accId, s.story_id, CancellationToken.None);
+
+        res.Status.Should().Be("completed");
+        s.status.Should().Be("completed");
+
+        _repo.Verify(r => r.UpdateStoryAsync(s, It.IsAny<CancellationToken>()), Times.Once);
+        _repo.VerifyAll();
     }
 }
