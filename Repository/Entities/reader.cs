@@ -34,6 +34,9 @@ public partial class reader
     [InverseProperty("reader")]
     public virtual ICollection<story_rating> story_ratings { get; set; } = new List<story_rating>();
 
+    [InverseProperty("reader")]
+    public virtual ICollection<chapter_comment_reaction> chapter_comment_reactions { get; set; } = new List<chapter_comment_reaction>();
+
     [InverseProperty("follower")]
     public virtual ICollection<follow> follows { get; set; } = new List<follow>();
 }

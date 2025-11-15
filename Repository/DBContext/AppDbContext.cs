@@ -32,6 +32,8 @@ public partial class AppDbContext : DbContext
 
     public virtual DbSet<chapter_comment> chapter_comments { get; set; }
 
+    public virtual DbSet<chapter_comment_reaction> chapter_comment_reactions { get; set; }
+
     public virtual DbSet<chapter_localization> chapter_localizations { get; set; }
 
     public virtual DbSet<chapter_purchase_log> chapter_purchase_logs { get; set; }
@@ -194,6 +196,20 @@ public partial class AppDbContext : DbContext
             entity.HasOne(d => d.chapter).WithMany(p => p.chapter_comments).HasConstraintName("fk_cmt_chapter");
             entity.HasOne(d => d.story).WithMany(p => p.chapter_comments).HasConstraintName("fk_cmt_story");
             entity.HasOne(d => d.reader).WithMany(p => p.chapter_comments).HasConstraintName("fk_cmt_reader");
+        });
+
+        modelBuilder.Entity<chapter_comment_reaction>(entity =>
+        {
+            entity.HasKey(e => e.reaction_id).HasName("PRIMARY");
+
+            entity.Property(e => e.reaction_id).ValueGeneratedNever();
+            entity.Property(e => e.created_at).HasDefaultValueSql("CURRENT_TIMESTAMP");
+            entity.Property(e => e.updated_at)
+                .ValueGeneratedOnAddOrUpdate()
+                .HasDefaultValueSql("CURRENT_TIMESTAMP");
+
+            entity.HasOne(d => d.comment).WithMany(p => p.chapter_comment_reactions).HasConstraintName("fk_ccr_comment");
+            entity.HasOne(d => d.reader).WithMany(p => p.chapter_comment_reactions).HasConstraintName("fk_ccr_reader");
         });
 
         modelBuilder.Entity<story_rating>(entity =>

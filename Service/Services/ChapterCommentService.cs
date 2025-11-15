@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -7,6 +8,7 @@ using Contract.DTOs.Respond.Chapter;
 using Contract.DTOs.Respond.Common;
 using Repository.Entities;
 using Repository.Interfaces;
+using Repository.DataModels;
 using Repository.Utils;
 using Service.Constants;
 using Service.Exceptions;
@@ -37,23 +39,24 @@ namespace Service.Services
             _notificationService = notificationService;
         }
 
-        public async Task<PagedResult<ChapterCommentResponse>> GetByChapterAsync(Guid chapterId, int page, int pageSize, CancellationToken ct = default)
+        public async Task<PagedResult<ChapterCommentResponse>> GetByChapterAsync(Guid chapterId, int page, int pageSize, CancellationToken ct = default, Guid? viewerAccountId = null)
         {
             var chapter = await RequirePublishedChapterAsync(chapterId, ct);
             var normalizedPage = NormalizePage(page);
             var normalizedSize = NormalizePageSize(pageSize);
             var (items, total) = await _commentRepository.GetByChapterAsync(chapter.chapter_id, normalizedPage, normalizedSize, ct);
+            var aggregates = await LoadAggregatesAsync(items, viewerAccountId, ct);
 
             return new PagedResult<ChapterCommentResponse>
             {
-                Items = items.Select(MapPublicComment).ToArray(),
+                Items = items.Select(c => MapPublicComment(c, TryGetAggregate(aggregates, c.comment_id))).ToArray(),
                 Total = total,
                 Page = normalizedPage,
                 PageSize = normalizedSize
             };
         }
 
-        public async Task<StoryCommentFeedResponse> GetByStoryAsync(Guid storyId, Guid? chapterId, int page, int pageSize, CancellationToken ct = default)
+        public async Task<StoryCommentFeedResponse> GetByStoryAsync(Guid storyId, Guid? chapterId, int page, int pageSize, CancellationToken ct = default, Guid? viewerAccountId = null)
         {
             var story = await RequirePublishedStoryAsync(storyId, ct);
             Guid? chapterFilterId = null;
@@ -71,6 +74,7 @@ namespace Service.Services
             var normalizedPage = NormalizePage(page);
             var normalizedSize = NormalizePageSize(pageSize);
             var (items, total) = await _commentRepository.GetByStoryAsync(story.story_id, chapterFilterId, normalizedPage, normalizedSize, ct);
+            var aggregates = await LoadAggregatesAsync(items, viewerAccountId, ct);
 
             return new StoryCommentFeedResponse
             {
@@ -78,7 +82,7 @@ namespace Service.Services
                 ChapterFilterId = chapterFilterId,
                 Comments = new PagedResult<ChapterCommentResponse>
                 {
-                    Items = items.Select(MapPublicComment).ToArray(),
+                    Items = items.Select(c => MapPublicComment(c, TryGetAggregate(aggregates, c.comment_id))).ToArray(),
                     Total = total,
                     Page = normalizedPage,
                     PageSize = normalizedSize
@@ -185,6 +189,73 @@ namespace Service.Services
             await _commentRepository.UpdateAsync(comment, ct);
         }
 
+        public async Task<ChapterCommentResponse> ReactAsync(Guid readerAccountId, Guid chapterId, Guid commentId, ChapterCommentReactRequest request, CancellationToken ct = default)
+        {
+            var reader = await _profileRepository.GetReaderByIdAsync(readerAccountId, ct)
+                         ?? throw new AppException("ReaderProfileMissing", "Reader profile is not registered.", 404);
+            var normalizedReaction = NormalizeReactionType(request.ReactionType);
+            var comment = await RequireVisibleCommentAsync(chapterId, commentId, ensureUnlocked: true, ct);
+            var existingReaction = await _commentRepository.GetReactionAsync(comment.comment_id, reader.account_id, ct);
+            var now = TimezoneConverter.VietnamNow;
+
+            if (existingReaction == null)
+            {
+                var reaction = new chapter_comment_reaction
+                {
+                    reaction_id = Guid.NewGuid(),
+                    comment_id = comment.comment_id,
+                    reader_id = reader.account_id,
+                    reaction_type = normalizedReaction,
+                    created_at = now,
+                    updated_at = now
+                };
+                await _commentRepository.AddReactionAsync(reaction, ct);
+            }
+            else if (!string.Equals(existingReaction.reaction_type, normalizedReaction, StringComparison.OrdinalIgnoreCase))
+            {
+                existingReaction.reaction_type = normalizedReaction;
+                existingReaction.updated_at = now;
+                await _commentRepository.UpdateReactionAsync(existingReaction, ct);
+            }
+
+            var aggregate = await LoadAggregateAsync(comment.comment_id, reader.account_id, ct);
+            var refreshed = await _commentRepository.GetAsync(comment.chapter_id, comment.comment_id, ct)
+                             ?? throw new InvalidOperationException("Failed to load comment after reacting.");
+            return MapPublicComment(refreshed, aggregate);
+        }
+
+        public async Task<ChapterCommentResponse> RemoveReactionAsync(Guid readerAccountId, Guid chapterId, Guid commentId, CancellationToken ct = default)
+        {
+            var comment = await RequireVisibleCommentAsync(chapterId, commentId, ensureUnlocked: true, ct);
+            var existingReaction = await _commentRepository.GetReactionAsync(comment.comment_id, readerAccountId, ct);
+            if (existingReaction != null)
+            {
+                await _commentRepository.RemoveReactionAsync(existingReaction, ct);
+            }
+
+            var aggregate = await LoadAggregateAsync(comment.comment_id, readerAccountId, ct);
+            var refreshed = await _commentRepository.GetAsync(comment.chapter_id, comment.comment_id, ct)
+                             ?? throw new InvalidOperationException("Failed to load comment after removing reaction.");
+            return MapPublicComment(refreshed, aggregate);
+        }
+
+        public async Task<PagedResult<ChapterCommentReactionUserResponse>> GetReactionsAsync(Guid chapterId, Guid commentId, string reactionType, int page, int pageSize, CancellationToken ct = default)
+        {
+            var normalizedReaction = NormalizeReactionType(reactionType);
+            var comment = await RequireVisibleCommentAsync(chapterId, commentId, ensureUnlocked: false, ct);
+            var normalizedPage = NormalizePage(page);
+            var normalizedSize = NormalizePageSize(pageSize);
+            var (items, total) = await _commentRepository.GetReactionsAsync(comment.comment_id, normalizedReaction, normalizedPage, normalizedSize, ct);
+
+            return new PagedResult<ChapterCommentReactionUserResponse>
+            {
+                Items = items.Select(MapReactionUser).ToArray(),
+                Total = total,
+                Page = normalizedPage,
+                PageSize = normalizedSize
+            };
+        }
+
         private async Task<story> RequirePublishedStoryAsync(Guid storyId, CancellationToken ct)
         {
             var story = await _storyCatalogRepository.GetPublishedStoryByIdAsync(storyId, ct);
@@ -200,17 +271,7 @@ namespace Service.Services
             var chapter = await _commentRepository.GetChapterWithStoryAsync(chapterId, ct)
                           ?? throw new AppException("ChapterNotFound", "Chapter was not found.", 404);
 
-            if (!string.Equals(chapter.status, "published", StringComparison.OrdinalIgnoreCase))
-            {
-                throw new AppException("ChapterNotPublished", "Comments are only allowed on published chapters.", 400);
-            }
-
-            var story = chapter.story ?? throw new InvalidOperationException("Chapter story navigation not loaded.");
-            if (!PublicStoryStatuses.Contains(story.status, StringComparer.OrdinalIgnoreCase))
-            {
-                throw new AppException("StoryNotPublished", "Comments are only allowed when the story is published.", 400);
-            }
-
+            EnsureChapterIsPublic(chapter);
             return chapter;
         }
 
@@ -257,7 +318,7 @@ namespace Service.Services
             return value.Substring(0, maxLength) + "...";
         }
 
-        private static ChapterCommentResponse MapPublicComment(chapter_comment comment)
+        private static ChapterCommentResponse MapPublicComment(chapter_comment comment, ChapterCommentReactionAggregate? reactionStats = null)
         {
             var readerAccount = comment.reader?.account
                                ?? throw new InvalidOperationException("Comment reader account navigation not loaded.");
@@ -276,7 +337,10 @@ namespace Service.Services
                 Content = comment.content,
                 IsLocked = comment.is_locked,
                 CreatedAt = comment.created_at,
-                UpdatedAt = comment.updated_at
+                UpdatedAt = comment.updated_at,
+                LikeCount = reactionStats?.LikeCount ?? 0,
+                DislikeCount = reactionStats?.DislikeCount ?? 0,
+                ViewerReaction = reactionStats?.ViewerReaction
             };
         }
 
@@ -304,6 +368,99 @@ namespace Service.Services
                 CreatedAt = comment.created_at,
                 UpdatedAt = comment.updated_at
             };
+        }
+
+        private async Task<chapter_comment> RequireVisibleCommentAsync(Guid chapterId, Guid commentId, bool ensureUnlocked, CancellationToken ct)
+        {
+            var comment = await _commentRepository.GetAsync(chapterId, commentId, ct)
+                          ?? throw new AppException("CommentNotFound", "Comment was not found.", 404);
+
+            var chapter = comment.chapter ?? throw new InvalidOperationException("Comment chapter navigation not loaded.");
+            EnsureChapterIsPublic(chapter);
+
+            if (!string.Equals(comment.status, "visible", StringComparison.OrdinalIgnoreCase))
+            {
+                throw new AppException("CommentUnavailable", "Comment is not available in its current state.", 400);
+            }
+
+            if (ensureUnlocked && comment.is_locked)
+            {
+                throw new AppException("CommentLocked", "Comment has been locked by a moderator.", 403);
+            }
+
+            return comment;
+        }
+
+        private async Task<Dictionary<Guid, ChapterCommentReactionAggregate>> LoadAggregatesAsync(IEnumerable<chapter_comment> comments, Guid? viewerAccountId, CancellationToken ct)
+        {
+            var ids = comments?.Select(c => c.comment_id).Distinct().ToArray() ?? Array.Empty<Guid>();
+            if (ids.Length == 0)
+            {
+                return new Dictionary<Guid, ChapterCommentReactionAggregate>();
+            }
+
+            return await _commentRepository.GetReactionAggregatesAsync(ids, viewerAccountId, ct);
+        }
+
+        private async Task<ChapterCommentReactionAggregate?> LoadAggregateAsync(Guid commentId, Guid? viewerAccountId, CancellationToken ct)
+        {
+            var map = await _commentRepository.GetReactionAggregatesAsync(new[] { commentId }, viewerAccountId, ct);
+            return TryGetAggregate(map, commentId);
+        }
+
+        private static ChapterCommentReactionAggregate? TryGetAggregate(Dictionary<Guid, ChapterCommentReactionAggregate>? aggregates, Guid commentId)
+        {
+            if (aggregates == null)
+            {
+                return null;
+            }
+
+            return aggregates.TryGetValue(commentId, out var aggregate) ? aggregate : null;
+        }
+
+        private static string NormalizeReactionType(string? reactionType)
+        {
+            if (string.IsNullOrWhiteSpace(reactionType))
+            {
+                throw new AppException("InvalidReactionType", "Reaction type is required.", 400);
+            }
+
+            var normalized = reactionType.Trim().ToLowerInvariant();
+            if (!ChapterCommentReactionTypes.Allowed.Contains(normalized, StringComparer.OrdinalIgnoreCase))
+            {
+                throw new AppException("InvalidReactionType", $"Unsupported reaction type '{reactionType}'. Allowed values: {string.Join(", ", ChapterCommentReactionTypes.Allowed)}.", 400);
+            }
+
+            return normalized;
+        }
+
+        private static ChapterCommentReactionUserResponse MapReactionUser(chapter_comment_reaction reaction)
+        {
+            var readerAccount = reaction.reader?.account
+                               ?? throw new InvalidOperationException("Reaction reader account navigation not loaded.");
+
+            return new ChapterCommentReactionUserResponse
+            {
+                ReaderId = reaction.reader_id,
+                Username = readerAccount.username,
+                AvatarUrl = readerAccount.avatar_url,
+                ReactionType = reaction.reaction_type,
+                CreatedAt = reaction.created_at
+            };
+        }
+
+        private static void EnsureChapterIsPublic(chapter chapter)
+        {
+            if (!string.Equals(chapter.status, "published", StringComparison.OrdinalIgnoreCase))
+            {
+                throw new AppException("ChapterNotPublished", "Comments are only allowed on published chapters.", 400);
+            }
+
+            var story = chapter.story ?? throw new InvalidOperationException("Chapter story navigation not loaded.");
+            if (!PublicStoryStatuses.Contains(story.status, StringComparer.OrdinalIgnoreCase))
+            {
+                throw new AppException("StoryNotPublished", "Comments are only allowed when the story is published.", 400);
+            }
         }
 
         private static int NormalizePage(int page) => page <= 0 ? 1 : page;
