@@ -238,6 +238,23 @@ CREATE TABLE chapter_comment (
     REFERENCES story(story_id) ON DELETE CASCADE ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
+CREATE TABLE chapter_comment_reaction (
+  reaction_id   CHAR(36) NOT NULL,
+  comment_id    CHAR(36) NOT NULL,
+  reader_id     CHAR(36) NOT NULL,
+  reaction_type ENUM('like','dislike') NOT NULL,
+  created_at    DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at    DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (reaction_id),
+  UNIQUE KEY ux_ccr_comment_reader (comment_id, reader_id),
+  KEY ix_ccr_comment (comment_id),
+  KEY ix_ccr_reader (reader_id),
+  CONSTRAINT fk_ccr_comment FOREIGN KEY (comment_id)
+    REFERENCES chapter_comment(comment_id) ON DELETE CASCADE ON UPDATE CASCADE,
+  CONSTRAINT fk_ccr_reader FOREIGN KEY (reader_id)
+    REFERENCES reader(account_id) ON DELETE CASCADE ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
 CREATE TABLE story_rating (
   story_id   CHAR(36) NOT NULL,
   reader_id  CHAR(36) NOT NULL,
