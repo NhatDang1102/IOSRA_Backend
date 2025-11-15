@@ -16,5 +16,8 @@ namespace Contract.DTOs.Respond.Chapter
         public bool IsLocked { get; set; }
         public DateTime CreatedAt { get; set; }
         public DateTime UpdatedAt { get; set; }
+        public int LikeCount { get; set; }
+        public int DislikeCount { get; set; }
+        public string? ViewerReaction { get; set; }
     }
 }

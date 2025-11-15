@@ -22,7 +22,8 @@ namespace Main.Controllers
         [AllowAnonymous]
         public async Task<IActionResult> GetByChapter(Guid chapterId, [FromQuery] int page = 1, [FromQuery] int pageSize = 20, CancellationToken ct = default)
         {
-            var result = await _chapterCommentService.GetByChapterAsync(chapterId, page, pageSize, ct);
+            var viewerId = TryGetAccountId();
+            var result = await _chapterCommentService.GetByChapterAsync(chapterId, page, pageSize, ct, viewerId);
             return Ok(result);
         }
 
@@ -30,7 +31,8 @@ namespace Main.Controllers
         [AllowAnonymous]
         public async Task<IActionResult> GetByStory(Guid storyId, [FromQuery] Guid? chapterId, [FromQuery] int page = 1, [FromQuery] int pageSize = 20, CancellationToken ct = default)
         {
-            var result = await _chapterCommentService.GetByStoryAsync(storyId, chapterId, page, pageSize, ct);
+            var viewerId = TryGetAccountId();
+            var result = await _chapterCommentService.GetByStoryAsync(storyId, chapterId, page, pageSize, ct, viewerId);
             return Ok(result);
         }
 
@@ -56,6 +58,30 @@ namespace Main.Controllers
         {
             await _chapterCommentService.DeleteAsync(AccountId, chapterId, commentId, ct);
             return NoContent();
+        }
+
+        [HttpPost("{chapterId:guid}/{commentId:guid}/reaction")]
+        [Authorize]
+        public async Task<IActionResult> React(Guid chapterId, Guid commentId, [FromBody] ChapterCommentReactRequest request, CancellationToken ct = default)
+        {
+            var response = await _chapterCommentService.ReactAsync(AccountId, chapterId, commentId, request, ct);
+            return Ok(response);
+        }
+
+        [HttpDelete("{chapterId:guid}/{commentId:guid}/reaction")]
+        [Authorize]
+        public async Task<IActionResult> RemoveReaction(Guid chapterId, Guid commentId, CancellationToken ct = default)
+        {
+            var response = await _chapterCommentService.RemoveReactionAsync(AccountId, chapterId, commentId, ct);
+            return Ok(response);
+        }
+
+        [HttpGet("{chapterId:guid}/{commentId:guid}/reactions")]
+        [AllowAnonymous]
+        public async Task<IActionResult> GetReactions(Guid chapterId, Guid commentId, [FromQuery] string reactionType, [FromQuery] int page = 1, [FromQuery] int pageSize = 20, CancellationToken ct = default)
+        {
+            var result = await _chapterCommentService.GetReactionsAsync(chapterId, commentId, reactionType, page, pageSize, ct);
+            return Ok(result);
         }
     }
 }

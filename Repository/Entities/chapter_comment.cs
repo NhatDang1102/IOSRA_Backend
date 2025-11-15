@@ -50,4 +50,7 @@ public partial class chapter_comment
     [ForeignKey("story_id")]
     [InverseProperty("chapter_comments")]
     public virtual story story { get; set; } = null!;
+
+    [InverseProperty("comment")]
+    public virtual ICollection<chapter_comment_reaction> chapter_comment_reactions { get; set; } = new List<chapter_comment_reaction>();
 }
