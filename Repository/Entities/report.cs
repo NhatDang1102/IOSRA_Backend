@@ -25,13 +25,13 @@ public partial class report
     
     public Guid reporter_id { get; set; }
 
-    [StringLength(255)]
+    [Column(TypeName = "enum('negative_content','misinformation','spam','ip_infringement')")]
     public string reason { get; set; } = null!;
 
     [Column(TypeName = "text")]
     public string? details { get; set; }
 
-    [Column(TypeName = "enum('open','in_review','resolved','rejected')")]
+    [Column(TypeName = "enum('pending','resolved','rejected')")]
     public string status { get; set; } = null!;
 
     

@@ -114,6 +114,7 @@ public partial class AppDbContext : DbContext
             entity.Property(e => e.account_id).ValueGeneratedNever(); 
             entity.Property(e => e.created_at).HasDefaultValueSql("CURRENT_TIMESTAMP");
             entity.Property(e => e.status).HasDefaultValueSql("'unbanned'");
+            entity.Property(e => e.strike_status).HasDefaultValueSql("'none'");
             entity.Property(e => e.updated_at)
                 .ValueGeneratedOnAddOrUpdate()
                 .HasDefaultValueSql("CURRENT_TIMESTAMP");
@@ -411,7 +412,7 @@ public partial class AppDbContext : DbContext
 
             entity.Property(e => e.report_id).ValueGeneratedNever(); 
             entity.Property(e => e.created_at).HasDefaultValueSql("CURRENT_TIMESTAMP");
-            entity.Property(e => e.status).HasDefaultValueSql("'open'");
+            entity.Property(e => e.status).HasDefaultValueSql("'pending'");
 
             entity.HasOne(d => d.moderator).WithMany(p => p.reports)
                 .OnDelete(DeleteBehavior.SetNull)

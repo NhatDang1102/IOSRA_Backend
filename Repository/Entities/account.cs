@@ -25,7 +25,13 @@ public partial class account
     [Column(TypeName = "enum('unbanned','banned')")]
     public string status { get; set; } = null!;
 
+    [Column(TypeName = "enum('none','restricted')")]
+    public string strike_status { get; set; } = null!;
+
     public byte strike { get; set; }
+
+    [Column(TypeName = "datetime")]
+    public DateTime? strike_restricted_until { get; set; }
 
     [StringLength(512)]
     public string? avatar_url { get; set; }
