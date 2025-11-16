@@ -16,5 +16,8 @@ namespace Contract.DTOs.Respond.Profile
         public string? Bio { get; set; }
         public string Gender { get; set; } = "unspecified";
         public DateOnly? Birthday { get; set; }
+        public byte Strike { get; set; }
+        public string StrikeStatus { get; set; } = "none";
+        public DateTime? StrikeRestrictedUntil { get; set; }
     }
 }

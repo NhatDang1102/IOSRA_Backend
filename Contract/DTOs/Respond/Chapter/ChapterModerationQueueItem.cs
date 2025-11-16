@@ -17,6 +17,7 @@ namespace Contract.DTOs.Respond.Chapter
         public string LanguageCode { get; set; } = null!;
         public string LanguageName { get; set; } = null!;
         public int PriceDias { get; set; }
+        public string? ContentPath { get; set; }
         public decimal? AiScore { get; set; }
         public string? AiFeedback { get; set; }
         public string Status { get; set; } = null!;

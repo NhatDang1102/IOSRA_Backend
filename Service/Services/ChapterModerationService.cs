@@ -213,6 +213,7 @@ namespace Service.Services
                 LanguageCode = language.lang_code,
                 LanguageName = language.lang_name,
                 PriceDias = (int)chapter.dias_price,
+                ContentPath = chapter.content_url,
                 AiScore = aiScore,
                 AiFeedback = aiFeedback,
                 Status = chapter.status,

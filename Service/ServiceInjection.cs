@@ -67,6 +67,8 @@ namespace Service
             services.AddScoped<IFollowerNotificationService, FollowerNotificationService>();
             services.AddScoped<IChapterPricingService, ChapterPricingService>();
             services.AddScoped<IPaymentService, PaymentService>();
+            services.AddScoped<IReportService, ReportService>();
+            services.AddScoped<IContentModHandlingService, ContentModHandlingService>();
             services.AddHostedService<StoryWeeklyViewSyncJob>();
 
             return services;

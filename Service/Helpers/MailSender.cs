@@ -1,3 +1,4 @@
+using System;
 using Contract.DTOs.Settings;
 using Microsoft.Extensions.Options;
 using Service.Interfaces;
@@ -117,6 +118,24 @@ namespace Service.Helpers
             body += "\nPlease adjust the content and submit again when ready.";
 
             using var message = BuildMessage("Your Chapter Was Rejected", body, toEmail);
+            using var client = CreateClient();
+            await client.SendMailAsync(message);
+        }
+
+        public async Task SendStrikeWarningEmailAsync(string toEmail, string username, string reason, byte strikeCount, DateTime? restrictedUntil)
+        {
+            var body = $"Hello {username},\n"
+                       + $"We received a valid report against your content for reason: {reason}.\n"
+                       + $"Your current strike count is {strikeCount}.";
+
+            if (restrictedUntil.HasValue)
+            {
+                body += $"\nYour account is temporarily restricted from posting new stories/chapters/comments until {restrictedUntil.Value:yyyy-MM-dd HH:mm:ss} (UTC+7).";
+            }
+
+            body += "\nIf you believe this is a mistake, please contact support.";
+
+            using var message = BuildMessage("IOSRA Content Strike Warning", body, toEmail);
             using var client = CreateClient();
             await client.SendMailAsync(message);
         }

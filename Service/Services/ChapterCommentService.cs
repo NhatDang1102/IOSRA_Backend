@@ -13,6 +13,7 @@ using Repository.Utils;
 using Service.Constants;
 using Service.Exceptions;
 using Service.Interfaces;
+using Service.Helpers;
 
 namespace Service.Services
 {
@@ -115,6 +116,8 @@ namespace Service.Services
             var reader = await _profileRepository.GetReaderByIdAsync(readerAccountId, ct)
                          ?? throw new AppException("ReaderProfileMissing", "Reader profile is not registered.", 404);
             var chapter = await RequirePublishedChapterAsync(chapterId, ct);
+
+            await AccountRestrictionHelper.EnsureCanPublishAsync(reader.account, _profileRepository, ct);
 
             var content = (request.Content ?? string.Empty).Trim();
             if (string.IsNullOrWhiteSpace(content))

@@ -11,5 +11,6 @@ namespace Service.Constants
         public const string NewFollower = "new_follower";
         public const string ChapterComment = "chapter_comment";
         public const string StoryRating = "story_rating";
+        public const string StrikeWarning = "strike_warning";
     }
 }

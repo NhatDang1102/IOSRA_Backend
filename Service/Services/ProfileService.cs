@@ -75,7 +75,10 @@ namespace Service.Implementations
                 AvatarUrl = acc.avatar_url,
                 Bio = reader.bio,
                 Gender = FromDbGender(reader.gender),
-                Birthday = reader.birthdate
+                Birthday = reader.birthdate,
+                Strike = acc.strike,
+                StrikeStatus = string.IsNullOrWhiteSpace(acc.strike_status) ? "none" : acc.strike_status,
+                StrikeRestrictedUntil = acc.strike_restricted_until
             };
         }
 

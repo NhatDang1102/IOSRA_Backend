@@ -13,6 +13,7 @@ namespace Service.Interfaces
         Task SendStoryRejectedEmailAsync(string toEmail, string storyTitle, string? note);
         Task SendChapterApprovedEmailAsync(string toEmail, string storyTitle, string chapterTitle);
         Task SendChapterRejectedEmailAsync(string toEmail, string storyTitle, string chapterTitle, string? note);
+        Task SendStrikeWarningEmailAsync(string toEmail, string username, string reason, byte strikeCount, DateTime? restrictedUntil);
     }
 }
 

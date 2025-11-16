@@ -11,6 +11,7 @@ using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
+using Service.Helpers;
 
 namespace Service.Services
 {
@@ -23,6 +24,7 @@ namespace Service.Services
         private readonly IOpenAiModerationService _openAiModerationService;
         private readonly IFollowerNotificationService _followerNotificationService;
         private readonly IChapterPricingService _chapterPricingService;
+        private readonly IProfileRepository? _profileRepository;
 
         private static readonly string[] AuthorChapterAllowedStatuses = { "draft", "pending", "rejected", "published", "hidden", "removed" };
 
@@ -32,7 +34,8 @@ namespace Service.Services
             IChapterContentStorage contentStorage,
             IOpenAiModerationService openAiModerationService,
             IFollowerNotificationService followerNotificationService,
-            IChapterPricingService chapterPricingService)
+            IChapterPricingService chapterPricingService,
+            IProfileRepository? profileRepository = null)
         {
             _chapterRepository = chapterRepository;
             _storyRepository = storyRepository;
@@ -40,6 +43,7 @@ namespace Service.Services
             _openAiModerationService = openAiModerationService;
             _followerNotificationService = followerNotificationService;
             _chapterPricingService = chapterPricingService;
+            _profileRepository = profileRepository;
         }
 
         public async Task<ChapterResponse> CreateAsync(Guid authorAccountId, Guid storyId, ChapterCreateRequest request, CancellationToken ct = default)
@@ -47,12 +51,15 @@ namespace Service.Services
             var author = await _storyRepository.GetAuthorAsync(authorAccountId, ct)
                          ?? throw new AppException("AuthorNotFound", "Author profile is not registered.", 404);
 
+            await AccountRestrictionHelper.EnsureCanPublishAsync(author.account, _profileRepository, ct);
+
             var story = await _storyRepository.GetStoryForAuthorAsync(storyId, author.account_id, ct)
                         ?? throw new AppException("StoryNotFound", "Story was not found.", 404);
 
-            if (!string.Equals(story.status, "published", StringComparison.OrdinalIgnoreCase))
+            if (!string.Equals(story.status, "published", StringComparison.OrdinalIgnoreCase) &&
+                !string.Equals(story.status, "hidden", StringComparison.OrdinalIgnoreCase))
             {
-                throw new AppException("StoryNotPublished", "Chapters can only be created for published stories.", 400);
+                throw new AppException("StoryNotPublished", "Chapters can only be created when the story is published or hidden.", 400);
             }
 
             var lastRejectedAt = await _chapterRepository.GetLastAuthorChapterRejectedAtAsync(author.account_id, ct);
@@ -177,6 +184,11 @@ namespace Service.Services
             if (story.author_id != author.account_id)
             {
                 throw new AppException("ChapterNotFound", "Chapter was not found.", 404);
+            }
+
+            if (string.Equals(story.status, "hidden", StringComparison.OrdinalIgnoreCase))
+            {
+                throw new AppException("StoryHidden", "Story is hidden. Please restore it before submitting chapters.", 400);
             }
 
             if (await _chapterRepository.StoryHasPendingChapterAsync(story.story_id, ct) &&

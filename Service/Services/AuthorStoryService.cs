@@ -11,6 +11,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Service.Helpers;
 
 namespace Service.Services
 {
@@ -21,6 +22,7 @@ namespace Service.Services
         private readonly IOpenAiImageService _openAiImageService;
         private readonly IOpenAiModerationService _openAiModerationService;
         private readonly IFollowerNotificationService _followerNotificationService;
+        private readonly IProfileRepository? _profileRepository;
 
         private static readonly string[] AllowedCoverModes = { "upload", "generate" };
         private static readonly string[] AuthorListAllowedStatuses = { "draft", "pending", "rejected", "published", "completed", "hidden", "removed" };
@@ -34,18 +36,22 @@ namespace Service.Services
             IImageUploader imageUploader,
             IOpenAiImageService openAiImageService,
             IOpenAiModerationService openAiModerationService,
-            IFollowerNotificationService followerNotificationService)
+            IFollowerNotificationService followerNotificationService,
+            IProfileRepository? profileRepository = null)
         {
             _storyRepository = storyRepository;
             _imageUploader = imageUploader;
             _openAiImageService = openAiImageService;
             _openAiModerationService = openAiModerationService;
             _followerNotificationService = followerNotificationService;
+            _profileRepository = profileRepository;
         }
 
         public async Task<StoryResponse> CreateAsync(Guid authorAccountId, StoryCreateRequest request, CancellationToken ct = default)
         {
             var author = await RequireAuthorAsync(authorAccountId, ct);
+
+            await AccountRestrictionHelper.EnsureCanPublishAsync(author.account, _profileRepository, ct);
 
             if (author.restricted)
             {

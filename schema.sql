@@ -14,7 +14,9 @@ CREATE TABLE account (
   email           VARCHAR(255) NOT NULL,
   password_hash   VARCHAR(255) NOT NULL,
   status          ENUM('unbanned','banned') NOT NULL DEFAULT 'unbanned',
+  strike_status   ENUM('none','restricted') NOT NULL DEFAULT 'none',
   strike          TINYINT UNSIGNED NOT NULL DEFAULT 0,
+  strike_restricted_until DATETIME NULL,
   avatar_url      VARCHAR(512) NULL,
   created_at      DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at      DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -337,6 +339,21 @@ CREATE TABLE favorite_story (
     REFERENCES story(story_id) ON DELETE CASCADE ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
+CREATE TABLE notifications (
+  notification_id CHAR(36) NOT NULL,
+  recipient_id    CHAR(36) NOT NULL,
+  type            ENUM('op_request','story_decision','chapter_decision','new_story','new_chapter','general','new_follower','chapter_comment','story_rating','strike_warning') NOT NULL,
+  title           VARCHAR(200) NOT NULL,
+  message         TEXT NOT NULL,
+  payload         JSON NULL,
+  is_read         TINYINT(1) NOT NULL DEFAULT 0,
+  created_at      DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (notification_id),
+  KEY ix_notifications_recipient (recipient_id),
+  CONSTRAINT fk_notifications_recipient FOREIGN KEY (recipient_id)
+    REFERENCES account(account_id) ON DELETE CASCADE ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
 CREATE TABLE story_weekly_views (
   story_weekly_view_id CHAR(36) NOT NULL,
   story_id             CHAR(36) NOT NULL,
@@ -417,9 +434,9 @@ CREATE TABLE reports (
   target_type  ENUM('story','chapter','comment','user') NOT NULL,
   target_id    CHAR(36) NOT NULL,
   reporter_id  CHAR(36) NOT NULL,
-  reason       VARCHAR(255) NOT NULL,
+  reason       ENUM('negative_content','misinformation','spam','ip_infringement') NOT NULL,
   details      TEXT NULL,
-  status       ENUM('open','in_review','resolved','rejected') NOT NULL DEFAULT 'open',
+  status       ENUM('pending','resolved','rejected') NOT NULL DEFAULT 'pending',
   moderator_id CHAR(36) NULL,
   reviewed_at  DATETIME NULL,
   created_at   DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,

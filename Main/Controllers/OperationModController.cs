@@ -39,5 +39,6 @@ namespace Main.Controllers
             await _service.RejectAsync(requestId, AccountId, request, ct);
             return Ok(new { message = "Rejected" });
         }
+
     }
 }
