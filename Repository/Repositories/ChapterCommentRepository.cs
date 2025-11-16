@@ -39,6 +39,8 @@ namespace Repository.Repositories
                 .Include(c => c.chapter)
                 .Include(c => c.replies.Where(r => VisibleStatuses.Contains(r.status)))
                     .ThenInclude(r => r.reader).ThenInclude(a => a.account)
+                .Include(c => c.replies.Where(r => VisibleStatuses.Contains(r.status)))
+                    .ThenInclude(r => r.chapter).ThenInclude(ch => ch.story)
                 .Where(c => c.chapter_id == chapterId
                             && c.parent_comment_id == null
                             && VisibleStatuses.Contains(c.status));
@@ -65,6 +67,8 @@ namespace Repository.Repositories
                 .Include(c => c.chapter)
                 .Include(c => c.replies.Where(r => VisibleStatuses.Contains(r.status)))
                     .ThenInclude(r => r.reader).ThenInclude(a => a.account)
+                .Include(c => c.replies.Where(r => VisibleStatuses.Contains(r.status)))
+                    .ThenInclude(r => r.chapter).ThenInclude(ch => ch.story)
                 .Where(c => c.story_id == storyId
                             && c.parent_comment_id == null
                             && VisibleStatuses.Contains(c.status));
