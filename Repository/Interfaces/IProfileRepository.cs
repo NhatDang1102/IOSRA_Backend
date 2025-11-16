@@ -16,5 +16,7 @@ namespace Repository.Interfaces
 
         Task<bool> ExistsByEmailAsync(string email, CancellationToken ct = default);
         Task UpdateEmailAsync(Guid accountId, string newEmail, CancellationToken ct = default);
+        Task UpdateStrikeAsync(Guid accountId, byte strike, string strikeStatus, DateTime? restrictedUntil, CancellationToken ct = default);
+        Task ResetStrikeAsync(Guid accountId, CancellationToken ct = default);
     }
 }

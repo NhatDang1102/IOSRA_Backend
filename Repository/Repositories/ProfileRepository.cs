@@ -47,5 +47,23 @@ namespace Repository.Repositories
             acc.email = newEmail;
             await _db.SaveChangesAsync(ct);
         }
+
+        public async Task UpdateStrikeAsync(Guid accountId, byte strike, string strikeStatus, DateTime? restrictedUntil, CancellationToken ct = default)
+        {
+            var acc = await _db.accounts.FirstAsync(a => a.account_id == accountId, ct);
+            acc.strike = strike;
+            acc.strike_status = strikeStatus;
+            acc.strike_restricted_until = restrictedUntil;
+            await _db.SaveChangesAsync(ct);
+        }
+
+        public async Task ResetStrikeAsync(Guid accountId, CancellationToken ct = default)
+        {
+            var acc = await _db.accounts.FirstAsync(a => a.account_id == accountId, ct);
+            acc.strike = 0;
+            acc.strike_status = "none";
+            acc.strike_restricted_until = null;
+            await _db.SaveChangesAsync(ct);
+        }
     }
 }
