@@ -50,7 +50,7 @@ namespace Service.Services
 
             return new PagedResult<ChapterCommentResponse>
             {
-                Items = items.Select(c => MapPublicComment(c, TryGetAggregate(aggregates, c.comment_id))).ToArray(),
+                Items = items.Select(c => MapCommentTree(c, aggregates)).ToArray(),
                 Total = total,
                 Page = normalizedPage,
                 PageSize = normalizedSize
@@ -83,7 +83,7 @@ namespace Service.Services
                 ChapterFilterId = chapterFilterId,
                 Comments = new PagedResult<ChapterCommentResponse>
                 {
-                    Items = items.Select(c => MapPublicComment(c, TryGetAggregate(aggregates, c.comment_id))).ToArray(),
+                    Items = items.Select(c => MapCommentTree(c, aggregates)).ToArray(),
                     Total = total,
                     Page = normalizedPage,
                     PageSize = normalizedSize
@@ -125,6 +125,25 @@ namespace Service.Services
                 throw new AppException("InvalidCommentContent", "Comment content must not be empty.", 400);
             }
 
+            Guid? parentCommentId = null;
+            if (request.ParentCommentId.HasValue && request.ParentCommentId.Value != Guid.Empty)
+            {
+                var parent = await _commentRepository.GetAsync(chapter.chapter_id, request.ParentCommentId.Value, ct)
+                              ?? throw new AppException("ParentCommentNotFound", "Parent comment was not found.", 404);
+
+                if (!string.Equals(parent.status, "visible", StringComparison.OrdinalIgnoreCase) || parent.is_locked)
+                {
+                    throw new AppException("ParentCommentUnavailable", "Cannot reply to this comment at the moment.", 400);
+                }
+
+                if (parent.chapter_id != chapter.chapter_id)
+                {
+                    throw new AppException("ParentCommentNotInChapter", "Parent comment does not belong to this chapter.", 400);
+                }
+
+                parentCommentId = parent.parent_comment_id ?? parent.comment_id;
+            }
+
             var now = TimezoneConverter.VietnamNow;
             var comment = new chapter_comment
             {
@@ -132,6 +151,7 @@ namespace Service.Services
                 reader_id = reader.account_id,
                 story_id = chapter.story_id,
                 chapter_id = chapter.chapter_id,
+                parent_comment_id = parentCommentId,
                 content = content,
                 status = "visible",
                 is_locked = false,
@@ -321,7 +341,10 @@ namespace Service.Services
             return value.Substring(0, maxLength) + "...";
         }
 
-        private static ChapterCommentResponse MapPublicComment(chapter_comment comment, ChapterCommentReactionAggregate? reactionStats = null)
+        private static ChapterCommentResponse MapPublicComment(
+            chapter_comment comment,
+            ChapterCommentReactionAggregate? reactionStats = null,
+            ChapterCommentResponse[]? replies = null)
         {
             var readerAccount = comment.reader?.account
                                ?? throw new InvalidOperationException("Comment reader account navigation not loaded.");
@@ -343,7 +366,9 @@ namespace Service.Services
                 UpdatedAt = comment.updated_at,
                 LikeCount = reactionStats?.LikeCount ?? 0,
                 DislikeCount = reactionStats?.DislikeCount ?? 0,
-                ViewerReaction = reactionStats?.ViewerReaction
+                ViewerReaction = reactionStats?.ViewerReaction,
+                ParentCommentId = comment.parent_comment_id,
+                Replies = replies ?? Array.Empty<ChapterCommentResponse>()
             };
         }
 
@@ -366,6 +391,7 @@ namespace Service.Services
                 Username = readerAccount.username,
                 AvatarUrl = readerAccount.avatar_url,
                 Content = comment.content,
+                ParentCommentId = comment.parent_comment_id,
                 Status = comment.status,
                 IsLocked = comment.is_locked,
                 CreatedAt = comment.created_at,
@@ -396,7 +422,26 @@ namespace Service.Services
 
         private async Task<Dictionary<Guid, ChapterCommentReactionAggregate>> LoadAggregatesAsync(IEnumerable<chapter_comment> comments, Guid? viewerAccountId, CancellationToken ct)
         {
-            var ids = comments?.Select(c => c.comment_id).Distinct().ToArray() ?? Array.Empty<Guid>();
+            var ids = comments?
+                .SelectMany(c =>
+                {
+                    IEnumerable<Guid> Enumerate()
+                    {
+                        yield return c.comment_id;
+                        if (c.replies != null)
+                        {
+                            foreach (var reply in c.replies)
+                            {
+                                yield return reply.comment_id;
+                            }
+                        }
+                    }
+
+                    return Enumerate();
+                })
+                .Distinct()
+                .ToArray() ?? Array.Empty<Guid>();
+
             if (ids.Length == 0)
             {
                 return new Dictionary<Guid, ChapterCommentReactionAggregate>();
@@ -450,6 +495,16 @@ namespace Service.Services
                 ReactionType = reaction.reaction_type,
                 CreatedAt = reaction.created_at
             };
+        }
+
+        private static ChapterCommentResponse MapCommentTree(chapter_comment comment, Dictionary<Guid, ChapterCommentReactionAggregate>? aggregates)
+        {
+            var replies = comment.replies?
+                .OrderBy(r => r.created_at)
+                .Select(r => MapPublicComment(r, TryGetAggregate(aggregates, r.comment_id)))
+                .ToArray() ?? Array.Empty<ChapterCommentResponse>();
+
+            return MapPublicComment(comment, TryGetAggregate(aggregates, comment.comment_id), replies);
         }
 
         private static void EnsureChapterIsPublic(chapter chapter)

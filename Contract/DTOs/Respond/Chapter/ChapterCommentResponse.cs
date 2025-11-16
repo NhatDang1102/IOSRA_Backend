@@ -19,5 +19,7 @@ namespace Contract.DTOs.Respond.Chapter
         public int LikeCount { get; set; }
         public int DislikeCount { get; set; }
         public string? ViewerReaction { get; set; }
+        public Guid? ParentCommentId { get; set; }
+        public ChapterCommentResponse[] Replies { get; set; } = Array.Empty<ChapterCommentResponse>();
     }
 }

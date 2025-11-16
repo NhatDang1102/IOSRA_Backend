@@ -37,7 +37,11 @@ namespace Repository.Repositories
                 .AsNoTracking()
                 .Include(c => c.reader).ThenInclude(r => r.account)
                 .Include(c => c.chapter)
-                .Where(c => c.chapter_id == chapterId && VisibleStatuses.Contains(c.status));
+                .Include(c => c.replies.Where(r => VisibleStatuses.Contains(r.status)))
+                    .ThenInclude(r => r.reader).ThenInclude(a => a.account)
+                .Where(c => c.chapter_id == chapterId
+                            && c.parent_comment_id == null
+                            && VisibleStatuses.Contains(c.status));
 
             var total = await query.CountAsync(ct);
             var skip = (page - 1) * pageSize;
@@ -59,7 +63,11 @@ namespace Repository.Repositories
                 .AsNoTracking()
                 .Include(c => c.reader).ThenInclude(r => r.account)
                 .Include(c => c.chapter)
-                .Where(c => c.story_id == storyId && VisibleStatuses.Contains(c.status));
+                .Include(c => c.replies.Where(r => VisibleStatuses.Contains(r.status)))
+                    .ThenInclude(r => r.reader).ThenInclude(a => a.account)
+                .Where(c => c.story_id == storyId
+                            && c.parent_comment_id == null
+                            && VisibleStatuses.Contains(c.status));
 
             if (chapterId.HasValue && chapterId.Value != Guid.Empty)
             {
@@ -86,6 +94,7 @@ namespace Repository.Repositories
                 .AsNoTracking()
                 .Include(c => c.reader).ThenInclude(r => r.account)
                 .Include(c => c.chapter).ThenInclude(ch => ch.story)
+                .Include(c => c.parent_comment)
                 .AsQueryable();
 
             if (!string.IsNullOrWhiteSpace(status))

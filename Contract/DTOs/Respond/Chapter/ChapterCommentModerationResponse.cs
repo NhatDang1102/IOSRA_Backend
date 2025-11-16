@@ -14,6 +14,7 @@ namespace Contract.DTOs.Respond.Chapter
         public string Username { get; set; } = null!;
         public string? AvatarUrl { get; set; }
         public string Content { get; set; } = null!;
+        public Guid? ParentCommentId { get; set; }
         public string Status { get; set; } = null!;
         public bool IsLocked { get; set; }
         public DateTime CreatedAt { get; set; }

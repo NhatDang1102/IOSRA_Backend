@@ -24,6 +24,9 @@ public partial class chapter_comment
     
     public Guid chapter_id { get; set; }
 
+    
+    public Guid? parent_comment_id { get; set; }
+
     [Column(TypeName = "text")]
     public string content { get; set; } = null!;
 
@@ -53,4 +56,11 @@ public partial class chapter_comment
 
     [InverseProperty("comment")]
     public virtual ICollection<chapter_comment_reaction> chapter_comment_reactions { get; set; } = new List<chapter_comment_reaction>();
+
+    [ForeignKey("parent_comment_id")]
+    [InverseProperty("replies")]
+    public virtual chapter_comment? parent_comment { get; set; }
+
+    [InverseProperty("parent_comment")]
+    public virtual ICollection<chapter_comment> replies { get; set; } = new List<chapter_comment>();
 }
