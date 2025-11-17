@@ -15,13 +15,6 @@ public class PaymentService : IPaymentService
     private readonly PayOS _payOS;
     private readonly ILogger<PaymentService> _logger;
 
-    private static readonly Dictionary<ulong, ulong> PackageTiers = new()
-    {
-        { 50000, 550 },
-        { 100000, 1150 },
-        { 200000, 2400 }
-    };
-
     public PaymentService(AppDbContext db, PayOS payOS, ILogger<PaymentService> logger)
     {
         _db = db;
@@ -31,12 +24,15 @@ public class PaymentService : IPaymentService
 
     public async Task<CreatePaymentLinkResponse> CreatePaymentLinkAsync(Guid accountId, ulong amount)
     {
-        if (!PackageTiers.ContainsKey(amount))
+        var pricing = await _db.topup_pricings
+            .AsNoTracking()
+            .FirstOrDefaultAsync(p => p.amount_vnd == amount && p.is_active);
+        if (pricing == null)
         {
-            throw new ArgumentException("Invalid amount. Must be 50000, 100000, or 200000 VND.");
+            throw new ArgumentException("Invalid top-up amount. Please select an available package.");
         }
 
-        var diamondGranted = PackageTiers[amount];
+        var diamondGranted = pricing.diamond_granted;
 
         var wallet = await _db.dia_wallets.FirstOrDefaultAsync(w => w.account_id == accountId);
         if (wallet == null)

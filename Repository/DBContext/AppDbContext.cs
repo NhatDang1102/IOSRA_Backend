@@ -46,7 +46,9 @@ public partial class AppDbContext : DbContext
 
     public virtual DbSet<dia_wallet> dia_wallets { get; set; }
 
-    public virtual DbSet<favorite_story> favvorite_stories { get; set; }
+    public virtual DbSet<topup_pricing> topup_pricings { get; set; }
+
+    public virtual DbSet<favorite_story> favorite_stories { get; set; }
 
     public virtual DbSet<follow> follows { get; set; }
     public virtual DbSet<notification> notifications { get; set; }
