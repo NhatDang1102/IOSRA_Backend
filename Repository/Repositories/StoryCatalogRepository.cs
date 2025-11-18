@@ -176,8 +176,6 @@ namespace Repository.Repositories
                     .Select(x => x.s);
             }
 
-            var total = await q.CountAsync(ct);
-
             // subquery: weekly views (cho sort WeeklyViews)
             IQueryable<dynamic> viewAgg = Enumerable.Empty<dynamic>().AsQueryable();
             if (string.Equals(sortBy, "weeklyViews", StringComparison.OrdinalIgnoreCase))
