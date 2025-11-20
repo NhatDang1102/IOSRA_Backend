@@ -145,6 +145,16 @@ public class PaymentService : IPaymentService
                 };
                 _db.wallet_payments.Add(walletPayment);
 
+                _db.payment_receipts.Add(new payment_receipt
+                {
+                    receipt_id = Guid.NewGuid(),
+                    account_id = wallet.account_id,
+                    ref_id = diaPayment.topup_id,
+                    type = "dia_topup",
+                    amount_vnd = diaPayment.amount_vnd,
+                    created_at = DateTime.UtcNow
+                });
+
                 await _db.SaveChangesAsync();
                 _logger.LogInformation("Successfully topped up {Amount} dias to wallet {WalletId}", diaPayment.diamond_granted, wallet.wallet_id);
             }

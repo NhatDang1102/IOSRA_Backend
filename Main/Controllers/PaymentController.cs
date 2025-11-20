@@ -11,11 +11,16 @@ namespace Main.Controllers;
 public class PaymentController : AppControllerBase
 {
     private readonly IPaymentService _paymentService;
+    private readonly IVoicePaymentService _voicePaymentService;
     private readonly ILogger<PaymentController> _logger;
 
-    public PaymentController(IPaymentService paymentService, ILogger<PaymentController> logger)
+    public PaymentController(
+        IPaymentService paymentService,
+        IVoicePaymentService voicePaymentService,
+        ILogger<PaymentController> logger)
     {
         _paymentService = paymentService;
+        _voicePaymentService = voicePaymentService;
         _logger = logger;
     }
 
@@ -40,11 +45,14 @@ public class PaymentController : AppControllerBase
     }
 
     [HttpPost("webhook")]
+    [AllowAnonymous]
     public async Task<IActionResult> PayOSWebhook([FromBody] WebhookType webhookBody)
     {
         _logger.LogInformation("Webhook received: {WebhookBody}", System.Text.Json.JsonSerializer.Serialize(webhookBody));
-        var handled = await _paymentService.HandlePayOSWebhookAsync(webhookBody);
-        _logger.LogInformation("Webhook handled: {Handled}", handled);
+        var handledDia = await _paymentService.HandlePayOSWebhookAsync(webhookBody);
+        var handledVoice = await _voicePaymentService.HandleWebhookAsync(webhookBody);
+        var handled = handledDia || handledVoice;
+        _logger.LogInformation("Webhook handled - dia:{Dia} voice:{Voice}", handledDia, handledVoice);
         return Ok(new { success = handled });
     }
 

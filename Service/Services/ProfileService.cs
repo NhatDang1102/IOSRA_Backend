@@ -78,7 +78,8 @@ namespace Service.Implementations
                 Birthday = reader.birthdate,
                 Strike = acc.strike,
                 StrikeStatus = string.IsNullOrWhiteSpace(acc.strike_status) ? "none" : acc.strike_status,
-                StrikeRestrictedUntil = acc.strike_restricted_until
+                StrikeRestrictedUntil = acc.strike_restricted_until,
+                VoiceCharBalance = acc.voice_wallet?.balance_chars ?? 0
             };
         }
 

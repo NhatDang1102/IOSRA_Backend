@@ -15,7 +15,9 @@ namespace Repository.Repositories
         public ProfileRepository(AppDbContext db) => _db = db;
 
         public Task<account?> GetAccountByIdAsync(Guid accountId, CancellationToken ct = default)
-            => _db.accounts.FirstOrDefaultAsync(a => a.account_id == accountId, ct);
+            => _db.accounts
+                .Include(a => a.voice_wallet)
+                .FirstOrDefaultAsync(a => a.account_id == accountId, ct);
 
         public Task<reader?> GetReaderByIdAsync(Guid accountId, CancellationToken ct = default)
             => _db.readers

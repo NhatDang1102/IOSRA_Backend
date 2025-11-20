@@ -64,6 +64,9 @@ public partial class account
     public virtual dia_wallet? dia_wallet { get; set; }
 
     [InverseProperty("account")]
+    public virtual voice_wallet? voice_wallet { get; set; }
+
+    [InverseProperty("account")]
     public virtual reader? reader { get; set; }
 
     [InverseProperty("reporter")]
@@ -72,4 +75,7 @@ public partial class account
     [InverseProperty("user")]
     public virtual ICollection<subcription> subcriptions { get; set; } = new List<subcription>();
     public virtual ICollection<op_request> op_requests_as_requester { get; set; } = new List<op_request>();
+
+    [InverseProperty("account")]
+    public virtual ICollection<payment_receipt> payment_receipts { get; set; } = new List<payment_receipt>();
 }
