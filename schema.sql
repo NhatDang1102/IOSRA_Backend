@@ -223,6 +223,7 @@ CREATE TABLE chapter_comment (
   reader_id  CHAR(36) NOT NULL,
   story_id   CHAR(36) NOT NULL,
   chapter_id CHAR(36) NOT NULL,
+  parent_comment_id CHAR(36) NULL,
   content    TEXT NOT NULL,
   status     ENUM('visible','hidden','removed') NOT NULL DEFAULT 'visible',
   is_locked  TINYINT(1) NOT NULL DEFAULT 0,
@@ -232,12 +233,15 @@ CREATE TABLE chapter_comment (
   KEY ix_cmt_reader (reader_id),
   KEY ix_cmt_chapter (chapter_id),
   KEY ix_cmt_story (story_id),
+  KEY ix_cmt_parent (parent_comment_id),
   CONSTRAINT fk_cmt_reader FOREIGN KEY (reader_id)
     REFERENCES reader(account_id) ON DELETE CASCADE ON UPDATE CASCADE,
   CONSTRAINT fk_cmt_chapter FOREIGN KEY (chapter_id)
     REFERENCES chapters(chapter_id) ON DELETE CASCADE ON UPDATE CASCADE,
   CONSTRAINT fk_cmt_story FOREIGN KEY (story_id)
-    REFERENCES story(story_id) ON DELETE CASCADE ON UPDATE CASCADE
+    REFERENCES story(story_id) ON DELETE CASCADE ON UPDATE CASCADE,
+  CONSTRAINT fk_cmt_parent FOREIGN KEY (parent_comment_id)
+    REFERENCES chapter_comment(comment_id) ON DELETE CASCADE ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 CREATE TABLE chapter_comment_reaction (
@@ -377,6 +381,66 @@ CREATE TABLE dia_wallet (
   PRIMARY KEY (wallet_id),
   UNIQUE KEY ux_wallet_account (account_id),
   CONSTRAINT fk_wallet_account FOREIGN KEY (account_id)
+    REFERENCES account(account_id) ON DELETE CASCADE ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+CREATE TABLE topup_pricing (
+  pricing_id       CHAR(36) NOT NULL,
+  amount_vnd       BIGINT UNSIGNED NOT NULL,
+  diamond_granted  BIGINT UNSIGNED NOT NULL,
+  is_active        TINYINT(1) NOT NULL DEFAULT 1,
+  updated_at       DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (pricing_id),
+  UNIQUE KEY ux_topup_amount (amount_vnd)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+CREATE TABLE voice_wallet (
+  wallet_id    CHAR(36) NOT NULL,
+  account_id   CHAR(36) NOT NULL,
+  balance_chars BIGINT NOT NULL DEFAULT 0,
+  updated_at   DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (wallet_id),
+  UNIQUE KEY ux_voice_wallet_account (account_id),
+  CONSTRAINT fk_voice_wallet_account FOREIGN KEY (account_id)
+    REFERENCES account(account_id) ON DELETE CASCADE ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+CREATE TABLE voice_topup_pricing (
+  pricing_id       CHAR(36) NOT NULL,
+  amount_vnd       BIGINT UNSIGNED NOT NULL,
+  chars_granted    BIGINT UNSIGNED NOT NULL,
+  is_active        TINYINT(1) NOT NULL DEFAULT 1,
+  updated_at       DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (pricing_id),
+  UNIQUE KEY ux_voice_topup_amount (amount_vnd)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+CREATE TABLE voice_payment (
+  topup_id        CHAR(36) NOT NULL,
+  wallet_id       CHAR(36) NOT NULL,
+  provider        VARCHAR(50) NOT NULL,
+  order_code      VARCHAR(50) NOT NULL,
+  amount_vnd      BIGINT UNSIGNED NOT NULL,
+  chars_granted   BIGINT UNSIGNED NOT NULL,
+  status          ENUM('pending','success','failed','refunded') NOT NULL DEFAULT 'pending',
+  created_at      DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (topup_id),
+  UNIQUE KEY ux_voice_order_code (order_code),
+  KEY ix_voice_payment_wallet (wallet_id),
+  CONSTRAINT fk_voice_payment_wallet FOREIGN KEY (wallet_id)
+    REFERENCES voice_wallet(wallet_id) ON DELETE RESTRICT ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+CREATE TABLE payment_receipt (
+  receipt_id  CHAR(36) NOT NULL,
+  account_id  CHAR(36) NOT NULL,
+  ref_id      CHAR(36) NOT NULL,
+  type        ENUM('dia_topup','voice_topup','subscription') NOT NULL,
+  amount_vnd  BIGINT UNSIGNED NOT NULL,
+  created_at  DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (receipt_id),
+  KEY ix_receipt_account (account_id),
+  CONSTRAINT fk_receipt_account FOREIGN KEY (account_id)
     REFERENCES account(account_id) ON DELETE CASCADE ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
