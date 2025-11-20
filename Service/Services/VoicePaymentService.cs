@@ -56,7 +56,7 @@ namespace Service.Services
             var paymentData = new PaymentData(
                 orderCode,
                 (int)amount,
-                $"Nạp {pricing.chars_granted} ký tự voice cho IOSRA",
+                $"Voice topup {pricing.chars_granted} chars",
                 new List<ItemData> { item },
                 "https://toranovel.id.vn/voice-payment/cancel",
                 "https://toranovel.id.vn/voice-payment/success"
