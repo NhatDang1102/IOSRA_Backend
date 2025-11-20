@@ -31,6 +31,7 @@ namespace Main
             services.Configure<CloudinarySettings>(configuration.GetSection("CloudinarySettings"));
             services.Configure<CloudflareR2Settings>(configuration.GetSection("CloudflareR2"));
             services.Configure<OpenAiSettings>(configuration.GetSection("OpenAi"));
+            services.Configure<ElevenLabsSettings>(configuration.GetSection("ElevenLabs"));
             services.AddMemoryCache();
 
             var connectionString = configuration.GetConnectionString("Default");

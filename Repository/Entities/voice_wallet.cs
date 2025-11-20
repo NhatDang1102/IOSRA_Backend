@@ -26,4 +26,7 @@ public partial class voice_wallet
 
     [InverseProperty("voice_wallet")]
     public virtual ICollection<voice_payment> voice_payments { get; set; } = new List<voice_payment>();
+
+    [InverseProperty("voice_wallet")]
+    public virtual ICollection<voice_wallet_payment> voice_wallet_payments { get; set; } = new List<voice_wallet_payment>();
 }

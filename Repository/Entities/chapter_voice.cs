@@ -12,15 +12,31 @@ namespace Repository.Entities;
 public partial class chapter_voice
 {
     [Key]
-    
     public Guid chapter_id { get; set; }
 
     [Key]
-    
     public Guid voice_id { get; set; }
 
     [StringLength(512)]
     public string? cloud_url { get; set; }
+
+    [StringLength(512)]
+    public string? storage_path { get; set; }
+
+    [StringLength(16)]
+    [Column(TypeName = "enum('pending','processing','ready','failed')")]
+    public string status { get; set; } = "pending";
+
+    [Column(TypeName = "datetime")]
+    public DateTime requested_at { get; set; }
+
+    [Column(TypeName = "datetime")]
+    public DateTime? completed_at { get; set; }
+
+    public int char_cost { get; set; }
+
+    [Column(TypeName = "text")]
+    public string? error_message { get; set; }
 
     [ForeignKey("chapter_id")]
     [InverseProperty("chapter_voices")]

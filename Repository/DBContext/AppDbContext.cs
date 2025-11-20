@@ -88,6 +88,8 @@ public partial class AppDbContext : DbContext
 
     public virtual DbSet<voice_topup_pricing> voice_topup_pricings { get; set; }
 
+    public virtual DbSet<voice_wallet_payment> voice_wallet_payments { get; set; }
+
     public virtual DbSet<payment_receipt> payment_receipts { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -274,6 +276,15 @@ public partial class AppDbContext : DbContext
                 .HasName("PRIMARY")
                 .HasAnnotation("MySql:IndexPrefixLength", new[] { 0, 0 });
 
+            entity.Property(e => e.cloud_url).HasMaxLength(512);
+            entity.Property(e => e.storage_path).HasMaxLength(512);
+            entity.Property(e => e.status)
+                .HasDefaultValueSql("'pending'")
+                .HasColumnType("enum('pending','processing','ready','failed')");
+            entity.Property(e => e.requested_at).HasDefaultValueSql("CURRENT_TIMESTAMP");
+            entity.Property(e => e.char_cost).HasDefaultValue(0);
+            entity.Property(e => e.error_message).HasColumnType("text");
+
             entity.HasOne(d => d.chapter).WithMany(p => p.chapter_voices).HasConstraintName("fk_chvoice_chapter");
 
             entity.HasOne(d => d.voice).WithMany(p => p.chapter_voices)
@@ -351,6 +362,20 @@ public partial class AppDbContext : DbContext
             entity.HasOne(d => d.voice_wallet).WithMany(p => p.voice_payments)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("fk_voice_payment_wallet");
+        });
+
+        modelBuilder.Entity<voice_wallet_payment>(entity =>
+        {
+            entity.HasKey(e => e.trs_id).HasName("PRIMARY");
+
+            entity.Property(e => e.trs_id).ValueGeneratedNever();
+            entity.Property(e => e.created_at).HasDefaultValueSql("CURRENT_TIMESTAMP");
+            entity.Property(e => e.note).HasMaxLength(255);
+            entity.Property(e => e.type).HasColumnType("enum('topup','purchase','refund')");
+
+            entity.HasOne(d => d.voice_wallet).WithMany(p => p.voice_wallet_payments)
+                .OnDelete(DeleteBehavior.Cascade)
+                .HasConstraintName("fk_voice_wallet_payment_wallet");
         });
 
         modelBuilder.Entity<favorite_story>(entity =>
@@ -538,6 +563,13 @@ public partial class AppDbContext : DbContext
         modelBuilder.Entity<voice_list>(entity =>
         {
             entity.HasKey(e => e.voice_id).HasName("PRIMARY");
+
+            entity.Property(e => e.voice_id).ValueGeneratedNever();
+            entity.Property(e => e.voice_name).HasMaxLength(64);
+            entity.Property(e => e.voice_code).HasMaxLength(32);
+            entity.Property(e => e.provider_voice_id).HasMaxLength(128);
+            entity.Property(e => e.description).HasMaxLength(256);
+            entity.Property(e => e.is_active).HasDefaultValueSql("1");
         });
 
         modelBuilder.Entity<voice_topup_pricing>(entity =>
