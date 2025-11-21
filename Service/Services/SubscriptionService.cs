@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
@@ -88,14 +88,14 @@ namespace Service.Services
 
             if (subscription == null)
             {
-                throw new AppException("SubscriptionNotFound", "B?n chua c� g�i subscription dang ho?t d?ng.", 400);
+                throw new AppException("SubscriptionNotFound", "Bạn chưa có gói nào.", 400);
             }
 
             var plan = subscription.plan_codeNavigation;
             var today = DateOnly.FromDateTime(now);
             if (subscription.last_claim_date.HasValue && subscription.last_claim_date.Value == today)
             {
-                throw new AppException("SubscriptionClaimed", "B?n d� nh?n dias h�m nay r?i.", 400);
+                throw new AppException("SubscriptionClaimed", "Bạn đã nhận kc hnay rồi.", 400);
             }
 
             var wallet = await _db.dia_wallets.FirstOrDefaultAsync(w => w.account_id == accountId, ct);
@@ -145,7 +145,7 @@ namespace Service.Services
         public async Task ActivateSubscriptionAsync(Guid accountId, string planCode, CancellationToken ct = default)
         {
             var plan = await _db.subscription_plans.FirstOrDefaultAsync(p => p.plan_code == planCode, ct)
-                       ?? throw new AppException("SubscriptionPlanNotFound", "G�i subscription kh�ng t?n t?i.", 404);
+                       ?? throw new AppException("SubscriptionPlanNotFound", "Gói subscription không tồn tại.", 404);
 
             var now = TimezoneConverter.VietnamNow;
             var subscription = await _db.subcriptions.FirstOrDefaultAsync(s => s.user_id == accountId && s.plan_code == planCode, ct);
