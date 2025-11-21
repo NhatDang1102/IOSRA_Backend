@@ -4,6 +4,6 @@ namespace Contract.DTOs.Request.Payment;
 
 public class CreatePaymentLinkRequest
 {
-    [Required(ErrorMessage = "Amount is required")]
+    [Required]
     public ulong Amount { get; set; }
 }

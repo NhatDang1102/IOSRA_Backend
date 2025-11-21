@@ -81,6 +81,7 @@ namespace Service
             services.AddScoped<IChapterPricingService, ChapterPricingService>();
             services.AddScoped<IPaymentService, PaymentService>();
             services.AddScoped<IVoicePaymentService, VoicePaymentService>();
+            services.AddScoped<ISubscriptionService, SubscriptionService>();
             services.AddScoped<IVoiceChapterService, VoiceChapterService>();
             services.AddScoped<IReportService, ReportService>();
             services.AddScoped<IContentModHandlingService, ContentModHandlingService>();
@@ -90,4 +91,5 @@ namespace Service
         }
     }
 }
+
 

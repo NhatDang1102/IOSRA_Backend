@@ -1,3 +1,8 @@
+using System;
+using System.Collections.Generic;
+using System.Threading;
+using System.Threading.Tasks;
+using Contract.DTOs.Request.Payment;
 using Contract.DTOs.Response.Payment;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
@@ -15,27 +20,38 @@ public class PaymentService : IPaymentService
     private readonly AppDbContext _db;
     private readonly PayOS _payOS;
     private readonly ILogger<PaymentService> _logger;
+    private readonly ISubscriptionService _subscriptionService;
 
-    public PaymentService(AppDbContext db, PayOS payOS, ILogger<PaymentService> logger)
+    public PaymentService(AppDbContext db, PayOS payOS, ILogger<PaymentService> logger, ISubscriptionService subscriptionService)
     {
         _db = db;
         _payOS = payOS;
         _logger = logger;
+        _subscriptionService = subscriptionService;
     }
 
-    public async Task<CreatePaymentLinkResponse> CreatePaymentLinkAsync(Guid accountId, ulong amount)
+    public Task<CreatePaymentLinkResponse> CreateTopupLinkAsync(Guid accountId, ulong amount, CancellationToken ct = default)
+        => CreateDiaTopupLinkAsync(accountId, amount, ct);
+
+    public Task<CreatePaymentLinkResponse> CreateSubscriptionLinkAsync(Guid accountId, CreateSubscriptionPaymentLinkRequest request, CancellationToken ct = default)
+        => CreateSubscriptionPaymentLinkAsync(accountId, request, ct);
+
+    private async Task<CreatePaymentLinkResponse> CreateDiaTopupLinkAsync(Guid accountId, ulong amount, CancellationToken ct)
     {
+        if (amount == 0)
+        {
+            throw new ArgumentException("Amount is required for dia top-up requests.");
+        }
+
         var pricing = await _db.topup_pricings
             .AsNoTracking()
-            .FirstOrDefaultAsync(p => p.amount_vnd == amount && p.is_active);
+            .FirstOrDefaultAsync(p => p.amount_vnd == amount && p.is_active, ct);
         if (pricing == null)
         {
             throw new ArgumentException("Invalid top-up amount. Please select an available package.");
         }
 
-        var diamondGranted = pricing.diamond_granted;
-
-        var wallet = await _db.dia_wallets.FirstOrDefaultAsync(w => w.account_id == accountId);
+        var wallet = await _db.dia_wallets.FirstOrDefaultAsync(w => w.account_id == accountId, ct);
         if (wallet == null)
         {
             wallet = new dia_wallet
@@ -47,24 +63,14 @@ public class PaymentService : IPaymentService
                 updated_at = TimezoneConverter.VietnamNow
             };
             _db.dia_wallets.Add(wallet);
-            await _db.SaveChangesAsync();
+            await _db.SaveChangesAsync(ct);
         }
 
-        long orderCode = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+        var orderCode = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
         var topupId = Guid.NewGuid();
 
-        var item = new ItemData($"Nạp {diamondGranted} dias", 1, (int)amount);
-        var items = new List<ItemData> { item };
-
-        var baseUrl = "https://toranovel.id.vn";
-        var paymentData = new PaymentData(
-            orderCode,
-            (int)amount,
-            $"Nạp {diamondGranted} dias cho IOSRA",
-            items,
-            $"{baseUrl}/payment/cancel",
-            $"{baseUrl}/payment/success"
-        );
+        var item = new ItemData($"Topup {pricing.diamond_granted} dias", 1, (int)amount);
+        var paymentData = BuildPaymentData(orderCode, (int)amount, $"Topup {pricing.diamond_granted} dias", item);
 
         var result = await _payOS.createPaymentLink(paymentData);
 
@@ -75,12 +81,12 @@ public class PaymentService : IPaymentService
             provider = "PayOS",
             order_code = orderCode.ToString(),
             amount_vnd = amount,
-            diamond_granted = diamondGranted,
+            diamond_granted = pricing.diamond_granted,
             status = "pending",
             created_at = TimezoneConverter.VietnamNow
         };
         _db.dia_payments.Add(diaPayment);
-        await _db.SaveChangesAsync();
+        await _db.SaveChangesAsync(ct);
 
         return new CreatePaymentLinkResponse
         {
@@ -89,7 +95,56 @@ public class PaymentService : IPaymentService
         };
     }
 
-    public async Task<bool> HandlePayOSWebhookAsync(WebhookType webhookBody)
+    private async Task<CreatePaymentLinkResponse> CreateSubscriptionPaymentLinkAsync(Guid accountId, CreateSubscriptionPaymentLinkRequest request, CancellationToken ct)
+    {
+        if (string.IsNullOrWhiteSpace(request.PlanCode))
+        {
+            throw new ArgumentException("SubscriptionPlanCode is required for subscription purchases.");
+        }
+
+        var planCode = request.PlanCode.Trim();
+        var plan = await _db.subscription_plans.AsNoTracking().FirstOrDefaultAsync(p => p.plan_code == planCode, ct)
+                   ?? throw new ArgumentException("Subscription plan not found.");
+
+        if (plan.price_vnd == 0)
+        {
+            throw new ArgumentException("Subscription plan is not configured with a price.");
+        }
+
+        if (plan.price_vnd > int.MaxValue)
+        {
+            throw new ArgumentException("Subscription price exceeds PayOS limit.");
+        }
+
+        var orderCode = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+        var item = new ItemData($"Subscription {plan.plan_name}", 1, (int)plan.price_vnd);
+        var paymentData = BuildPaymentData(orderCode, (int)plan.price_vnd, $"Subscription {plan.plan_name}", item);
+
+        var result = await _payOS.createPaymentLink(paymentData);
+
+        var now = TimezoneConverter.VietnamNow;
+        var record = new subscription_payment
+        {
+            payment_id = Guid.NewGuid(),
+            account_id = accountId,
+            plan_code = plan.plan_code,
+            provider = "PayOS",
+            order_code = orderCode.ToString(),
+            amount_vnd = plan.price_vnd,
+            status = "pending",
+            created_at = now
+        };
+        _db.subscription_payments.Add(record);
+        await _db.SaveChangesAsync(ct);
+
+        return new CreatePaymentLinkResponse
+        {
+            CheckoutUrl = result.checkoutUrl,
+            TransactionId = orderCode.ToString()
+        };
+    }
+
+    public async Task<bool> HandlePayOSWebhookAsync(WebhookType webhookBody, CancellationToken ct = default)
     {
         WebhookData webhookData;
         try
@@ -105,75 +160,101 @@ public class PaymentService : IPaymentService
         }
 
         var orderCode = webhookData.orderCode.ToString();
-        _logger.LogInformation("Looking for order_code = {OrderCode} in DB", orderCode);
-
-        var diaPayment = await _db.dia_payments
-            .Include(p => p.wallet)
-            .FirstOrDefaultAsync(p => p.order_code == orderCode);
-
-        if (diaPayment == null)
-        {
-            _logger.LogWarning("Transaction with order_code {OrderCode} not found in DB", orderCode);
-            return false;
-        }
-
-        bool isPaid = webhookBody.success
+        var isPaid = webhookBody.success
                       && webhookData.code == "00"
                       && webhookData.desc?.Trim().Equals("success", StringComparison.OrdinalIgnoreCase) == true;
 
-        _logger.LogInformation("Payment status: {Status}", isPaid ? "Success" : "Failed");
-        diaPayment.status = isPaid ? "success" : "failed";
+        var handled = false;
+        var now = TimezoneConverter.VietnamNow;
 
-        if (isPaid)
+        var diaPayment = await _db.dia_payments
+            .Include(p => p.wallet)
+            .FirstOrDefaultAsync(p => p.order_code == orderCode, ct);
+
+        if (diaPayment != null)
         {
-            try
+            handled = true;
+            diaPayment.status = isPaid ? "success" : "failed";
+
+            if (isPaid)
             {
-                var wallet = diaPayment.wallet;
-                var oldBalance = wallet.balance_coin;
-                var newBalance = oldBalance + (long)diaPayment.diamond_granted;
-                wallet.balance_coin = newBalance;
-                wallet.updated_at = TimezoneConverter.VietnamNow;
-
-                var walletPayment = new wallet_payment
+                try
                 {
-                    trs_id = Guid.NewGuid(),
-                    wallet_id = wallet.wallet_id,
-                    type = "topup",
-                    coin_delta = (long)diaPayment.diamond_granted,
-                    coin_after = newBalance,
-                    ref_id = diaPayment.topup_id,
-                    created_at = TimezoneConverter.VietnamNow
-                };
-                _db.wallet_payments.Add(walletPayment);
+                    var wallet = diaPayment.wallet;
+                    var newBalance = wallet.balance_coin + (long)diaPayment.diamond_granted;
+                    wallet.balance_coin = newBalance;
+                    wallet.updated_at = now;
 
+                    _db.wallet_payments.Add(new wallet_payment
+                    {
+                        trs_id = Guid.NewGuid(),
+                        wallet_id = wallet.wallet_id,
+                        type = "topup",
+                        coin_delta = (long)diaPayment.diamond_granted,
+                        coin_after = newBalance,
+                        ref_id = diaPayment.topup_id,
+                        created_at = now
+                    });
+
+                    _db.payment_receipts.Add(new payment_receipt
+                    {
+                        receipt_id = Guid.NewGuid(),
+                        account_id = wallet.account_id,
+                        ref_id = diaPayment.topup_id,
+                        type = "dia_topup",
+                        amount_vnd = diaPayment.amount_vnd,
+                        created_at = now
+                    });
+
+                    await _db.SaveChangesAsync(ct);
+                    _logger.LogInformation("Successfully topped up {Amount} dias to wallet {WalletId}", diaPayment.diamond_granted, wallet.wallet_id);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Failed to update wallet for dia topup");
+                    return false;
+                }
+            }
+            else
+            {
+                await _db.SaveChangesAsync(ct);
+            }
+        }
+
+        var subPayment = await _db.subscription_payments.FirstOrDefaultAsync(p => p.order_code == orderCode, ct);
+        if (subPayment != null)
+        {
+            handled = true;
+            subPayment.status = isPaid ? "success" : "failed";
+            if (isPaid)
+            {
+                await _subscriptionService.ActivateSubscriptionAsync(subPayment.account_id, subPayment.plan_code, ct);
                 _db.payment_receipts.Add(new payment_receipt
                 {
                     receipt_id = Guid.NewGuid(),
-                    account_id = wallet.account_id,
-                    ref_id = diaPayment.topup_id,
-                    type = "dia_topup",
-                    amount_vnd = diaPayment.amount_vnd,
-                    created_at = TimezoneConverter.VietnamNow
+                    account_id = subPayment.account_id,
+                    ref_id = subPayment.payment_id,
+                    type = "subscription",
+                    amount_vnd = subPayment.amount_vnd,
+                    created_at = now
                 });
-
-                await _db.SaveChangesAsync();
-                _logger.LogInformation("Successfully topped up {Amount} dias to wallet {WalletId}", diaPayment.diamond_granted, wallet.wallet_id);
+                await _db.SaveChangesAsync(ct);
             }
-            catch (Exception ex)
+            else
             {
-                _logger.LogError(ex, "Failed to update wallet");
-                return false;
+                await _db.SaveChangesAsync(ct);
             }
         }
-        else
+
+        if (!handled)
         {
-            await _db.SaveChangesAsync();
+            _logger.LogWarning("No payment record matched order {OrderCode}", orderCode);
         }
 
-        return true;
+        return handled;
     }
 
-    public async Task<bool> CancelPaymentLinkAsync(string transactionId, string? cancellationReason = null)
+    public async Task<bool> CancelPaymentLinkAsync(string transactionId, string? cancellationReason = null, CancellationToken ct = default)
     {
         if (!long.TryParse(transactionId, out var orderCode))
         {
@@ -181,7 +262,8 @@ public class PaymentService : IPaymentService
             return false;
         }
 
-        var diaPayment = await _db.dia_payments.FirstOrDefaultAsync(p => p.order_code == transactionId);
+        var diaPayment = await _db.dia_payments.FirstOrDefaultAsync(p => p.order_code == transactionId, ct);
+        var subPayment = await _db.subscription_payments.FirstOrDefaultAsync(p => p.order_code == transactionId, ct);
 
         try
         {
@@ -194,21 +276,40 @@ public class PaymentService : IPaymentService
             return false;
         }
 
-        if (diaPayment == null)
-        {
-            _logger.LogWarning("dia_payment record not found for order {OrderCode}", transactionId);
-            return true;
-        }
-
-        if (string.Equals(diaPayment.status, "pending", StringComparison.OrdinalIgnoreCase))
+        var updated = false;
+        if (diaPayment != null && string.Equals(diaPayment.status, "pending", StringComparison.OrdinalIgnoreCase))
         {
             diaPayment.status = "cancelled";
-            await _db.SaveChangesAsync();
+            updated = true;
+        }
+
+        if (subPayment != null && string.Equals(subPayment.status, "pending", StringComparison.OrdinalIgnoreCase))
+        {
+            subPayment.status = "cancelled";
+            updated = true;
+        }
+
+        if (updated)
+        {
+            await _db.SaveChangesAsync(ct);
+        }
+        else if (diaPayment == null && subPayment == null)
+        {
+            _logger.LogWarning("No payment record found for order {OrderCode}", transactionId);
         }
 
         return true;
     }
+
+    private static PaymentData BuildPaymentData(long orderCode, int amount, string description, ItemData item)
+    {
+        const string BaseUrl = "https://toranovel.id.vn";
+        return new PaymentData(
+            orderCode,
+            amount,
+            description,
+            new List<ItemData> { item },
+            $"{BaseUrl}/payment/cancel",
+            $"{BaseUrl}/payment/success");
+    }
 }
-
-
-

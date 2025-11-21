@@ -1,3 +1,5 @@
+using System.Threading;
+using System.Threading.Tasks;
 using Contract.DTOs.Request.Payment;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -26,11 +28,11 @@ public class PaymentController : AppControllerBase
 
     [HttpPost("create-link")]
     [Authorize]
-    public async Task<IActionResult> CreateLink([FromBody] CreatePaymentLinkRequest request)
+    public async Task<IActionResult> CreateLink([FromBody] CreatePaymentLinkRequest request, CancellationToken ct = default)
     {
         try
         {
-            var response = await _paymentService.CreatePaymentLinkAsync(AccountId, request.Amount);
+            var response = await _paymentService.CreateTopupLinkAsync(AccountId, request.Amount, ct);
             return Ok(response);
         }
         catch (ArgumentException ex)
@@ -44,13 +46,33 @@ public class PaymentController : AppControllerBase
         }
     }
 
+    [HttpPost("create-subscription-link")]
+    [Authorize]
+    public async Task<IActionResult> CreateSubscriptionLink([FromBody] CreateSubscriptionPaymentLinkRequest request, CancellationToken ct = default)
+    {
+        try
+        {
+            var response = await _paymentService.CreateSubscriptionLinkAsync(AccountId, request, ct);
+            return Ok(response);
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error creating subscription payment link for account {AccountId}", AccountId);
+            return StatusCode(500, new { message = "An error occurred while creating subscription payment link" });
+        }
+    }
+
     [HttpPost("webhook")]
     [AllowAnonymous]
-    public async Task<IActionResult> PayOSWebhook([FromBody] WebhookType webhookBody)
+    public async Task<IActionResult> PayOSWebhook([FromBody] WebhookType webhookBody, CancellationToken ct = default)
     {
         _logger.LogInformation("Webhook received: {WebhookBody}", System.Text.Json.JsonSerializer.Serialize(webhookBody));
-        var handledDia = await _paymentService.HandlePayOSWebhookAsync(webhookBody);
-        var handledVoice = await _voicePaymentService.HandleWebhookAsync(webhookBody);
+        var handledDia = await _paymentService.HandlePayOSWebhookAsync(webhookBody, ct);
+        var handledVoice = await _voicePaymentService.HandleWebhookAsync(webhookBody, ct);
         var handled = handledDia || handledVoice;
         _logger.LogInformation("Webhook handled - dia:{Dia} voice:{Voice}", handledDia, handledVoice);
         return Ok(new { success = handled });
@@ -58,11 +80,11 @@ public class PaymentController : AppControllerBase
 
     [HttpPost("cancel-link")]
     [Authorize]
-    public async Task<IActionResult> CancelLink([FromBody] CancelPaymentRequest request)
+    public async Task<IActionResult> CancelLink([FromBody] CancelPaymentRequest request, CancellationToken ct = default)
     {
         try
         {
-            var success = await _paymentService.CancelPaymentLinkAsync(request.TransactionId, request.CancellationReason);
+            var success = await _paymentService.CancelPaymentLinkAsync(request.TransactionId, request.CancellationReason, ct);
             if (success)
             {
                 return Ok(new { success = true, message = "Payment link cancelled successfully" });
