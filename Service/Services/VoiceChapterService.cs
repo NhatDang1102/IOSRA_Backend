@@ -9,6 +9,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Repository.DBContext;
 using Repository.Entities;
+using Repository.Utils;
 using Service.Exceptions;
 using Service.Interfaces;
 
@@ -109,7 +110,7 @@ namespace Service.Services
                 });
             }
 
-            var now = DateTime.UtcNow;
+            var now = TimezoneConverter.VietnamNow;
             var chapterVoiceRows = new List<chapter_voice>();
             foreach (var preset in newPresets)
             {
@@ -240,14 +241,14 @@ namespace Service.Services
                 row.storage_path = storageKey;
                 row.cloud_url = _voiceStorage.GetPublicUrl(storageKey);
                 row.status = "ready";
-                row.completed_at = DateTime.UtcNow;
+                row.completed_at = TimezoneConverter.VietnamNow;
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Voice synthesis failed for chapter {ChapterId} voice preset {VoiceId}", chapter.chapter_id, preset.voice_id);
                 row.status = "failed";
                 row.error_message = ex.Message;
-                row.completed_at = DateTime.UtcNow;
+                row.completed_at = TimezoneConverter.VietnamNow;
             }
             finally
             {

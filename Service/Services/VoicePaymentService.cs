@@ -8,6 +8,7 @@ using Net.payOS;
 using Net.payOS.Types;
 using Repository.DBContext;
 using Repository.Entities;
+using Repository.Utils;
 using Service.Interfaces;
 
 namespace Service.Services
@@ -43,7 +44,7 @@ namespace Service.Services
                     wallet_id = Guid.NewGuid(),
                     account_id = accountId,
                     balance_chars = 0,
-                    updated_at = DateTime.UtcNow
+                    updated_at = TimezoneConverter.VietnamNow
                 };
                 _db.voice_wallets.Add(wallet);
                 await _db.SaveChangesAsync(ct);
@@ -73,7 +74,7 @@ namespace Service.Services
                 amount_vnd = amount,
                 chars_granted = pricing.chars_granted,
                 status = "pending",
-                created_at = DateTime.UtcNow
+                created_at = TimezoneConverter.VietnamNow
             };
             _db.voice_payments.Add(record);
             await _db.SaveChangesAsync(ct);
@@ -122,7 +123,7 @@ namespace Service.Services
                 {
                     var wallet = record.voice_wallet;
                     wallet.balance_chars += (long)record.chars_granted;
-                    wallet.updated_at = DateTime.UtcNow;
+                    wallet.updated_at = TimezoneConverter.VietnamNow;
                     var newBalance = wallet.balance_chars;
                     _db.payment_receipts.Add(new payment_receipt
                     {
@@ -131,7 +132,7 @@ namespace Service.Services
                         ref_id = record.topup_id,
                         type = "voice_topup",
                         amount_vnd = record.amount_vnd,
-                        created_at = DateTime.UtcNow
+                        created_at = TimezoneConverter.VietnamNow
                     });
                     _db.voice_wallet_payments.Add(new voice_wallet_payment
                     {
@@ -141,7 +142,7 @@ namespace Service.Services
                         char_delta = (long)record.chars_granted,
                         char_after = newBalance,
                         ref_id = record.topup_id,
-                        created_at = DateTime.UtcNow,
+                        created_at = TimezoneConverter.VietnamNow,
                         note = "Voice top-up via PayOS"
                     });
                     await _db.SaveChangesAsync(ct);
@@ -196,3 +197,5 @@ namespace Service.Services
     }
 }
 }
+
+

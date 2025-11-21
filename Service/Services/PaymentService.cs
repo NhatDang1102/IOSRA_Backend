@@ -5,6 +5,7 @@ using Net.payOS;
 using Net.payOS.Types;
 using Repository.DBContext;
 using Repository.Entities;
+using Repository.Utils;
 using Service.Interfaces;
 
 namespace Service.Services;
@@ -43,7 +44,7 @@ public class PaymentService : IPaymentService
                 account_id = accountId,
                 balance_coin = 0,
                 locked_coin = 0,
-                updated_at = DateTime.UtcNow
+                updated_at = TimezoneConverter.VietnamNow
             };
             _db.dia_wallets.Add(wallet);
             await _db.SaveChangesAsync();
@@ -76,7 +77,7 @@ public class PaymentService : IPaymentService
             amount_vnd = amount,
             diamond_granted = diamondGranted,
             status = "pending",
-            created_at = DateTime.UtcNow
+            created_at = TimezoneConverter.VietnamNow
         };
         _db.dia_payments.Add(diaPayment);
         await _db.SaveChangesAsync();
@@ -131,7 +132,7 @@ public class PaymentService : IPaymentService
                 var oldBalance = wallet.balance_coin;
                 var newBalance = oldBalance + (long)diaPayment.diamond_granted;
                 wallet.balance_coin = newBalance;
-                wallet.updated_at = DateTime.UtcNow;
+                wallet.updated_at = TimezoneConverter.VietnamNow;
 
                 var walletPayment = new wallet_payment
                 {
@@ -141,7 +142,7 @@ public class PaymentService : IPaymentService
                     coin_delta = (long)diaPayment.diamond_granted,
                     coin_after = newBalance,
                     ref_id = diaPayment.topup_id,
-                    created_at = DateTime.UtcNow
+                    created_at = TimezoneConverter.VietnamNow
                 };
                 _db.wallet_payments.Add(walletPayment);
 
@@ -152,7 +153,7 @@ public class PaymentService : IPaymentService
                     ref_id = diaPayment.topup_id,
                     type = "dia_topup",
                     amount_vnd = diaPayment.amount_vnd,
-                    created_at = DateTime.UtcNow
+                    created_at = TimezoneConverter.VietnamNow
                 });
 
                 await _db.SaveChangesAsync();
@@ -208,4 +209,6 @@ public class PaymentService : IPaymentService
         return true;
     }
 }
+
+
 
