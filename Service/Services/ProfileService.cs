@@ -1,9 +1,11 @@
 using Contract.DTOs.Request.Profile;
 using Contract.DTOs.Respond.Profile;
+using Contract.DTOs.Response.Subscription;
 using Microsoft.AspNetCore.Http;
 using Repository.Interfaces;
 using Service.Exceptions;
 using Service.Helpers;
+using Repository.Utils;
 using Service.Interfaces;
 using System;
 using System.Collections.Generic;
@@ -21,13 +23,17 @@ namespace Service.Implementations
         private readonly IImageUploader _uploader;
         private readonly IOtpStore _otpStore;
         private readonly IMailSender _mail;
+        private readonly ISubscriptionService _subscriptionService;
 
-        public ProfileService(IProfileRepository profileRepo, IImageUploader uploader, IOtpStore otpStore, IMailSender mail)
+        private static readonly ISubscriptionService NoopSubscriptionService = new NullSubscriptionService();
+
+        public ProfileService(IProfileRepository profileRepo, IImageUploader uploader, IOtpStore otpStore, IMailSender mail, ISubscriptionService? subscriptionService = null)
         {
             _profileRepo = profileRepo;
             _uploader = uploader;
             _otpStore = otpStore;
             _mail = mail;
+            _subscriptionService = subscriptionService ?? NoopSubscriptionService;
         }
 
         private static string? ToDbGender(string? input)
@@ -80,6 +86,26 @@ namespace Service.Implementations
                 StrikeStatus = string.IsNullOrWhiteSpace(acc.strike_status) ? "none" : acc.strike_status,
                 StrikeRestrictedUntil = acc.strike_restricted_until,
                 VoiceCharBalance = acc.voice_wallet?.balance_chars ?? 0
+            };
+        }
+
+        public async Task<ProfileWalletResponse> GetWalletAsync(Guid accountId, CancellationToken ct = default)
+        {
+            var account = await _profileRepo.GetAccountByIdAsync(accountId, ct)
+                          ?? throw new AppException("AccountNotFound", "Account was not found.", 404);
+
+            var diaWallet = account.dia_wallet;
+            var voiceWallet = account.voice_wallet;
+            var isAuthor = account.author != null;
+
+            var subscription = await _subscriptionService.GetStatusAsync(accountId, ct);
+
+            return new ProfileWalletResponse
+            {
+                DiaBalance = diaWallet?.balance_coin ?? 0,
+                IsAuthor = isAuthor,
+                VoiceCharBalance = isAuthor ? voiceWallet?.balance_chars : null,
+                Subscription = subscription
             };
         }
 
@@ -160,5 +186,36 @@ namespace Service.Implementations
 
             _ = _mail.SendChangeEmailSuccessAsync(oldEmail, newEmail);
         }
+
+        private sealed class NullSubscriptionService : ISubscriptionService
+        {
+            public Task<IReadOnlyList<SubscriptionPlanResponse>> GetPlansAsync(CancellationToken ct = default)
+                => Task.FromResult<IReadOnlyList<SubscriptionPlanResponse>>(Array.Empty<SubscriptionPlanResponse>());
+
+            public Task<SubscriptionStatusResponse> GetStatusAsync(Guid accountId, CancellationToken ct = default)
+                => Task.FromResult(new SubscriptionStatusResponse
+                {
+                    HasActiveSubscription = false,
+                    CanClaimToday = false
+                });
+
+            public Task<SubscriptionClaimResponse> ClaimDailyAsync(Guid accountId, CancellationToken ct = default)
+                => Task.FromResult(new SubscriptionClaimResponse
+                {
+                    SubscriptionId = Guid.Empty,
+                    ClaimedDias = 0,
+                    WalletBalance = 0,
+                    ClaimedAt = TimezoneConverter.VietnamNow,
+                    NextClaimAvailableAt = null
+                });
+
+            public Task ActivateSubscriptionAsync(Guid accountId, string planCode, CancellationToken ct = default)
+                => Task.CompletedTask;
+        }
     }
 }
+
+
+
+
+

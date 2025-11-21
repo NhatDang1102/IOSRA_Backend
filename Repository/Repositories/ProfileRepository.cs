@@ -16,7 +16,10 @@ namespace Repository.Repositories
 
         public Task<account?> GetAccountByIdAsync(Guid accountId, CancellationToken ct = default)
             => _db.accounts
+                .Include(a => a.dia_wallet)
                 .Include(a => a.voice_wallet)
+                .Include(a => a.author)
+                .Include(a => a.author)
                 .FirstOrDefaultAsync(a => a.account_id == accountId, ct);
 
         public Task<reader?> GetReaderByIdAsync(Guid accountId, CancellationToken ct = default)
@@ -69,3 +72,6 @@ namespace Repository.Repositories
         }
     }
 }
+
+
+

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Threading;
 using System.Threading.Tasks;
 using Contract.DTOs.Request.Profile;
@@ -16,5 +16,7 @@ namespace Service.Interfaces
 
         Task SendChangeEmailOtpAsync(Guid accountId, ChangeEmailRequest req, CancellationToken ct = default);
         Task VerifyChangeEmailAsync(Guid accountId, VerifyChangeEmailRequest req, CancellationToken ct = default);
+
+        Task<ProfileWalletResponse> GetWalletAsync(Guid accountId, CancellationToken ct = default);
     }
 }

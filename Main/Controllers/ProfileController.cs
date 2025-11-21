@@ -25,6 +25,13 @@ public class ProfileController : AppControllerBase
         return Ok(res);
     }
 
+    [HttpGet("wallet")]
+    public async Task<IActionResult> GetWallet(CancellationToken ct)
+    {
+        var res = await _profile.GetWalletAsync(AccountId, ct);
+        return Ok(res);
+    }
+
     [HttpPut]
     public async Task<IActionResult> Update([FromBody] ProfileUpdateRequest req, CancellationToken ct)
     {
@@ -55,3 +62,4 @@ public class ProfileController : AppControllerBase
         return Ok(new { message = "Email updated successfully." });
     }
 }
+
