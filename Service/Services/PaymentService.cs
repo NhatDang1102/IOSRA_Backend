@@ -69,8 +69,9 @@ public class PaymentService : IPaymentService
         var orderCode = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
         var topupId = Guid.NewGuid();
 
-        var item = new ItemData($"Topup {pricing.diamond_granted} dias", 1, (int)amount);
-        var paymentData = BuildPaymentData(orderCode, (int)amount, $"Topup {pricing.diamond_granted} dias", item);
+        var description = $"Topup {pricing.diamond_granted} dias";
+        var item = new ItemData(description, 1, (int)amount);
+        var paymentData = BuildPaymentData(orderCode, (int)amount, description, item);
 
         var result = await _payOS.createPaymentLink(paymentData);
 
@@ -117,8 +118,9 @@ public class PaymentService : IPaymentService
         }
 
         var orderCode = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
-        var item = new ItemData($"Subscription {plan.plan_name}", 1, (int)plan.price_vnd);
-        var paymentData = BuildPaymentData(orderCode, (int)plan.price_vnd, $"Subscription {plan.plan_name}", item);
+        var description = $"Subscription {plan.plan_name}";
+        var item = new ItemData(description, 1, (int)plan.price_vnd);
+        var paymentData = BuildPaymentData(orderCode, (int)plan.price_vnd, description, item);
 
         var result = await _payOS.createPaymentLink(paymentData);
 
@@ -304,12 +306,25 @@ public class PaymentService : IPaymentService
     private static PaymentData BuildPaymentData(long orderCode, int amount, string description, ItemData item)
     {
         const string BaseUrl = "https://toranovel.id.vn";
+        var normalizedDescription = NormalizeDescription(description);
         return new PaymentData(
             orderCode,
             amount,
-            description,
+            normalizedDescription,
             new List<ItemData> { item },
             $"{BaseUrl}/payment/cancel",
             $"{BaseUrl}/payment/success");
     }
+
+    private static string NormalizeDescription(string? description)
+    {
+        if (string.IsNullOrWhiteSpace(description))
+        {
+            return "IOSRA Payment";
+        }
+
+        var trimmed = description.Trim();
+        return trimmed.Length <= 25 ? trimmed : trimmed[..25];
+    }
 }
+
