@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
@@ -28,7 +28,7 @@ public partial class dia_payment
 
     public ulong diamond_granted { get; set; }
 
-    [Column(TypeName = "enum('pending','success','failed','refunded')")]
+    [Column(TypeName = "enum('pending','success','failed','refunded','cancelled')")]
     public string status { get; set; } = null!;
 
     [Column(TypeName = "datetime")]
@@ -38,3 +38,4 @@ public partial class dia_payment
     [InverseProperty("dia_payments")]
     public virtual dia_wallet wallet { get; set; } = null!;
 }
+

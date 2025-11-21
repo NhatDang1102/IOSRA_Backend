@@ -180,16 +180,32 @@ public class PaymentService : IPaymentService
             return false;
         }
 
+        var diaPayment = await _db.dia_payments.FirstOrDefaultAsync(p => p.order_code == transactionId);
+
         try
         {
             await _payOS.cancelPaymentLink(orderCode, cancellationReason ?? "User cancelled payment");
             _logger.LogInformation("Successfully cancelled payment link with order code: {OrderCode}", orderCode);
-            return true;
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to cancel payment link with order code: {OrderCode}", orderCode);
             return false;
         }
+
+        if (diaPayment == null)
+        {
+            _logger.LogWarning("dia_payment record not found for order {OrderCode}", transactionId);
+            return true;
+        }
+
+        if (string.Equals(diaPayment.status, "pending", StringComparison.OrdinalIgnoreCase))
+        {
+            diaPayment.status = "cancelled";
+            await _db.SaveChangesAsync();
+        }
+
+        return true;
     }
 }
+

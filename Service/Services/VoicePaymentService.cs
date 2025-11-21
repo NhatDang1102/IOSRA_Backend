@@ -161,23 +161,38 @@ namespace Service.Services
             return true;
         }
 
-        public async Task<bool> CancelPaymentLinkAsync(string transactionId, string? cancellationReason = null, CancellationToken ct = default)
+    public async Task<bool> CancelPaymentLinkAsync(string transactionId, string? cancellationReason = null, CancellationToken ct = default)
+    {
+        if (!long.TryParse(transactionId, out var orderCode))
         {
-            if (!long.TryParse(transactionId, out var orderCode))
-            {
-                return false;
-            }
-
-            try
-            {
-                await _payOS.cancelPaymentLink(orderCode, cancellationReason ?? "User cancelled voice payment");
-                return true;
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Failed to cancel voice payment link {OrderCode}", orderCode);
-                return false;
-            }
+            return false;
         }
+
+        var record = await _db.voice_payments.FirstOrDefaultAsync(p => p.order_code == transactionId, ct);
+
+        try
+        {
+            await _payOS.cancelPaymentLink(orderCode, cancellationReason ?? "User cancelled voice payment");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to cancel voice payment link {OrderCode}", orderCode);
+            return false;
+        }
+
+        if (record == null)
+        {
+            _logger.LogWarning("voice_payment record not found for order {OrderCode}", transactionId);
+            return true;
+        }
+
+        if (string.Equals(record.status, "pending", StringComparison.OrdinalIgnoreCase))
+        {
+            record.status = "cancelled";
+            await _db.SaveChangesAsync(ct);
+        }
+
+        return true;
     }
+}
 }

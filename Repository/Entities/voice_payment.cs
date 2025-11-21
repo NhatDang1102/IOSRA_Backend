@@ -27,7 +27,7 @@ public partial class voice_payment
     [Column(TypeName = "bigint unsigned")]
     public ulong chars_granted { get; set; }
 
-    [Column(TypeName = "enum('pending','success','failed','refunded')")]
+    [Column(TypeName = "enum('pending','success','failed','refunded','cancelled')")]
     public string status { get; set; } = null!;
 
     [Column(TypeName = "datetime")]
@@ -37,3 +37,4 @@ public partial class voice_payment
     [InverseProperty("voice_payments")]
     public virtual voice_wallet voice_wallet { get; set; } = null!;
 }
+
