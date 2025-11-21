@@ -1,5 +1,6 @@
 using Contract.DTOs.Request.Chapter;
 using Contract.DTOs.Respond.Chapter;
+using Contract.DTOs.Response.Voice;
 using Repository.Entities;
 using Repository.Interfaces;
 using Repository.Utils;
@@ -257,7 +258,7 @@ namespace Service.Services
 
             if (notifyFollowers)
             {
-                var authorName = story.author?.account.username ?? "Tác giả";
+                var authorName = story.author?.account.username ?? "TÃƒÆ’Ã‚Â¡c giÃƒÂ¡Ã‚ÂºÃ‚Â£";
                 await _followerNotificationService.NotifyChapterPublishedAsync(
                     story.author_id,
                     authorName,
@@ -449,8 +450,33 @@ namespace Service.Services
                 CreatedAt = chapter.created_at,
                 UpdatedAt = chapter.updated_at,
                 SubmittedAt = chapter.submitted_at,
-                PublishedAt = chapter.published_at
+                PublishedAt = chapter.published_at,
+                Voices = MapVoices(chapter)
             };
+        }
+
+        private static VoiceChapterVoiceResponse[] MapVoices(chapter chapter)
+        {
+            if (chapter.chapter_voices == null || chapter.chapter_voices.Count == 0)
+            {
+                return Array.Empty<VoiceChapterVoiceResponse>();
+            }
+
+            return chapter.chapter_voices
+                .OrderBy(v => v.voice?.voice_name)
+                .Select(v => new VoiceChapterVoiceResponse
+                {
+                    VoiceId = v.voice_id,
+                    VoiceName = v.voice?.voice_name ?? string.Empty,
+                    VoiceCode = v.voice?.voice_code ?? string.Empty,
+                    Status = v.status,
+                    AudioUrl = string.IsNullOrWhiteSpace(v.storage_path) ? v.cloud_url : v.storage_path,
+                    RequestedAt = v.requested_at,
+                    CompletedAt = v.completed_at,
+                    CharCost = v.char_cost,
+                    ErrorMessage = v.error_message
+                })
+                .ToArray();
         }
 
         private static ChapterListItemResponse MapChapterListItem(chapter chapter)

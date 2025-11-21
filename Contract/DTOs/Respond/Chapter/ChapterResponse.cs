@@ -1,4 +1,5 @@
-﻿using System;
+using System;
+using Contract.DTOs.Response.Voice;
 
 namespace Contract.DTOs.Respond.Chapter
 {
@@ -25,5 +26,6 @@ namespace Contract.DTOs.Respond.Chapter
         public DateTime UpdatedAt { get; set; }
         public DateTime? SubmittedAt { get; set; }
         public DateTime? PublishedAt { get; set; }
+        public VoiceChapterVoiceResponse[] Voices { get; set; } = Array.Empty<VoiceChapterVoiceResponse>();
     }
 }

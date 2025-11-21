@@ -123,6 +123,7 @@ namespace Service.Services
                     var wallet = record.voice_wallet;
                     wallet.balance_chars += (long)record.chars_granted;
                     wallet.updated_at = DateTime.UtcNow;
+                    var newBalance = wallet.balance_chars;
                     _db.payment_receipts.Add(new payment_receipt
                     {
                         receipt_id = Guid.NewGuid(),
@@ -131,6 +132,17 @@ namespace Service.Services
                         type = "voice_topup",
                         amount_vnd = record.amount_vnd,
                         created_at = DateTime.UtcNow
+                    });
+                    _db.voice_wallet_payments.Add(new voice_wallet_payment
+                    {
+                        trs_id = Guid.NewGuid(),
+                        wallet_id = wallet.wallet_id,
+                        type = "topup",
+                        char_delta = (long)record.chars_granted,
+                        char_after = newBalance,
+                        ref_id = record.topup_id,
+                        created_at = DateTime.UtcNow,
+                        note = "Voice top-up via PayOS"
                     });
                     await _db.SaveChangesAsync(ct);
                     _logger.LogInformation("Voice wallet {WalletId} credited {Chars} chars", wallet.wallet_id, record.chars_granted);

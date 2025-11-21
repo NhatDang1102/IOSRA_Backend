@@ -150,10 +150,15 @@ CREATE TABLE language_list (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 CREATE TABLE voice_list (
-  voice_id   CHAR(36) NOT NULL,
-  voice_name VARCHAR(64) NOT NULL,
+  voice_id          CHAR(36) NOT NULL,
+  voice_name        VARCHAR(64) NOT NULL,
+  voice_code        VARCHAR(32) NOT NULL,
+  provider_voice_id VARCHAR(128) NOT NULL,
+  description       VARCHAR(256) NULL,
+  is_active         TINYINT(1) NOT NULL DEFAULT 1,
   PRIMARY KEY (voice_id),
-  UNIQUE KEY ux_voice_name (voice_name)
+  UNIQUE KEY ux_voice_name (voice_name),
+  UNIQUE KEY ux_voice_code (voice_code)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 CREATE TABLE chapters (
@@ -290,15 +295,21 @@ CREATE TABLE chapter_localizations (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 CREATE TABLE chapter_voices (
-  chapter_id CHAR(36) NOT NULL,
-  voice_id   CHAR(36) NOT NULL,
-  cloud_url  VARCHAR(512) NULL,
-  PRIMARY KEY (chapter_id, voice_id),
-  KEY fk_chvoice_voice (voice_id),
-  CONSTRAINT fk_chvoice_chapter FOREIGN KEY (chapter_id)
-    REFERENCES chapters(chapter_id) ON DELETE CASCADE ON UPDATE CASCADE,
-  CONSTRAINT fk_chvoice_voice FOREIGN KEY (voice_id)
-    REFERENCES voice_list(voice_id) ON DELETE CASCADE ON UPDATE CASCADE
+    chapter_id   CHAR(36) NOT NULL,
+    voice_id     CHAR(36) NOT NULL,
+    cloud_url    VARCHAR(512) NULL,
+    storage_path VARCHAR(512) NULL,
+    status       ENUM('pending','processing','ready','failed') NOT NULL DEFAULT 'pending',
+    requested_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    completed_at DATETIME NULL,
+    char_cost    INT NOT NULL DEFAULT 0,
+    error_message TEXT NULL,
+    PRIMARY KEY (chapter_id, voice_id),
+    KEY fk_chvoice_voice (voice_id),
+    CONSTRAINT fk_chvoice_chapter FOREIGN KEY (chapter_id)
+      REFERENCES chapters(chapter_id) ON DELETE CASCADE ON UPDATE CASCADE,
+    CONSTRAINT fk_chvoice_voice FOREIGN KEY (voice_id)
+      REFERENCES voice_list(voice_id) ON DELETE CASCADE ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 CREATE TABLE chapter_purchase_log (
@@ -431,6 +442,21 @@ CREATE TABLE voice_payment (
     REFERENCES voice_wallet(wallet_id) ON DELETE RESTRICT ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
+CREATE TABLE voice_wallet_payment (
+  trs_id     CHAR(36) NOT NULL,
+  wallet_id  CHAR(36) NOT NULL,
+  type       ENUM('topup','purchase','refund') NOT NULL DEFAULT 'purchase',
+  char_delta BIGINT NOT NULL,
+  char_after BIGINT NOT NULL,
+  ref_id     CHAR(36) NULL,
+  note       VARCHAR(255) NULL,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (trs_id),
+  KEY ix_voice_wallet_payment_wallet (wallet_id),
+  CONSTRAINT fk_voice_wallet_payment_wallet FOREIGN KEY (wallet_id)
+    REFERENCES voice_wallet(wallet_id) ON DELETE CASCADE ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
 CREATE TABLE payment_receipt (
   receipt_id  CHAR(36) NOT NULL,
   account_id  CHAR(36) NOT NULL,
@@ -472,6 +498,18 @@ CREATE TABLE wallet_payment (
   CONSTRAINT fk_wpay_wallet FOREIGN KEY (wallet_id)
     REFERENCES dia_wallet(wallet_id) ON DELETE RESTRICT ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+INSERT INTO voice_list (voice_id, voice_name, voice_code, provider_voice_id, description, is_active)
+VALUES
+  ('6f800e5e-7d15-4a7d-9d35-1c50b0f395e5', 'Nam trầm', 'male_low', 'TxGEqnHWrfWFTfGW9XjX', 'Male deep tone', 1),
+  ('a1300832-4e02-426a-87c6-6b436a3d7909', 'Nam cao', 'male_high', 'VR6AewLTigWG4xSOukaG', 'Male bright tone', 1),
+  ('4fcb206b-544f-4d32-920f-b1c3159af645', 'Nữ trầm', 'female_low', '21m00Tcm4TlvDq8ikWAM', 'Female warm tone', 1),
+  ('9c77afca-88f9-41bc-a13d-08d601b93a60', 'Nữ cao', 'female_high', 'AZnzlk1XvdvUeBnXmlld', 'Female bright tone', 1)
+ON DUPLICATE KEY UPDATE
+  voice_name = VALUES(voice_name),
+  provider_voice_id = VALUES(provider_voice_id),
+  description = VALUES(description),
+  is_active = VALUES(is_active);
 
 -- ===================== Requests & moderation =====================
 CREATE TABLE op_requests (

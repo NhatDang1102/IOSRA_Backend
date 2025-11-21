@@ -30,12 +30,14 @@ namespace Repository.Repositories
             => _db.chapters
                   .Include(c => c.story).ThenInclude(s => s.author).ThenInclude(a => a.account)
                   .Include(c => c.language)
+                  .Include(c => c.chapter_voices).ThenInclude(cv => cv.voice)
                   .FirstOrDefaultAsync(c => c.chapter_id == chapterId, ct);
 
         public Task<chapter?> GetForAuthorAsync(Guid storyId, Guid chapterId, Guid authorId, CancellationToken ct = default)
             => _db.chapters
                   .Include(c => c.story).ThenInclude(s => s.author).ThenInclude(a => a.account)
                   .Include(c => c.language)
+                  .Include(c => c.chapter_voices).ThenInclude(cv => cv.voice)
                   .FirstOrDefaultAsync(c => c.chapter_id == chapterId && c.story_id == storyId && c.story.author_id == authorId, ct);
 
         public async Task<IReadOnlyList<chapter>> GetByStoryAsync(Guid storyId, IEnumerable<string>? statuses = null, CancellationToken ct = default)

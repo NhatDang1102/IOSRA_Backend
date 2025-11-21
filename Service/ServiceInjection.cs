@@ -31,6 +31,7 @@ namespace Service
                 return new AmazonS3Client(settings.AccessKeyId, settings.SecretAccessKey, config);
             });
             services.AddSingleton<IChapterContentStorage, CloudflareR2ChapterStorage>();
+            services.AddSingleton<IVoiceAudioStorage, CloudflareR2VoiceStorage>();
 
             services.AddHttpClient<OpenAiService>((sp, client) =>
             {
@@ -40,6 +41,18 @@ namespace Service
                 client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", settings.ApiKey);
                 client.DefaultRequestHeaders.Accept.Clear();
                 client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+            });
+            services.AddHttpClient<IElevenLabsClient, ElevenLabsClient>((sp, client) =>
+            {
+                var settings = sp.GetRequiredService<IOptions<ElevenLabsSettings>>().Value;
+                var baseUrl = string.IsNullOrWhiteSpace(settings.BaseUrl) ? "https://api.elevenlabs.io" : settings.BaseUrl.TrimEnd('/');
+                client.BaseAddress = new Uri($"{baseUrl}/");
+                if (!string.IsNullOrWhiteSpace(settings.ApiKey))
+                {
+                    client.DefaultRequestHeaders.Add("xi-api-key", settings.ApiKey);
+                }
+                client.DefaultRequestHeaders.Accept.Clear();
+                client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("audio/mpeg"));
             });
             services.AddTransient<IOpenAiModerationService>(sp => sp.GetRequiredService<OpenAiService>());
             services.AddTransient<IOpenAiImageService>(sp => sp.GetRequiredService<OpenAiService>());
@@ -68,6 +81,7 @@ namespace Service
             services.AddScoped<IChapterPricingService, ChapterPricingService>();
             services.AddScoped<IPaymentService, PaymentService>();
             services.AddScoped<IVoicePaymentService, VoicePaymentService>();
+            services.AddScoped<IVoiceChapterService, VoiceChapterService>();
             services.AddScoped<IReportService, ReportService>();
             services.AddScoped<IContentModHandlingService, ContentModHandlingService>();
             services.AddHostedService<StoryWeeklyViewSyncJob>();
