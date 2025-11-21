@@ -1,4 +1,4 @@
-ï»¿using System;
+using System;
 using System.Collections.Generic;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata;
@@ -75,6 +75,8 @@ public partial class AppDbContext : DbContext
     public virtual DbSet<subcription> subcriptions { get; set; }
 
     public virtual DbSet<subscription_plan> subscription_plans { get; set; }
+
+    public virtual DbSet<subscription_payment> subscription_payments { get; set; }
 
     public virtual DbSet<tag> tags { get; set; }
 
@@ -442,9 +444,9 @@ public partial class AppDbContext : DbContext
             entity.Property(e => e.created_at).HasDefaultValueSql("CURRENT_TIMESTAMP");
             entity.Property(e => e.status).HasDefaultValueSql("'pending'");
 
-            // requester -> account (DUY NH?T quan h? nÃ y; khÃ´ng quan h? nÃ o khÃ¡c t?i account)
+            // requester -> account (DUY NH?T quan h? này; không quan h? nào khác t?i account)
             entity.HasOne(d => d.requester)
-                .WithMany(p => p.op_requests_as_requester)   // <-- tr? dÃºng collection
+                .WithMany(p => p.op_requests_as_requester)   // <-- tr? dúng collection
                 .HasForeignKey(d => d.requester_id)
                 .OnDelete(DeleteBehavior.Restrict)
                 .HasConstraintName("fk_opreq_requester");
@@ -553,8 +555,30 @@ public partial class AppDbContext : DbContext
         modelBuilder.Entity<subscription_plan>(entity =>
         {
             entity.HasKey(e => e.plan_code).HasName("PRIMARY");
+            entity.Property(e => e.plan_code).ValueGeneratedNever();
+            entity.Property(e => e.plan_name).HasMaxLength(64);
+            entity.Property(e => e.price_vnd).HasColumnType("bigint unsigned");
+            entity.Property(e => e.daily_dias).HasDefaultValue(0);
         });
 
+        modelBuilder.Entity<subscription_payment>(entity =>
+        {
+            entity.HasKey(e => e.payment_id).HasName("PRIMARY");
+
+            entity.Property(e => e.payment_id).ValueGeneratedNever();
+            entity.Property(e => e.created_at).HasDefaultValueSql("CURRENT_TIMESTAMP");
+            entity.Property(e => e.status).HasDefaultValueSql("'pending'");
+
+            entity.HasOne(d => d.account).WithMany(p => p.subscription_payments)
+                .HasForeignKey(d => d.account_id)
+                .OnDelete(DeleteBehavior.Cascade)
+                .HasConstraintName("fk_subpay_account");
+
+            entity.HasOne(d => d.plan).WithMany(p => p.subscription_payments)
+                .HasForeignKey(d => d.plan_code)
+                .OnDelete(DeleteBehavior.Cascade)
+                .HasConstraintName("fk_subpay_plan");
+        });
         modelBuilder.Entity<tag>(entity =>
         {
             entity.HasKey(e => e.tag_id).HasName("PRIMARY");
@@ -608,5 +632,10 @@ public partial class AppDbContext : DbContext
 
     partial void OnModelCreatingPartial(ModelBuilder modelBuilder);
 }
+
+
+
+
+
 
 

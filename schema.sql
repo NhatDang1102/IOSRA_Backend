@@ -470,6 +470,24 @@ CREATE TABLE payment_receipt (
     REFERENCES account(account_id) ON DELETE CASCADE ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
+CREATE TABLE subscription_payment (
+  payment_id  CHAR(36) NOT NULL,
+  account_id  CHAR(36) NOT NULL,
+  plan_code   VARCHAR(32) NOT NULL,
+  provider    VARCHAR(50) NOT NULL,
+  order_code  VARCHAR(50) NOT NULL,
+  amount_vnd  BIGINT UNSIGNED NOT NULL,
+  status      ENUM('pending','success','failed','cancelled') NOT NULL DEFAULT 'pending',
+  created_at  DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (payment_id),
+  UNIQUE KEY ux_sub_payment_order (order_code),
+  KEY ix_sub_payment_account (account_id),
+  KEY ix_sub_payment_plan (plan_code),
+  CONSTRAINT fk_subpay_account FOREIGN KEY (account_id)
+    REFERENCES account(account_id) ON DELETE CASCADE ON UPDATE CASCADE,
+  CONSTRAINT fk_subpay_plan FOREIGN KEY (plan_code)
+    REFERENCES subscription_plan(plan_code) ON DELETE CASCADE ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 CREATE TABLE dia_payment (
   topup_id        CHAR(36) NOT NULL,
   wallet_id       CHAR(36) NOT NULL,
@@ -556,9 +574,10 @@ CREATE TABLE reports (
 CREATE TABLE subscription_plan (
   plan_code        VARCHAR(32) NOT NULL,
   plan_name        VARCHAR(64) NOT NULL,
-  price_coin       INT UNSIGNED NOT NULL,
+  price_vnd       BIGINT UNSIGNED NOT NULL,
   daily_claim_limit INT UNSIGNED NOT NULL,
   duration_days    INT UNSIGNED NOT NULL,
+  daily_dias       INT UNSIGNED NOT NULL DEFAULT 0,
   PRIMARY KEY (plan_code)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
@@ -579,3 +598,11 @@ CREATE TABLE subcriptions (
     REFERENCES subscription_plan(plan_code) ON DELETE RESTRICT ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
+
+
+INSERT INTO subscription_plan (plan_code, plan_name, price_vnd, daily_claim_limit, duration_days, daily_dias)
+VALUES ('premium_month', 'Premium Monthly', 199000, 1, 30, 50)
+ON DUPLICATE KEY UPDATE
+  price_vnd = VALUES(price_vnd),
+  duration_days = VALUES(duration_days),
+  daily_dias = VALUES(daily_dias);

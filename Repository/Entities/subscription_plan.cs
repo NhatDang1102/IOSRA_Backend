@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
@@ -16,12 +16,18 @@ public partial class subscription_plan
     [StringLength(64)]
     public string plan_name { get; set; } = null!;
 
-    public uint price_coin { get; set; }
+    [Column(TypeName = "bigint unsigned")]
+    public ulong price_vnd { get; set; }
 
     public uint daily_claim_limit { get; set; }
 
     public uint duration_days { get; set; }
 
+    public uint daily_dias { get; set; }
+
     [InverseProperty("plan_codeNavigation")]
     public virtual ICollection<subcription> subcriptions { get; set; } = new List<subcription>();
+
+    [InverseProperty("plan")]
+    public virtual ICollection<subscription_payment> subscription_payments { get; set; } = new List<subscription_payment>();
 }

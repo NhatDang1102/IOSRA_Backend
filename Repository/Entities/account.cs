@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
@@ -74,8 +74,12 @@ public partial class account
 
     [InverseProperty("user")]
     public virtual ICollection<subcription> subcriptions { get; set; } = new List<subcription>();
+
     public virtual ICollection<op_request> op_requests_as_requester { get; set; } = new List<op_request>();
 
     [InverseProperty("account")]
     public virtual ICollection<payment_receipt> payment_receipts { get; set; } = new List<payment_receipt>();
+
+    [InverseProperty("account")]
+    public virtual ICollection<subscription_payment> subscription_payments { get; set; } = new List<subscription_payment>();
 }
