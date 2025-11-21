@@ -17,7 +17,7 @@ public class ExceptionHandlingMiddleware
         _next = next;
         _logger = logger;
     }
-
+    //bat loi
     public async Task InvokeAsync(HttpContext context)
     {
         try
