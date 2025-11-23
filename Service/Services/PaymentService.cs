@@ -305,7 +305,7 @@ public class PaymentService : IPaymentService
 
     private static PaymentData BuildPaymentData(long orderCode, int amount, string description, ItemData item)
     {
-        const string BaseUrl = "https://toranovel.id.vn";
+        const string BaseUrl = "https://iosra-web.vercel.app";
         var normalizedDescription = NormalizeDescription(description);
         return new PaymentData(
             orderCode,

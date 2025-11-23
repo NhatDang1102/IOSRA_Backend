@@ -59,8 +59,8 @@ namespace Service.Services
                 (int)amount,
                 $"Voice topup {pricing.chars_granted} chars",
                 new List<ItemData> { item },
-                "https://toranovel.id.vn/voice-payment/cancel",
-                "https://toranovel.id.vn/voice-payment/success"
+                "https://iosra-web.vercel.app/payment/cancel",
+                "https://iosra-web.vercel.app/payment/success"
             );
 
             var result = await _payOS.createPaymentLink(paymentData);
