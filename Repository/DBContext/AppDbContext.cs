@@ -40,6 +40,8 @@ public partial class AppDbContext : DbContext
 
     public virtual DbSet<chapter_voice> chapter_voices { get; set; }
 
+    public virtual DbSet<author_rank_upgrade_request> author_rank_upgrade_requests { get; set; }
+
     public virtual DbSet<content_approve> content_approves { get; set; }
 
     public virtual DbSet<dia_payment> dia_payments { get; set; }
@@ -177,6 +179,29 @@ public partial class AppDbContext : DbContext
         modelBuilder.Entity<author_rank>(entity =>
         {
             entity.HasKey(e => e.rank_id).HasName("PRIMARY");
+        });
+
+        modelBuilder.Entity<author_rank_upgrade_request>(entity =>
+        {
+            entity.HasKey(e => e.request_id).HasName("PRIMARY");
+
+            entity.Property(e => e.request_id).ValueGeneratedNever();
+            entity.Property(e => e.created_at).HasDefaultValueSql("CURRENT_TIMESTAMP");
+
+            entity.HasOne(d => d.author).WithMany(p => p.rank_upgrade_requests)
+                .HasForeignKey(d => d.author_id)
+                .OnDelete(DeleteBehavior.Cascade)
+                .HasConstraintName("fk_rank_upgrade_author");
+
+            entity.HasOne(d => d.target_rank).WithMany()
+                .HasForeignKey(d => d.target_rank_id)
+                .OnDelete(DeleteBehavior.Cascade)
+                .HasConstraintName("fk_rank_upgrade_target");
+
+            entity.HasOne(d => d.moderator).WithMany()
+                .HasForeignKey(d => d.omod_id)
+                .OnDelete(DeleteBehavior.SetNull)
+                .HasConstraintName("fk_rank_upgrade_omod");
         });
 
         modelBuilder.Entity<chapter>(entity =>

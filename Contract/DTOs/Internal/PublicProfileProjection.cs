@@ -17,6 +17,8 @@ namespace Contract.DTOs.Internal
         public bool AuthorRestricted { get; set; }
         public bool AuthorVerified { get; set; }
         public string? AuthorRankName { get; set; }
+        public decimal? AuthorRankRewardRate { get; set; }
+        public uint? AuthorRankMinFollowers { get; set; }
         public int FollowerCount { get; set; }
         public int PublishedStoryCount { get; set; }
         public DateTime? LatestPublishedAt { get; set; }

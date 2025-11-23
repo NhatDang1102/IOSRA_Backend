@@ -20,5 +20,20 @@ namespace Contract.DTOs.Respond.Profile
         public string StrikeStatus { get; set; } = "none";
         public DateTime? StrikeRestrictedUntil { get; set; }
         public long VoiceCharBalance { get; set; }
+        public bool IsAuthor { get; set; }
+        public AuthorProfileSummary? Author { get; set; }
+    }
+
+    public class AuthorProfileSummary
+    {
+        public Guid AuthorId { get; set; }
+        public bool IsRestricted { get; set; }
+        public bool IsVerified { get; set; }
+        public uint TotalFollower { get; set; }
+        public uint TotalStory { get; set; }
+        public Guid? RankId { get; set; }
+        public string? RankName { get; set; }
+        public decimal? RankRewardRate { get; set; }
+        public uint? RankMinFollowers { get; set; }
     }
 }

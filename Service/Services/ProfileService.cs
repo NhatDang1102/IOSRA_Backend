@@ -73,6 +73,24 @@ namespace Service.Implementations
             var reader = await _profileRepo.GetReaderByIdAsync(accountId, ct)
                          ?? throw new AppException("ReaderProfileMissing", "Reader profile was not found.", 404);
 
+            var author = acc.author;
+            AuthorProfileSummary? authorSummary = null;
+            if (author is not null)
+            {
+                authorSummary = new AuthorProfileSummary
+                {
+                    AuthorId = author.account_id,
+                    IsRestricted = author.restricted,
+                    IsVerified = author.verified_status,
+                    TotalFollower = author.total_follower,
+                    TotalStory = author.total_story,
+                    RankId = author.rank_id,
+                    RankName = author.rank?.rank_name,
+                    RankRewardRate = author.rank?.reward_rate,
+                    RankMinFollowers = author.rank?.min_followers
+                };
+            }
+
             return new ProfileResponse
             {
                 AccountId = acc.account_id,
@@ -85,7 +103,9 @@ namespace Service.Implementations
                 Strike = acc.strike,
                 StrikeStatus = string.IsNullOrWhiteSpace(acc.strike_status) ? "none" : acc.strike_status,
                 StrikeRestrictedUntil = acc.strike_restricted_until,
-                VoiceCharBalance = acc.voice_wallet?.balance_chars ?? 0
+                VoiceCharBalance = acc.voice_wallet?.balance_chars ?? 0,
+                IsAuthor = author is not null,
+                Author = authorSummary
             };
         }
 

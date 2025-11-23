@@ -19,6 +19,8 @@ namespace Contract.DTOs.Respond.Profile
     {
         public Guid AuthorId { get; set; }
         public string? RankName { get; set; }
+        public decimal? RankRewardRate { get; set; }
+        public uint? RankMinFollowers { get; set; }
         public bool IsRestricted { get; set; }
         public bool IsVerified { get; set; }
         public int FollowerCount { get; set; }

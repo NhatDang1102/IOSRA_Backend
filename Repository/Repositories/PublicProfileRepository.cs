@@ -37,6 +37,8 @@ namespace Repository.Repositories
                     AuthorRestricted = a.author != null && a.author.restricted,
                     AuthorVerified = a.author != null && a.author.verified_status,
                     AuthorRankName = a.author != null && a.author.rank != null ? a.author.rank.rank_name : null,
+                    AuthorRankRewardRate = a.author != null && a.author.rank != null ? (decimal?)a.author.rank.reward_rate : null,
+                    AuthorRankMinFollowers = a.author != null && a.author.rank != null ? (uint?)a.author.rank.min_followers : null,
                     FollowerCount = a.author != null
                         ? _db.follows.Count(f => f.followee_id == a.account_id)
                         : 0,

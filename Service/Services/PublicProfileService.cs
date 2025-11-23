@@ -92,6 +92,8 @@ namespace Service.Services
                 {
                     AuthorId = projection.AccountId,
                     RankName = projection.AuthorRankName,
+                    RankRewardRate = projection.AuthorRankRewardRate,
+                    RankMinFollowers = projection.AuthorRankMinFollowers,
                     IsRestricted = projection.AuthorRestricted,
                     IsVerified = projection.AuthorVerified,
                     FollowerCount = projection.FollowerCount,

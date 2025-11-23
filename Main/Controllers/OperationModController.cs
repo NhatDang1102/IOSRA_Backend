@@ -13,10 +13,12 @@ namespace Main.Controllers
     public class OperationModController : AppControllerBase
     {
         private readonly IOperationModService _service;
+        private readonly IAuthorRankPromotionService _rankPromotionService;
 
-        public OperationModController(IOperationModService service)
+        public OperationModController(IOperationModService service, IAuthorRankPromotionService rankPromotionService)
         {
             _service = service;
+            _rankPromotionService = rankPromotionService;
         }
 
         [HttpGet("requests")]
@@ -37,6 +39,27 @@ namespace Main.Controllers
         public async Task<IActionResult> Reject([FromRoute] Guid requestId, [FromBody] RejectAuthorUpgradeRequest request, CancellationToken ct)
         {
             await _service.RejectAsync(requestId, AccountId, request, ct);
+            return Ok(new { message = "Rejected" });
+        }
+
+        [HttpGet("rank-requests")]
+        public async Task<IActionResult> ListRankRequests([FromQuery] string? status, CancellationToken ct)
+        {
+            var result = await _rankPromotionService.ListForModerationAsync(status, ct);
+            return Ok(result);
+        }
+
+        [HttpPost("rank-requests/{requestId:guid}/approve")]
+        public async Task<IActionResult> ApproveRankRequest([FromRoute] Guid requestId, [FromBody] RankPromotionApproveRequest? request, CancellationToken ct)
+        {
+            await _rankPromotionService.ApproveAsync(requestId, AccountId, request?.Note, ct);
+            return Ok(new { message = "Approved" });
+        }
+
+        [HttpPost("rank-requests/{requestId:guid}/reject")]
+        public async Task<IActionResult> RejectRankRequest([FromRoute] Guid requestId, [FromBody] RankPromotionRejectRequest request, CancellationToken ct)
+        {
+            await _rankPromotionService.RejectAsync(requestId, AccountId, request, ct);
             return Ok(new { message = "Rejected" });
         }
 
