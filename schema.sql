@@ -63,6 +63,9 @@ CREATE TABLE author (
   verified_status   TINYINT(1) NOT NULL DEFAULT 0,
   total_story       INT UNSIGNED NOT NULL DEFAULT 0,
   total_follower    INT UNSIGNED NOT NULL DEFAULT 0,
+  revenue_balance_vnd   BIGINT NOT NULL DEFAULT 0,
+  revenue_pending_vnd   BIGINT NOT NULL DEFAULT 0,
+  revenue_withdrawn_vnd BIGINT NOT NULL DEFAULT 0,
   PRIMARY KEY (account_id),
   KEY fk_author_rank (rank_id),
   CONSTRAINT fk_author_account FOREIGN KEY (account_id)
@@ -169,7 +172,7 @@ CREATE TABLE chapters (
   title        VARCHAR(255) NOT NULL,
   summary      TEXT NULL,
   dias_price   INT UNSIGNED NOT NULL DEFAULT 0,
-  access_type  ENUM('free','coin','sub_only') NOT NULL DEFAULT 'free',
+  access_type  ENUM('free','dias','sub_only') NOT NULL DEFAULT 'free',
   content_url  VARCHAR(512) NULL,
   word_count   INT UNSIGNED NOT NULL DEFAULT 0,
   status       ENUM('draft','pending','rejected','published','hidden','removed') NOT NULL DEFAULT 'draft',
@@ -533,7 +536,7 @@ ON DUPLICATE KEY UPDATE
 CREATE TABLE op_requests (
   request_id       CHAR(36) NOT NULL,
   requester_id     CHAR(36) NOT NULL,
-  request_type     ENUM('withdraw','rank_up','become_author') NOT NULL DEFAULT 'withdraw',
+  request_type     ENUM('withdraw','rank_up','become_author','author_withdraw') NOT NULL DEFAULT 'withdraw',
   request_content  TEXT NULL,
   withdraw_amount  BIGINT UNSIGNED NULL,
   omod_id          CHAR(36) NULL,
@@ -549,6 +552,27 @@ CREATE TABLE op_requests (
     REFERENCES account(account_id) ON DELETE CASCADE ON UPDATE CASCADE,
   CONSTRAINT fk_opreq_omod FOREIGN KEY (omod_id)
     REFERENCES OperationMod(account_id) ON DELETE SET NULL ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+CREATE TABLE author_revenue_transactions (
+  trans_id         CHAR(36) NOT NULL,
+  author_id        CHAR(36) NOT NULL,
+  type             ENUM('purchase','withdraw_reserve','withdraw_release','withdraw_complete') NOT NULL,
+  amount_vnd       BIGINT NOT NULL DEFAULT 0,
+  purchase_log_id  CHAR(36) NULL,
+  request_id       CHAR(36) NULL,
+  metadata         JSON NULL,
+  created_at       DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (trans_id),
+  KEY ix_art_author (author_id),
+  KEY ix_art_purchase (purchase_log_id),
+  KEY ix_art_request (request_id),
+  CONSTRAINT fk_art_author FOREIGN KEY (author_id)
+    REFERENCES author(account_id) ON DELETE CASCADE ON UPDATE CASCADE,
+  CONSTRAINT fk_art_purchase FOREIGN KEY (purchase_log_id)
+    REFERENCES chapter_purchase_log(chapter_purchase_id) ON DELETE SET NULL ON UPDATE CASCADE,
+  CONSTRAINT fk_art_request FOREIGN KEY (request_id)
+    REFERENCES op_requests(request_id) ON DELETE SET NULL ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 CREATE TABLE reports (

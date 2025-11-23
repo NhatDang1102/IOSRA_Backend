@@ -33,4 +33,8 @@ public partial class chapter_purchase_log
     [ForeignKey("chapter_id")]
     [InverseProperty("chapter_purchase_logs")]
     public virtual chapter chapter { get; set; } = null!;
+
+    
+    [InverseProperty("purchase_log")]
+    public virtual ICollection<author_revenue_transaction> author_revenue_transactions { get; set; } = new List<author_revenue_transaction>();
 }

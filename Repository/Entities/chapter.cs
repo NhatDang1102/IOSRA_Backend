@@ -28,7 +28,7 @@ public partial class chapter
 
     public uint dias_price { get; set; }
 
-    [Column(TypeName = "enum('free','coin','sub_only')")]
+    [Column(TypeName = "enum('free','dias','sub_only')")]
     public string access_type { get; set; } = null!;
 
     [StringLength(512)]

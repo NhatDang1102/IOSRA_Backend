@@ -25,6 +25,15 @@ public partial class author
 
     public uint total_follower { get; set; }
 
+    [Column(TypeName = "bigint")]
+    public long revenue_balance_vnd { get; set; }
+
+    [Column(TypeName = "bigint")]
+    public long revenue_pending_vnd { get; set; }
+
+    [Column(TypeName = "bigint")]
+    public long revenue_withdrawn_vnd { get; set; }
+
     [ForeignKey("account_id")]
     [InverseProperty("author")]
     public virtual account account { get; set; } = null!;
@@ -38,5 +47,8 @@ public partial class author
 
     [InverseProperty("author")]
     public virtual ICollection<story> stories { get; set; } = new List<story>();
+
+    [InverseProperty("author")]
+    public virtual ICollection<author_revenue_transaction> author_revenue_transactions { get; set; } = new List<author_revenue_transaction>();
 
 }

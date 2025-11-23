@@ -14,5 +14,8 @@ namespace Contract.DTOs.Request.Chapter
 
         [Required(ErrorMessage = "Content is required.")]
         public string Content { get; set; } = null!;
+
+        [RegularExpression("^(?i)(free|dias)$", ErrorMessage = "AccessType must be either 'free' or 'dias'.")]
+        public string? AccessType { get; set; }
     }
 }

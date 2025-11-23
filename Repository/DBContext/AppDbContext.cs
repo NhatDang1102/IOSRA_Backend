@@ -58,6 +58,10 @@ public partial class AppDbContext : DbContext
 
 
 
+    public virtual DbSet<author_revenue_transaction> author_revenue_transactions { get; set; }
+
+
+
     public virtual DbSet<chapter> chapters { get; set; }
 
 
@@ -334,6 +338,12 @@ public partial class AppDbContext : DbContext
 
             entity.Property(e => e.account_id).ValueGeneratedNever();
 
+            entity.Property(e => e.revenue_balance_vnd).HasDefaultValue(0L);
+
+            entity.Property(e => e.revenue_pending_vnd).HasDefaultValue(0L);
+
+            entity.Property(e => e.revenue_withdrawn_vnd).HasDefaultValue(0L);
+
 
 
             entity.HasOne(d => d.account).WithOne(p => p.author).HasConstraintName("fk_author_account");
@@ -355,6 +365,28 @@ public partial class AppDbContext : DbContext
         {
 
             entity.HasKey(e => e.rank_id).HasName("PRIMARY");
+
+        });
+
+
+
+        modelBuilder.Entity<author_revenue_transaction>(entity =>
+
+        {
+
+            entity.HasKey(e => e.trans_id).HasName("PRIMARY");
+
+            entity.Property(e => e.trans_id).ValueGeneratedNever();
+
+            entity.Property(e => e.amount_vnd).HasDefaultValue(0L);
+
+            entity.Property(e => e.created_at).HasDefaultValueSql("CURRENT_TIMESTAMP");
+
+            entity.HasOne(d => d.author).WithMany(p => p.author_revenue_transactions).HasForeignKey(d => d.author_id).HasConstraintName("fk_art_author");
+
+            entity.HasOne(d => d.purchase_log).WithMany(p => p.author_revenue_transactions).HasForeignKey(d => d.purchase_log_id).HasConstraintName("fk_art_purchase");
+
+            entity.HasOne(d => d.request).WithMany(p => p.author_revenue_transactions).HasForeignKey(d => d.request_id).HasConstraintName("fk_art_request");
 
         });
 

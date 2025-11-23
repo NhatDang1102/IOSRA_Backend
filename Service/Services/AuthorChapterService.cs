@@ -28,6 +28,7 @@ namespace Service.Services
         private readonly IProfileRepository? _profileRepository;
 
         private static readonly string[] AuthorChapterAllowedStatuses = { "draft", "pending", "rejected", "published", "hidden", "removed" };
+        private static readonly string[] ChapterAccessTypes = { "free", "dias" };
 
         public AuthorChapterService(
             IAuthorChapterRepository chapterRepository,
@@ -106,7 +107,9 @@ namespace Service.Services
             var price = await _chapterPricingService.GetPriceAsync(wordCount, ct);
             var chapterNumber = await _chapterRepository.GetNextChapterNumberAsync(story.story_id, ct);
             var chapterId = Guid.NewGuid();
-            var accessType = story.is_premium ? "coin" : "free";
+            var requestedAccessType = NormalizeOptionalChapterAccessType(request.AccessType);
+            var canLockChapters = CanAuthorLockChapters(author, story);
+            var accessType = ResolveAccessTypeForCreate(requestedAccessType, canLockChapters, story.is_premium);
 
             var chapter = new chapter
             {
@@ -391,6 +394,24 @@ namespace Service.Services
                 updated = true;
             }
 
+            if (request.AccessType != null)
+            {
+                var normalizedAccessType = NormalizeOptionalChapterAccessType(request.AccessType)
+                                           ?? throw new AppException("InvalidAccessType", "Access type is required when provided.", 400);
+
+                var canLockChapters = CanAuthorLockChapters(author, story);
+                if (string.Equals(normalizedAccessType, "dias", StringComparison.OrdinalIgnoreCase) && !canLockChapters)
+                {
+                    throw new AppException("AccessTypeNotAllowed", "Only higher-ranked authors can lock chapters.", 400);
+                }
+
+                if (!string.Equals(chapter.access_type, normalizedAccessType, StringComparison.OrdinalIgnoreCase))
+                {
+                    chapter.access_type = normalizedAccessType;
+                    updated = true;
+                }
+            }
+
             if (!updated)
             {
                 throw new AppException("NoChanges", "No changes were provided.", 400);
@@ -417,6 +438,55 @@ namespace Service.Services
             }
 
             return new[] { normalized.ToLowerInvariant() };
+        }
+
+        private static string? NormalizeOptionalChapterAccessType(string? accessType)
+        {
+            if (accessType == null)
+            {
+                return null;
+            }
+
+            var normalized = accessType.Trim().ToLowerInvariant();
+            if (normalized.Length == 0)
+            {
+                throw new AppException("InvalidAccessType", "Access type must be 'free' or 'dias'.", 400);
+            }
+
+            if (!ChapterAccessTypes.Contains(normalized, StringComparer.OrdinalIgnoreCase))
+            {
+                throw new AppException("InvalidAccessType", $"Access type '{accessType}' is not supported. Allowed values are: {string.Join(", ", ChapterAccessTypes)}.", 400);
+            }
+
+            return normalized;
+        }
+
+        private static bool CanAuthorLockChapters(author author, story story)
+        {
+            if (story.is_premium)
+            {
+                return true;
+            }
+
+            var rankName = author.rank?.rank_name;
+            return !string.IsNullOrWhiteSpace(rankName) &&
+                   !string.Equals(rankName, "casual", StringComparison.OrdinalIgnoreCase);
+        }
+
+        private static string ResolveAccessTypeForCreate(string? requestedAccessType, bool canLockChapters, bool storyIsPremium)
+        {
+            var defaultAccess = storyIsPremium ? "dias" : "free";
+            if (requestedAccessType == null)
+            {
+                return canLockChapters ? defaultAccess : "free";
+            }
+
+            if (string.Equals(requestedAccessType, "dias", StringComparison.OrdinalIgnoreCase) && !canLockChapters)
+            {
+                throw new AppException("AccessTypeNotAllowed", "Only higher-ranked authors can lock chapters.", 400);
+            }
+
+            return requestedAccessType;
         }
 
         private static ChapterResponse MapChapter(chapter chapter, IReadOnlyList<content_approve> approvals)
