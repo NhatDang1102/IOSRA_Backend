@@ -4,31 +4,34 @@ using System.Threading;
 using System.Threading.Tasks;
 using Contract.DTOs.Request.Payment;
 using Contract.DTOs.Response.Payment;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Net.payOS;
 using Net.payOS.Types;
-using Repository.DBContext;
 using Repository.Entities;
 using Repository.Utils;
+using Repository.Interfaces;
 using Service.Interfaces;
 
 namespace Service.Services;
 
 public class PaymentService : IPaymentService
 {
-    private readonly AppDbContext _db;
-    private readonly PayOS _payOS;
-    private readonly ILogger<PaymentService> _logger;
-    private readonly ISubscriptionService _subscriptionService;
+        private readonly IBillingRepository _billingRepository;
+        private readonly PayOS _payOS;
+        private readonly ILogger<PaymentService> _logger;
+        private readonly ISubscriptionService _subscriptionService;
 
-    public PaymentService(AppDbContext db, PayOS payOS, ILogger<PaymentService> logger, ISubscriptionService subscriptionService)
-    {
-        _db = db;
-        _payOS = payOS;
-        _logger = logger;
-        _subscriptionService = subscriptionService;
-    }
+        public PaymentService(
+            IBillingRepository billingRepository,
+            PayOS payOS,
+            ILogger<PaymentService> logger,
+            ISubscriptionService subscriptionService)
+        {
+            _billingRepository = billingRepository;
+            _payOS = payOS;
+            _logger = logger;
+            _subscriptionService = subscriptionService;
+        }
 
     public Task<CreatePaymentLinkResponse> CreateTopupLinkAsync(Guid accountId, ulong amount, CancellationToken ct = default)
         => CreateDiaTopupLinkAsync(accountId, amount, ct);
@@ -43,28 +46,13 @@ public class PaymentService : IPaymentService
             throw new ArgumentException("Amount is required for dia top-up requests.");
         }
 
-        var pricing = await _db.topup_pricings
-            .AsNoTracking()
-            .FirstOrDefaultAsync(p => p.amount_vnd == amount && p.is_active, ct);
-        if (pricing == null)
-        {
-            throw new ArgumentException("Invalid top-up amount. Please select an available package.");
-        }
-
-        var wallet = await _db.dia_wallets.FirstOrDefaultAsync(w => w.account_id == accountId, ct);
-        if (wallet == null)
-        {
-            wallet = new dia_wallet
+            var pricing = await _billingRepository.GetDiaTopupPricingAsync(amount, ct);
+            if (pricing == null)
             {
-                wallet_id = Guid.NewGuid(),
-                account_id = accountId,
-                balance_coin = 0,
-                locked_coin = 0,
-                updated_at = TimezoneConverter.VietnamNow
-            };
-            _db.dia_wallets.Add(wallet);
-            await _db.SaveChangesAsync(ct);
-        }
+                throw new ArgumentException("Invalid top-up amount. Please select an available package.");
+            }
+
+            var wallet = await _billingRepository.GetOrCreateDiaWalletAsync(accountId, ct);
 
         var orderCode = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
         var topupId = Guid.NewGuid();
@@ -86,8 +74,8 @@ public class PaymentService : IPaymentService
             status = "pending",
             created_at = TimezoneConverter.VietnamNow
         };
-        _db.dia_payments.Add(diaPayment);
-        await _db.SaveChangesAsync(ct);
+            await _billingRepository.AddDiaPaymentAsync(diaPayment, ct);
+            await _billingRepository.SaveChangesAsync(ct);
 
         return new CreatePaymentLinkResponse
         {
@@ -96,16 +84,16 @@ public class PaymentService : IPaymentService
         };
     }
 
-    private async Task<CreatePaymentLinkResponse> CreateSubscriptionPaymentLinkAsync(Guid accountId, CreateSubscriptionPaymentLinkRequest request, CancellationToken ct)
-    {
-        if (string.IsNullOrWhiteSpace(request.PlanCode))
+        private async Task<CreatePaymentLinkResponse> CreateSubscriptionPaymentLinkAsync(Guid accountId, CreateSubscriptionPaymentLinkRequest request, CancellationToken ct)
         {
-            throw new ArgumentException("SubscriptionPlanCode is required for subscription purchases.");
-        }
+            if (string.IsNullOrWhiteSpace(request.PlanCode))
+            {
+                throw new ArgumentException("SubscriptionPlanCode is required for subscription purchases.");
+            }
 
-        var planCode = request.PlanCode.Trim();
-        var plan = await _db.subscription_plans.AsNoTracking().FirstOrDefaultAsync(p => p.plan_code == planCode, ct)
-                   ?? throw new ArgumentException("Subscription plan not found.");
+            var planCode = request.PlanCode.Trim();
+            var plan = await _billingRepository.GetSubscriptionPlanAsync(planCode, ct)
+                       ?? throw new ArgumentException("Subscription plan not found.");
 
         if (plan.price_vnd == 0)
         {
@@ -136,8 +124,8 @@ public class PaymentService : IPaymentService
             status = "pending",
             created_at = now
         };
-        _db.subscription_payments.Add(record);
-        await _db.SaveChangesAsync(ct);
+        await _billingRepository.AddSubscriptionPaymentAsync(record, ct);
+        await _billingRepository.SaveChangesAsync(ct);
 
         return new CreatePaymentLinkResponse
         {
@@ -169,9 +157,7 @@ public class PaymentService : IPaymentService
         var handled = false;
         var now = TimezoneConverter.VietnamNow;
 
-        var diaPayment = await _db.dia_payments
-            .Include(p => p.wallet)
-            .FirstOrDefaultAsync(p => p.order_code == orderCode, ct);
+        var diaPayment = await _billingRepository.GetDiaPaymentByOrderCodeAsync(orderCode, ct);
 
         if (diaPayment != null)
         {
@@ -187,7 +173,7 @@ public class PaymentService : IPaymentService
                     wallet.balance_coin = newBalance;
                     wallet.updated_at = now;
 
-                    _db.wallet_payments.Add(new wallet_payment
+                    await _billingRepository.AddWalletPaymentAsync(new wallet_payment
                     {
                         trs_id = Guid.NewGuid(),
                         wallet_id = wallet.wallet_id,
@@ -198,7 +184,7 @@ public class PaymentService : IPaymentService
                         created_at = now
                     });
 
-                    _db.payment_receipts.Add(new payment_receipt
+                    await _billingRepository.AddPaymentReceiptAsync(new payment_receipt
                     {
                         receipt_id = Guid.NewGuid(),
                         account_id = wallet.account_id,
@@ -208,7 +194,7 @@ public class PaymentService : IPaymentService
                         created_at = now
                     });
 
-                    await _db.SaveChangesAsync(ct);
+                    await _billingRepository.SaveChangesAsync(ct);
                     _logger.LogInformation("Successfully topped up {Amount} dias to wallet {WalletId}", diaPayment.diamond_granted, wallet.wallet_id);
                 }
                 catch (Exception ex)
@@ -219,11 +205,11 @@ public class PaymentService : IPaymentService
             }
             else
             {
-                await _db.SaveChangesAsync(ct);
+                await _billingRepository.SaveChangesAsync(ct);
             }
         }
 
-        var subPayment = await _db.subscription_payments.FirstOrDefaultAsync(p => p.order_code == orderCode, ct);
+        var subPayment = await _billingRepository.GetSubscriptionPaymentByOrderCodeAsync(orderCode, ct);
         if (subPayment != null)
         {
             handled = true;
@@ -231,7 +217,7 @@ public class PaymentService : IPaymentService
             if (isPaid)
             {
                 await _subscriptionService.ActivateSubscriptionAsync(subPayment.account_id, subPayment.plan_code, ct);
-                _db.payment_receipts.Add(new payment_receipt
+                await _billingRepository.AddPaymentReceiptAsync(new payment_receipt
                 {
                     receipt_id = Guid.NewGuid(),
                     account_id = subPayment.account_id,
@@ -240,11 +226,11 @@ public class PaymentService : IPaymentService
                     amount_vnd = subPayment.amount_vnd,
                     created_at = now
                 });
-                await _db.SaveChangesAsync(ct);
+                await _billingRepository.SaveChangesAsync(ct);
             }
             else
             {
-                await _db.SaveChangesAsync(ct);
+                await _billingRepository.SaveChangesAsync(ct);
             }
         }
 
@@ -264,8 +250,8 @@ public class PaymentService : IPaymentService
             return false;
         }
 
-        var diaPayment = await _db.dia_payments.FirstOrDefaultAsync(p => p.order_code == transactionId, ct);
-        var subPayment = await _db.subscription_payments.FirstOrDefaultAsync(p => p.order_code == transactionId, ct);
+        var diaPayment = await _billingRepository.GetDiaPaymentByOrderCodeAsync(transactionId, ct);
+        var subPayment = await _billingRepository.GetSubscriptionPaymentByOrderCodeAsync(transactionId, ct);
 
         try
         {
@@ -293,7 +279,7 @@ public class PaymentService : IPaymentService
 
         if (updated)
         {
-            await _db.SaveChangesAsync(ct);
+            await _billingRepository.SaveChangesAsync(ct);
         }
         else if (diaPayment == null && subPayment == null)
         {

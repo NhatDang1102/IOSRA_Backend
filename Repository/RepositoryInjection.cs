@@ -28,6 +28,8 @@ namespace Repository
             services.AddScoped<IChapterPricingRepository, ChapterPricingRepository>();
             services.AddScoped<IReportRepository, ReportRepository>();
             services.AddScoped<IModerationRepository, ModerationRepository>();
+            services.AddScoped<IBillingRepository, BillingRepository>();
+            services.AddScoped<IChapterPurchaseRepository, ChapterPurchaseRepository>();
 
             return services;
         }

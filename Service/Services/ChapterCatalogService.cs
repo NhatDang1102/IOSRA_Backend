@@ -59,7 +59,7 @@ namespace Service.Services
             };
         }
 
-        public async Task<ChapterCatalogDetailResponse> GetChapterAsync(Guid chapterId, CancellationToken ct = default)
+        public async Task<ChapterCatalogDetailResponse> GetChapterAsync(Guid chapterId, CancellationToken ct = default, Guid? viewerAccountId = null)
         {
             var chapter = await _chapterRepository.GetPublishedChapterByIdAsync(chapterId, ct)
                            ?? throw new AppException("ChapterNotFound", "Chapter was not found or not available.", 404);
@@ -67,7 +67,21 @@ namespace Service.Services
             var isLocked = !string.Equals(chapter.access_type, "free", StringComparison.OrdinalIgnoreCase);
             if (isLocked)
             {
-                throw new AppException("ChapterLocked", "This chapter requires purchase to view.", 403);
+                var storyAuthorId = chapter.story?.author_id;
+                var viewerIsAuthor = viewerAccountId.HasValue && storyAuthorId.HasValue && storyAuthorId.Value == viewerAccountId.Value;
+                if (!viewerIsAuthor)
+                {
+                    if (!viewerAccountId.HasValue)
+                    {
+                        throw new AppException("ChapterLocked", "This chapter requires purchase to view.", 403);
+                    }
+
+                    var hasPurchased = await _chapterRepository.HasReaderPurchasedChapterAsync(chapterId, viewerAccountId.Value, ct);
+                    if (!hasPurchased)
+                    {
+                        throw new AppException("ChapterLocked", "This chapter requires purchase to view.", 403);
+                    }
+                }
             }
 
             if (string.IsNullOrWhiteSpace(chapter.content_url))

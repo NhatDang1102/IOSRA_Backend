@@ -59,6 +59,8 @@ namespace Repository.Repositories
 
         public Task<int> GetPublishedChapterCountAsync(Guid storyId, CancellationToken ct = default)
             => _db.chapters.CountAsync(c => c.story_id == storyId && c.status == PublishedStatus, ct);
+
+        public Task<bool> HasReaderPurchasedChapterAsync(Guid chapterId, Guid readerId, CancellationToken ct = default)
+            => _db.chapter_purchase_logs.AnyAsync(p => p.chapter_id == chapterId && p.account_id == readerId, ct);
     }
 }
-

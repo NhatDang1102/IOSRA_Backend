@@ -39,9 +39,9 @@ namespace Main.Controllers
         [HttpGet("{chapterId:guid}")]
         public async Task<ActionResult<ChapterCatalogDetailResponse>> Get(Guid chapterId, CancellationToken ct)
         {
-            var chapter = await _chapterCatalogService.GetChapterAsync(chapterId, ct);
-
             var viewerAccountId = TryGetAccountId();
+            var chapter = await _chapterCatalogService.GetChapterAsync(chapterId, ct, viewerAccountId);
+
             var fingerprint = HttpContext.Connection.RemoteIpAddress?.ToString();
             await _storyViewTracker.RecordViewAsync(chapter.StoryId, viewerAccountId, fingerprint, ct);
 

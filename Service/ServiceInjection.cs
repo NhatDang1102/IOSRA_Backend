@@ -72,6 +72,7 @@ namespace Service
             services.AddScoped<IStoryCatalogService, StoryCatalogService>();
             services.AddScoped<IAuthorChapterService, AuthorChapterService>();
             services.AddScoped<IChapterCatalogService, ChapterCatalogService>();
+            services.AddScoped<IChapterPurchaseService, ChapterPurchaseService>();
             services.AddScoped<IChapterModerationService, ChapterModerationService>();
             services.AddScoped<IStoryModerationService, StoryModerationService>();
             services.AddScoped<IStoryRatingService, StoryRatingService>();
