@@ -12,5 +12,7 @@ namespace Contract.DTOs.Respond.OperationMod
         public string? Content { get; set; }
         public DateTime CreatedAt { get; set; }
         public Guid? AssignedOmodId { get; set; }
+        public DateTime? ReviewedAt { get; set; }
+        public string? ModeratorNote { get; set; }
     }
 }

@@ -23,16 +23,13 @@ namespace Service.Services
             PropertyNameCaseInsensitive = true
         };
 
-        private readonly IAuthorStoryRepository _authorRepository;
         private readonly IOpRequestRepository _opRequestRepository;
         private readonly INotificationService _notificationService;
 
         public AuthorRankPromotionService(
-            IAuthorStoryRepository authorRepository,
             IOpRequestRepository opRequestRepository,
             INotificationService notificationService)
         {
-            _authorRepository = authorRepository;
             _opRequestRepository = opRequestRepository;
             _notificationService = notificationService;
         }
@@ -50,7 +47,7 @@ namespace Service.Services
                 throw new AppException("CommitmentRequired", "Commitment content is required.", 400);
             }
 
-            var author = await _authorRepository.GetAuthorAsync(authorAccountId, ct)
+            var author = await _opRequestRepository.GetAuthorWithRankAsync(authorAccountId, ct)
                          ?? throw new AppException("AuthorProfileMissing", "Author profile was not found.", 404);
 
             if (author.rank_id == null)
@@ -58,7 +55,7 @@ namespace Service.Services
                 throw new AppException("RankMissing", "Author rank is not assigned. Please contact support.", 409);
             }
 
-            if (!await _authorRepository.AuthorHasPublishedStoryAsync(authorAccountId, ct))
+            if (!await _opRequestRepository.AuthorHasPublishedStoryAsync(authorAccountId, ct))
             {
                 throw new AppException("StoryRequirement", "You must have at least one published story to request a promotion.", 400);
             }
@@ -68,7 +65,7 @@ namespace Service.Services
                 throw new AppException("PendingExists", "You already have a pending rank promotion request.", 409);
             }
 
-            var ranks = await _authorRepository.GetAllRanksAsync(ct);
+            var ranks = await _opRequestRepository.GetAllAuthorRanksAsync(ct);
             if (ranks.Count == 0)
             {
                 throw new AppException("RankSeedMissing", "Author ranks have not been seeded.", 500);
@@ -108,7 +105,10 @@ namespace Service.Services
                 JsonSerializer.Serialize(payload, JsonOptions),
                 ct);
 
-            return Map(created, payload);
+            var hydrated = await _opRequestRepository.GetRankPromotionRequestAsync(created.request_id, ct)
+                            ?? created;
+
+            return Map(hydrated, payload);
         }
 
         public async Task<IReadOnlyList<RankPromotionRequestResponse>> ListMineAsync(Guid authorAccountId, CancellationToken ct = default)
@@ -135,14 +135,14 @@ namespace Service.Services
 
             var payload = ParsePayload(request);
 
-            await _authorRepository.UpdateAuthorRankAsync(request.requester_id, payload.TargetRankId, ct);
+            await _opRequestRepository.UpdateAuthorRankAsync(request.requester_id, payload.TargetRankId, ct);
 
             request.status = "approved";
             request.omod_id = omodAccountId;
             request.reviewed_at = TimezoneConverter.VietnamNow;
             request.omod_note = string.IsNullOrWhiteSpace(note) ? null : note.Trim();
 
-            await _opRequestRepository.UpdateAsync(request, ct);
+            await _opRequestRepository.UpdateOpRequestAsync(request, ct);
 
             await _notificationService.CreateAsync(new NotificationCreateModel(
                 request.requester_id,
@@ -178,7 +178,7 @@ namespace Service.Services
             entity.reviewed_at = TimezoneConverter.VietnamNow;
             entity.omod_note = reason;
 
-            await _opRequestRepository.UpdateAsync(entity, ct);
+            await _opRequestRepository.UpdateOpRequestAsync(entity, ct);
 
             var payload = ParsePayload(entity);
 

@@ -64,7 +64,10 @@ namespace Service.Implementations
             {
                 RequestId = created.request_id,
                 Status = created.status,
-                AssignedOmodId = created.omod_id
+                AssignedOmodId = created.omod_id,
+                CreatedAt = created.created_at,
+                ReviewedAt = created.reviewed_at,
+                ModeratorNote = created.omod_note
             };
         }
 
@@ -78,10 +81,14 @@ namespace Service.Implementations
             {
                 RequestId = x.request_id,
                 RequesterId = x.requester_id,
+                RequesterUsername = x.requester?.username ?? string.Empty,
+                RequesterEmail = x.requester?.email ?? string.Empty,
                 Status = x.status,
                 Content = x.request_content,
                 CreatedAt = x.created_at,
-                AssignedOmodId = x.omod_id
+                AssignedOmodId = x.omod_id,
+                ReviewedAt = x.reviewed_at,
+                ModeratorNote = x.omod_note
             }).ToList();
         }
     }

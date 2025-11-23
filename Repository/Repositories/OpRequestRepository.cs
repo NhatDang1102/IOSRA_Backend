@@ -30,7 +30,9 @@ namespace Repository.Repositories
                 omod_id = null,
                 status = "pending",
                 withdraw_code = null,
-                created_at = TimezoneConverter.VietnamNow
+                created_at = TimezoneConverter.VietnamNow,
+                reviewed_at = null,
+                omod_note = null
             };
 
             _db.op_requests.Add(req);
@@ -54,6 +56,7 @@ namespace Repository.Repositories
 
         public Task<List<op_request>> ListRequestsOfRequesterAsync(Guid accountId, CancellationToken ct = default)
             => _db.op_requests
+                  .Include(r => r.requester)
                   .Where(r => r.requester_id == accountId)
                   .OrderByDescending(r => r.created_at)
                   .ToListAsync(ct);
@@ -149,6 +152,36 @@ namespace Repository.Repositories
                   .Select(r => (DateTime?)r.created_at)
                   .FirstOrDefaultAsync(ct);
 
+        public Task<author?> GetAuthorWithRankAsync(Guid authorId, CancellationToken ct = default)
+            => _db.authors
+                  .Include(a => a.rank)
+                  .Include(a => a.account)
+                  .FirstOrDefaultAsync(a => a.account_id == authorId, ct);
+
+        public Task<bool> AuthorHasPublishedStoryAsync(Guid authorId, CancellationToken ct = default)
+            => _db.stories.AnyAsync(s => s.author_id == authorId && s.status == "published", ct);
+
+        public Task<List<author_rank>> GetAllAuthorRanksAsync(CancellationToken ct = default)
+            => _db.author_ranks
+                  .OrderBy(r => r.min_followers)
+                  .AsNoTracking()
+                  .ToListAsync(ct);
+
+        public async Task UpdateAuthorRankAsync(Guid authorId, Guid rankId, CancellationToken ct = default)
+        {
+            var author = await _db.authors.FirstOrDefaultAsync(a => a.account_id == authorId, ct)
+                         ?? throw new InvalidOperationException("Author not found.");
+
+            author.rank_id = rankId;
+            await _db.SaveChangesAsync(ct);
+        }
+
+        public Task<bool> HasPendingRankPromotionRequestAsync(Guid authorId, CancellationToken ct = default)
+            => _db.op_requests.AnyAsync(r =>
+                r.requester_id == authorId &&
+                r.request_type == "rank_up" &&
+                r.status == "pending", ct);
+
         public async Task<op_request> CreateRankPromotionRequestAsync(Guid authorId, string payloadJson, CancellationToken ct = default)
         {
             var entity = new op_request
@@ -162,7 +195,8 @@ namespace Repository.Repositories
                 withdraw_code = null,
                 omod_id = null,
                 omod_note = null,
-                created_at = TimezoneConverter.VietnamNow
+                created_at = TimezoneConverter.VietnamNow,
+                reviewed_at = null
             };
 
             _db.op_requests.Add(entity);
@@ -170,20 +204,17 @@ namespace Repository.Repositories
             return entity;
         }
 
-        public Task<bool> HasPendingRankPromotionRequestAsync(Guid authorId, CancellationToken ct = default)
-            => _db.op_requests.AnyAsync(r => r.requester_id == authorId && r.request_type == "rank_up" && r.status == "pending", ct);
-
         public async Task<IReadOnlyList<op_request>> ListRankPromotionRequestsAsync(Guid? authorId, string? status, CancellationToken ct = default)
         {
             var query = _db.op_requests
-                .AsNoTracking()
-                .Include(r => r.requester)
-                    .ThenInclude(acc => acc.author)
-                        .ThenInclude(a => a.rank)
-                .Include(r => r.omod)
-                    .ThenInclude(o => o.account)
-                .Where(r => r.request_type == "rank_up")
-                .AsQueryable();
+                           .AsNoTracking()
+                           .Include(r => r.requester)
+                               .ThenInclude(a => a.author)
+                                   .ThenInclude(ar => ar.rank)
+                           .Include(r => r.omod)
+                               .ThenInclude(o => o.account)
+                           .Where(r => r.request_type == "rank_up")
+                           .AsQueryable();
 
             if (authorId.HasValue)
             {
@@ -203,14 +234,14 @@ namespace Repository.Repositories
 
         public Task<op_request?> GetRankPromotionRequestAsync(Guid requestId, CancellationToken ct = default)
             => _db.op_requests
-                .Include(r => r.requester)
-                    .ThenInclude(acc => acc.author)
-                        .ThenInclude(a => a.rank)
-                .Include(r => r.omod)
-                    .ThenInclude(o => o.account)
-                .FirstOrDefaultAsync(r => r.request_id == requestId && r.request_type == "rank_up", ct);
+                  .Include(r => r.requester)
+                      .ThenInclude(a => a.author)
+                          .ThenInclude(ar => ar.rank)
+                  .Include(r => r.omod)
+                      .ThenInclude(o => o.account)
+                  .FirstOrDefaultAsync(r => r.request_id == requestId && r.request_type == "rank_up", ct);
 
-        public async Task UpdateAsync(op_request entity, CancellationToken ct = default)
+        public async Task UpdateOpRequestAsync(op_request entity, CancellationToken ct = default)
         {
             _db.op_requests.Update(entity);
             await _db.SaveChangesAsync(ct);

@@ -29,10 +29,6 @@ namespace Repository.Interfaces
         Task<int> GetChapterCountAsync(Guid storyId, CancellationToken ct = default);
         Task<DateTime?> GetStoryPublishedAtAsync(Guid storyId, CancellationToken ct = default);
 
-        Task<bool> AuthorHasPublishedStoryAsync(Guid authorId, CancellationToken ct = default);
-        Task<List<author_rank>> GetAllRanksAsync(CancellationToken ct = default);
-        Task UpdateAuthorRankAsync(Guid authorId, Guid rankId, CancellationToken ct = default);
-
         Task SaveChangesAsync(CancellationToken ct = default);
     }
 }

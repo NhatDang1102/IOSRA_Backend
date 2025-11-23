@@ -35,7 +35,9 @@ namespace Service.Implementations
                 Status = x.status,
                 Content = x.request_content,
                 CreatedAt = x.created_at,
-                AssignedOmodId = x.omod_id
+                AssignedOmodId = x.omod_id,
+                ReviewedAt = x.reviewed_at,
+                ModeratorNote = x.omod_note
             }).ToList();
         }
 
