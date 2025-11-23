@@ -8,7 +8,6 @@ namespace Contract.DTOs.Respond.Author
         public Guid AuthorId { get; set; }
         public string AuthorUsername { get; set; } = string.Empty;
         public string AuthorEmail { get; set; } = string.Empty;
-        public string? FullName { get; set; }
         public string? Commitment { get; set; }
         public string? CurrentRankName { get; set; }
         public string TargetRankName { get; set; } = string.Empty;

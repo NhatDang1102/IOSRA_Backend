@@ -19,4 +19,9 @@ public interface IOpRequestRepository
     Task<Guid?> GetRankIdByNameAsync(string rankName, CancellationToken ct = default);
     Task<Guid?> GetRoleIdByCodeAsync(string roleCode, CancellationToken ct = default);
     Task AddAccountRoleIfNotExistsAsync(Guid accountId, Guid roleId, CancellationToken ct = default);
+    Task<op_request> CreateRankPromotionRequestAsync(Guid authorId, string payloadJson, CancellationToken ct = default);
+    Task<bool> HasPendingRankPromotionRequestAsync(Guid authorId, CancellationToken ct = default);
+    Task<IReadOnlyList<op_request>> ListRankPromotionRequestsAsync(Guid? authorId, string? status, CancellationToken ct = default);
+    Task<op_request?> GetRankPromotionRequestAsync(Guid requestId, CancellationToken ct = default);
+    Task UpdateAsync(op_request entity, CancellationToken ct = default);
 }

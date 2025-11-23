@@ -178,6 +178,23 @@ namespace Repository.Repositories
                   .Select(s => s.published_at)
                   .FirstOrDefaultAsync(ct);
 
+        public Task<bool> AuthorHasPublishedStoryAsync(Guid authorId, CancellationToken ct = default)
+            => _db.stories.AnyAsync(s => s.author_id == authorId && s.status == "published", ct);
+
+        public Task<List<author_rank>> GetAllRanksAsync(CancellationToken ct = default)
+            => _db.author_ranks
+                  .OrderBy(r => r.min_followers)
+                  .ToListAsync(ct);
+
+        public async Task UpdateAuthorRankAsync(Guid authorId, Guid rankId, CancellationToken ct = default)
+        {
+            var author = await _db.authors.FirstOrDefaultAsync(a => a.account_id == authorId, ct)
+                         ?? throw new InvalidOperationException("Author not found.");
+
+            author.rank_id = rankId;
+            await _db.SaveChangesAsync(ct);
+        }
+
         public Task SaveChangesAsync(CancellationToken ct = default)
             => _db.SaveChangesAsync(ct);
     }

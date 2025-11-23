@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using Contract.DTOs.Request.Author;
@@ -17,14 +18,22 @@ namespace Service.Services
 {
     public class AuthorRankPromotionService : IAuthorRankPromotionService
     {
-        private readonly IAuthorRankUpgradeRepository _repository;
+        private static readonly JsonSerializerOptions JsonOptions = new()
+        {
+            PropertyNameCaseInsensitive = true
+        };
+
+        private readonly IAuthorStoryRepository _authorRepository;
+        private readonly IOpRequestRepository _opRequestRepository;
         private readonly INotificationService _notificationService;
 
         public AuthorRankPromotionService(
-            IAuthorRankUpgradeRepository repository,
+            IAuthorStoryRepository authorRepository,
+            IOpRequestRepository opRequestRepository,
             INotificationService notificationService)
         {
-            _repository = repository;
+            _authorRepository = authorRepository;
+            _opRequestRepository = opRequestRepository;
             _notificationService = notificationService;
         }
 
@@ -35,19 +44,13 @@ namespace Service.Services
                 throw new AppException("InvalidRequest", "Request body is required.", 400);
             }
 
-            var fullName = request.FullName?.Trim();
             var commitment = request.Commitment?.Trim();
-            if (string.IsNullOrWhiteSpace(fullName))
-            {
-                throw new AppException("FullNameRequired", "Full name is required.", 400);
-            }
-
             if (string.IsNullOrWhiteSpace(commitment))
             {
                 throw new AppException("CommitmentRequired", "Commitment content is required.", 400);
             }
 
-            var author = await _repository.GetAuthorAsync(authorAccountId, ct)
+            var author = await _authorRepository.GetAuthorAsync(authorAccountId, ct)
                          ?? throw new AppException("AuthorProfileMissing", "Author profile was not found.", 404);
 
             if (author.rank_id == null)
@@ -55,17 +58,17 @@ namespace Service.Services
                 throw new AppException("RankMissing", "Author rank is not assigned. Please contact support.", 409);
             }
 
-            if (!await _repository.HasPublishedStoryAsync(authorAccountId, ct))
+            if (!await _authorRepository.AuthorHasPublishedStoryAsync(authorAccountId, ct))
             {
                 throw new AppException("StoryRequirement", "You must have at least one published story to request a promotion.", 400);
             }
 
-            if (await _repository.HasPendingRequestAsync(authorAccountId, ct))
+            if (await _opRequestRepository.HasPendingRankPromotionRequestAsync(authorAccountId, ct))
             {
                 throw new AppException("PendingExists", "You already have a pending rank promotion request.", 409);
             }
 
-            var ranks = await _repository.GetAllRanksAsync(ct);
+            var ranks = await _authorRepository.GetAllRanksAsync(ct);
             if (ranks.Count == 0)
             {
                 throw new AppException("RankSeedMissing", "Author ranks have not been seeded.", 500);
@@ -89,36 +92,40 @@ namespace Service.Services
                 throw new AppException("FollowerRequirement", $"You need at least {nextRank.min_followers} followers to request {nextRank.rank_name}.", 400);
             }
 
-            var created = await _repository.CreateAsync(new author_rank_upgrade_request
+            var payload = new RankPromotionPayload
             {
-                author_id = authorAccountId,
-                current_rank_id = author.rank_id,
-                target_rank_id = nextRank.rank_id,
-                full_name = fullName,
-                commitment = commitment
-            }, ct);
+                Commitment = commitment,
+                CurrentRankId = author.rank_id,
+                CurrentRankName = author.rank?.rank_name,
+                TargetRankId = nextRank.rank_id,
+                TargetRankName = nextRank.rank_name,
+                TargetRankMinFollowers = nextRank.min_followers,
+                SubmittedFollowerCount = author.total_follower
+            };
 
-            created.author = author;
-            created.target_rank = nextRank;
+            var created = await _opRequestRepository.CreateRankPromotionRequestAsync(
+                authorAccountId,
+                JsonSerializer.Serialize(payload, JsonOptions),
+                ct);
 
-            return Map(created);
+            return Map(created, payload);
         }
 
         public async Task<IReadOnlyList<RankPromotionRequestResponse>> ListMineAsync(Guid authorAccountId, CancellationToken ct = default)
         {
-            var items = await _repository.GetRequestsByAuthorAsync(authorAccountId, ct);
-            return items.Select(Map).ToArray();
+            var requests = await _opRequestRepository.ListRankPromotionRequestsAsync(authorAccountId, null, ct);
+            return requests.Select(Map).ToArray();
         }
 
         public async Task<IReadOnlyList<RankPromotionRequestResponse>> ListForModerationAsync(string? status, CancellationToken ct = default)
         {
-            var items = await _repository.ListAsync(status, ct);
-            return items.Select(Map).ToArray();
+            var requests = await _opRequestRepository.ListRankPromotionRequestsAsync(null, status, ct);
+            return requests.Select(Map).ToArray();
         }
 
         public async Task ApproveAsync(Guid requestId, Guid omodAccountId, string? note, CancellationToken ct = default)
         {
-            var request = await _repository.GetByIdAsync(requestId, ct)
+            var request = await _opRequestRepository.GetRankPromotionRequestAsync(requestId, ct)
                           ?? throw new AppException("RankRequestNotFound", "Rank promotion request was not found.", 404);
 
             if (!string.Equals(request.status, "pending", StringComparison.OrdinalIgnoreCase))
@@ -126,33 +133,33 @@ namespace Service.Services
                 throw new AppException("InvalidState", "Only pending requests can be approved.", 400);
             }
 
-            await _repository.UpdateAuthorRankAsync(request.author_id, request.target_rank_id, ct);
+            var payload = ParsePayload(request);
+
+            await _authorRepository.UpdateAuthorRankAsync(request.requester_id, payload.TargetRankId, ct);
 
             request.status = "approved";
             request.omod_id = omodAccountId;
             request.reviewed_at = TimezoneConverter.VietnamNow;
-            if (!string.IsNullOrWhiteSpace(note))
-            {
-                request.mod_note = note.Trim();
-            }
-            await _repository.UpdateAsync(request, ct);
+            request.omod_note = string.IsNullOrWhiteSpace(note) ? null : note.Trim();
+
+            await _opRequestRepository.UpdateAsync(request, ct);
 
             await _notificationService.CreateAsync(new NotificationCreateModel(
-                request.author_id,
+                request.requester_id,
                 NotificationTypes.AuthorRankUpgrade,
-                $"Yêu cầu nâng hạng {request.target_rank?.rank_name ?? "mới"} đã được duyệt",
-                $"Chúc mừng! Bạn đã được nâng lên hạng {request.target_rank?.rank_name ?? "mới"}.",
+                $"Yêu cầu nâng hạng {payload.TargetRankName} đã được duyệt",
+                $"Chúc mừng! Bạn đã được nâng lên hạng {payload.TargetRankName}.",
                 new
                 {
                     requestId = request.request_id,
                     status = request.status,
-                    targetRank = request.target_rank?.rank_name
+                    targetRank = payload.TargetRankName
                 }), ct);
         }
 
         public async Task RejectAsync(Guid requestId, Guid omodAccountId, RankPromotionRejectRequest request, CancellationToken ct = default)
         {
-            var entity = await _repository.GetByIdAsync(requestId, ct)
+            var entity = await _opRequestRepository.GetRankPromotionRequestAsync(requestId, ct)
                          ?? throw new AppException("RankRequestNotFound", "Rank promotion request was not found.", 404);
 
             if (!string.Equals(entity.status, "pending", StringComparison.OrdinalIgnoreCase))
@@ -169,14 +176,17 @@ namespace Service.Services
             entity.status = "rejected";
             entity.omod_id = omodAccountId;
             entity.reviewed_at = TimezoneConverter.VietnamNow;
-            entity.mod_note = reason;
-            await _repository.UpdateAsync(entity, ct);
+            entity.omod_note = reason;
+
+            await _opRequestRepository.UpdateAsync(entity, ct);
+
+            var payload = ParsePayload(entity);
 
             await _notificationService.CreateAsync(new NotificationCreateModel(
-                entity.author_id,
+                entity.requester_id,
                 NotificationTypes.AuthorRankUpgrade,
                 "Yêu cầu nâng hạng bị từ chối",
-                $"Yêu cầu nâng hạng của bạn đã bị từ chối: {reason}",
+                $"Yêu cầu nâng hạng {payload.TargetRankName} của bạn đã bị từ chối: {reason}",
                 new
                 {
                     requestId = entity.request_id,
@@ -185,28 +195,62 @@ namespace Service.Services
                 }), ct);
         }
 
-        private static RankPromotionRequestResponse Map(author_rank_upgrade_request entity)
+        private static RankPromotionRequestResponse Map(op_request request)
         {
-            var authorAccount = entity.author?.account;
+            var payload = ParsePayload(request);
+            return Map(request, payload);
+        }
+
+        private static RankPromotionRequestResponse Map(op_request request, RankPromotionPayload payload)
+        {
+            var requester = request.requester;
             return new RankPromotionRequestResponse
             {
-                RequestId = entity.request_id,
-                AuthorId = entity.author_id,
-                AuthorUsername = authorAccount?.username ?? string.Empty,
-                AuthorEmail = authorAccount?.email ?? string.Empty,
-                FullName = entity.full_name,
-                Commitment = entity.commitment,
-                CurrentRankName = entity.author?.rank?.rank_name,
-                TargetRankName = entity.target_rank?.rank_name ?? string.Empty,
-                TargetRankMinFollowers = entity.target_rank?.min_followers ?? 0,
-                TotalFollowers = entity.author?.total_follower ?? 0,
-                Status = entity.status,
-                ModeratorId = entity.omod_id,
-                ModeratorUsername = entity.moderator?.username,
-                ModeratorNote = entity.mod_note,
-                CreatedAt = entity.created_at,
-                ReviewedAt = entity.reviewed_at
+                RequestId = request.request_id,
+                AuthorId = request.requester_id,
+                AuthorUsername = requester?.username ?? string.Empty,
+                AuthorEmail = requester?.email ?? string.Empty,
+                Commitment = payload.Commitment,
+                CurrentRankName = payload.CurrentRankName,
+                TargetRankName = payload.TargetRankName,
+                TargetRankMinFollowers = payload.TargetRankMinFollowers,
+                TotalFollowers = payload.SubmittedFollowerCount,
+                Status = request.status,
+                ModeratorId = request.omod_id,
+                ModeratorUsername = request.omod?.account.username,
+                ModeratorNote = request.omod_note,
+                CreatedAt = request.created_at,
+                ReviewedAt = request.reviewed_at
             };
+        }
+
+        private static RankPromotionPayload ParsePayload(op_request request)
+        {
+            if (string.IsNullOrWhiteSpace(request.request_content))
+            {
+                throw new AppException("CorruptedRequestPayload", "Rank promotion request payload is invalid.", 500);
+            }
+
+            try
+            {
+                return JsonSerializer.Deserialize<RankPromotionPayload>(request.request_content, JsonOptions)
+                       ?? throw new JsonException("Empty payload");
+            }
+            catch (Exception ex)
+            {
+                throw new AppException("CorruptedRequestPayload", "Rank promotion request payload is invalid.", 500, ex);
+            }
+        }
+
+        private sealed class RankPromotionPayload
+        {
+            public string Commitment { get; set; } = string.Empty;
+            public Guid? CurrentRankId { get; set; }
+            public string? CurrentRankName { get; set; }
+            public Guid TargetRankId { get; set; }
+            public string TargetRankName { get; set; } = string.Empty;
+            public uint TargetRankMinFollowers { get; set; }
+            public uint SubmittedFollowerCount { get; set; }
         }
     }
 }

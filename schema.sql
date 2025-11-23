@@ -357,7 +357,7 @@ CREATE TABLE favorite_story (
 CREATE TABLE notifications (
   notification_id CHAR(36) NOT NULL,
   recipient_id    CHAR(36) NOT NULL,
-  type            ENUM('op_request','story_decision','chapter_decision','new_story','new_chapter','general','new_follower','chapter_comment','story_rating','strike_warning') NOT NULL,
+  type            ENUM('op_request','story_decision','chapter_decision','new_story','new_chapter','general','new_follower','chapter_comment','story_rating','strike_warning','author_rank_upgrade') NOT NULL,
   title           VARCHAR(200) NOT NULL,
   message         TEXT NOT NULL,
   payload         JSON NULL,
@@ -537,9 +537,11 @@ CREATE TABLE op_requests (
   request_content  TEXT NULL,
   withdraw_amount  BIGINT UNSIGNED NULL,
   omod_id          CHAR(36) NULL,
+  omod_note        TEXT NULL,
   status           ENUM('pending','approved','rejected') NOT NULL DEFAULT 'pending',
   withdraw_code    VARCHAR(64) NULL,
   created_at       DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  reviewed_at      DATETIME NULL,
   PRIMARY KEY (request_id),
   KEY ix_opreq_requester (requester_id),
   KEY ix_opreq_omod (omod_id),
@@ -607,26 +609,3 @@ ON DUPLICATE KEY UPDATE
   duration_days = VALUES(duration_days),
   daily_dias = VALUES(daily_dias);
 
--- Author rank upgrade requests
-CREATE TABLE IF NOT EXISTS author_rank_upgrade_request (
-    request_id CHAR(36) NOT NULL,
-    author_id CHAR(36) NOT NULL,
-    current_rank_id CHAR(36) NULL,
-    target_rank_id CHAR(36) NOT NULL,
-    full_name VARCHAR(100) NOT NULL,
-    commitment TEXT NOT NULL,
-    status ENUM('pending','approved','rejected') NOT NULL DEFAULT 'pending',
-    omod_id CHAR(36) NULL,
-    mod_note TEXT NULL,
-    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    reviewed_at DATETIME NULL,
-    PRIMARY KEY (request_id),
-    KEY ix_rank_upgrade_author (author_id),
-    KEY ix_rank_upgrade_status (status),
-    CONSTRAINT fk_rank_upgrade_author FOREIGN KEY (author_id) REFERENCES author(account_id) ON DELETE CASCADE,
-    CONSTRAINT fk_rank_upgrade_target FOREIGN KEY (target_rank_id) REFERENCES author_rank(rank_id) ON DELETE CASCADE,
-    CONSTRAINT fk_rank_upgrade_omod FOREIGN KEY (omod_id) REFERENCES account(account_id) ON DELETE SET NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-
-ALTER TABLE notifications
-    MODIFY type ENUM('op_request','story_decision','chapter_decision','new_story','new_chapter','general','new_follower','chapter_comment','story_rating','strike_warning','author_rank_upgrade') NOT NULL;

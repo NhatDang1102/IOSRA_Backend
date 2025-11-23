@@ -39,6 +39,4 @@ public partial class author
     [InverseProperty("author")]
     public virtual ICollection<story> stories { get; set; } = new List<story>();
 
-    [InverseProperty("author")]
-    public virtual ICollection<author_rank_upgrade_request> rank_upgrade_requests { get; set; } = new List<author_rank_upgrade_request>();
 }

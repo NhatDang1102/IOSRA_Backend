@@ -28,6 +28,9 @@ public partial class op_request
     
     public Guid? omod_id { get; set; }
 
+    [Column(TypeName = "text")]
+    public string? omod_note { get; set; }
+
     [Column(TypeName = "enum('pending','approved','rejected')")]
     public string status { get; set; } = null!;
 
@@ -36,6 +39,9 @@ public partial class op_request
 
     [Column(TypeName = "datetime")]
     public DateTime created_at { get; set; }
+
+    [Column(TypeName = "datetime")]
+    public DateTime? reviewed_at { get; set; }
 
     [ForeignKey(nameof(requester_id))]
     public virtual account requester { get; set; } = null!;

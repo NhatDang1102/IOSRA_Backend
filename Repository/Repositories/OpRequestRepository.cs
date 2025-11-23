@@ -68,6 +68,8 @@ namespace Repository.Repositories
 
             req.status = "approved";
             req.omod_id = omodId;
+            req.reviewed_at = TimezoneConverter.VietnamNow;
+            req.omod_note = null;
             await _db.SaveChangesAsync(ct);
         }
 
@@ -78,10 +80,8 @@ namespace Repository.Repositories
 
             req.status = "rejected";
             req.omod_id = omodId;
-            if (!string.IsNullOrWhiteSpace(reason))
-            {
-                req.request_content = (req.request_content ?? string.Empty) + $"\n\n[REJECT_REASON]: {reason}";
-            }
+            req.reviewed_at = TimezoneConverter.VietnamNow;
+            req.omod_note = string.IsNullOrWhiteSpace(reason) ? null : reason.Trim();
 
             await _db.SaveChangesAsync(ct);
         }
@@ -148,5 +148,72 @@ namespace Repository.Repositories
                   .OrderByDescending(r => r.created_at)
                   .Select(r => (DateTime?)r.created_at)
                   .FirstOrDefaultAsync(ct);
+
+        public async Task<op_request> CreateRankPromotionRequestAsync(Guid authorId, string payloadJson, CancellationToken ct = default)
+        {
+            var entity = new op_request
+            {
+                request_id = NewId(),
+                requester_id = authorId,
+                request_type = "rank_up",
+                request_content = payloadJson,
+                status = "pending",
+                withdraw_amount = null,
+                withdraw_code = null,
+                omod_id = null,
+                omod_note = null,
+                created_at = TimezoneConverter.VietnamNow
+            };
+
+            _db.op_requests.Add(entity);
+            await _db.SaveChangesAsync(ct);
+            return entity;
+        }
+
+        public Task<bool> HasPendingRankPromotionRequestAsync(Guid authorId, CancellationToken ct = default)
+            => _db.op_requests.AnyAsync(r => r.requester_id == authorId && r.request_type == "rank_up" && r.status == "pending", ct);
+
+        public async Task<IReadOnlyList<op_request>> ListRankPromotionRequestsAsync(Guid? authorId, string? status, CancellationToken ct = default)
+        {
+            var query = _db.op_requests
+                .AsNoTracking()
+                .Include(r => r.requester)
+                    .ThenInclude(acc => acc.author)
+                        .ThenInclude(a => a.rank)
+                .Include(r => r.omod)
+                    .ThenInclude(o => o.account)
+                .Where(r => r.request_type == "rank_up")
+                .AsQueryable();
+
+            if (authorId.HasValue)
+            {
+                query = query.Where(r => r.requester_id == authorId.Value);
+            }
+
+            if (!string.IsNullOrWhiteSpace(status))
+            {
+                var normalized = status.Trim().ToLowerInvariant();
+                query = query.Where(r => r.status == normalized);
+            }
+
+            return await query
+                .OrderByDescending(r => r.created_at)
+                .ToListAsync(ct);
+        }
+
+        public Task<op_request?> GetRankPromotionRequestAsync(Guid requestId, CancellationToken ct = default)
+            => _db.op_requests
+                .Include(r => r.requester)
+                    .ThenInclude(acc => acc.author)
+                        .ThenInclude(a => a.rank)
+                .Include(r => r.omod)
+                    .ThenInclude(o => o.account)
+                .FirstOrDefaultAsync(r => r.request_id == requestId && r.request_type == "rank_up", ct);
+
+        public async Task UpdateAsync(op_request entity, CancellationToken ct = default)
+        {
+            _db.op_requests.Update(entity);
+            await _db.SaveChangesAsync(ct);
+        }
     }
 }
