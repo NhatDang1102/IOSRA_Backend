@@ -88,6 +88,8 @@ namespace Service
             services.AddScoped<IReportService, ReportService>();
             services.AddScoped<IContentModHandlingService, ContentModHandlingService>();
             services.AddScoped<IAuthorRankPromotionService, AuthorRankPromotionService>();
+            services.AddScoped<IContentModStatService, ContentModStatService>();
+            services.AddScoped<IOperationModStatService, OperationModStatService>();
             services.AddHostedService<StoryWeeklyViewSyncJob>();
 
             return services;
