@@ -10,7 +10,7 @@ using Service.Interfaces;
 namespace Main.Controllers
 {
     [Route("api/[controller]")]
-    [Authorize(Roles = "cmod,CMOD,CONTENT_MODERATOR,content_moderator,admin,ADMIN")]
+    [Authorize(Roles = "cmod,CMOD,CONTENT_MODERATOR,content_moderator")]
     public class ContentModHandlingController : AppControllerBase
     {
         private readonly IContentModHandlingService _service;

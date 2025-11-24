@@ -9,7 +9,7 @@ using Service.Interfaces;
 namespace Main.Controllers
 {
     [Route("api/moderation/chapters")]
-    [Authorize(Roles = "cmod,CMOD,CONTENT_MODERATOR,content_moderator,admin,ADMIN")]
+    [Authorize(Roles = "cmod,CMOD,CONTENT_MODERATOR,content_moderator")]
     public class ChapterModerationController : AppControllerBase
     {
         private readonly IChapterModerationService _chapterModerationService;

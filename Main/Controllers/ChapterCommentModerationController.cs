@@ -8,7 +8,7 @@ using Service.Interfaces;
 namespace Main.Controllers
 {
     [Route("api/moderation/comments")]
-    [Authorize(Roles = "cmod,CMOD,CONTENT_MODERATOR,content_moderator,admin,ADMIN")]
+    [Authorize(Roles = "cmod,CMOD,CONTENT_MODERATOR,content_moderator")]
     public class ChapterCommentModerationController : AppControllerBase
     {
         private readonly IChapterCommentService _chapterCommentService;
