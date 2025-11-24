@@ -1,7 +1,9 @@
 ﻿using System;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Collections.Generic;
 using Contract.DTOs.Request.OperationMod;
+using Contract.DTOs.Respond.Author;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Service.Interfaces;
@@ -60,6 +62,27 @@ namespace Main.Controllers
         public async Task<IActionResult> RejectRankRequest([FromRoute] Guid requestId, [FromBody] RankPromotionRejectRequest request, CancellationToken ct)
         {
             await _rankPromotionService.RejectAsync(requestId, AccountId, request, ct);
+            return Ok(new { message = "Rejected" });
+        }
+
+        [HttpGet("withdraw-requests")]
+        public async Task<ActionResult<IReadOnlyList<AuthorWithdrawRequestResponse>>> ListWithdrawRequests([FromQuery] string? status, CancellationToken ct)
+        {
+            var result = await _service.ListWithdrawRequestsAsync(status, ct);
+            return Ok(result);
+        }
+
+        [HttpPost("withdraw-requests/{requestId:guid}/approve")]
+        public async Task<IActionResult> ApproveWithdraw(Guid requestId, [FromBody] ApproveWithdrawRequest? request, CancellationToken ct)
+        {
+            await _service.ApproveWithdrawAsync(requestId, AccountId, request ?? new ApproveWithdrawRequest(), ct);
+            return Ok(new { message = "Approved" });
+        }
+
+        [HttpPost("withdraw-requests/{requestId:guid}/reject")]
+        public async Task<IActionResult> RejectWithdraw(Guid requestId, [FromBody] RejectWithdrawRequest request, CancellationToken ct)
+        {
+            await _service.RejectWithdrawAsync(requestId, AccountId, request, ct);
             return Ok(new { message = "Rejected" });
         }
 

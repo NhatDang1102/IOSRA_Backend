@@ -246,5 +246,66 @@ namespace Repository.Repositories
             _db.op_requests.Update(entity);
             await _db.SaveChangesAsync(ct);
         }
+
+        public Task<bool> HasPendingWithdrawRequestAsync(Guid authorId, CancellationToken ct = default)
+            => _db.op_requests.AnyAsync(r =>
+                r.requester_id == authorId &&
+                r.request_type == "withdraw" &&
+                r.status == "pending", ct);
+
+        public async Task<op_request> CreateWithdrawRequestAsync(Guid authorId, string payloadJson, ulong amount, CancellationToken ct = default)
+        {
+            var entity = new op_request
+            {
+                request_id = NewId(),
+                requester_id = authorId,
+                request_type = "withdraw",
+                request_content = payloadJson,
+                withdraw_amount = amount,
+                status = "pending",
+                withdraw_code = null,
+                omod_id = null,
+                omod_note = null,
+                created_at = TimezoneConverter.VietnamNow,
+                reviewed_at = null
+            };
+
+            _db.op_requests.Add(entity);
+            await _db.SaveChangesAsync(ct);
+            return entity;
+        }
+
+        public async Task<IReadOnlyList<op_request>> ListWithdrawRequestsAsync(Guid? authorId, string? status, CancellationToken ct = default)
+        {
+            var query = _db.op_requests
+                .AsNoTracking()
+                .Include(r => r.requester)
+                .Include(r => r.omod)
+                    .ThenInclude(o => o.account)
+                .Where(r => r.request_type == "withdraw")
+                .AsQueryable();
+
+            if (authorId.HasValue)
+            {
+                query = query.Where(r => r.requester_id == authorId.Value);
+            }
+
+            if (!string.IsNullOrWhiteSpace(status))
+            {
+                var normalized = status.Trim().ToLowerInvariant();
+                query = query.Where(r => r.status == normalized);
+            }
+
+            return await query
+                .OrderByDescending(r => r.created_at)
+                .ToListAsync(ct);
+        }
+
+        public Task<op_request?> GetWithdrawRequestAsync(Guid requestId, CancellationToken ct = default)
+            => _db.op_requests
+                .Include(r => r.requester)
+                .Include(r => r.omod)
+                    .ThenInclude(o => o.account)
+                .FirstOrDefaultAsync(r => r.request_id == requestId && r.request_type == "withdraw", ct);
     }
 }

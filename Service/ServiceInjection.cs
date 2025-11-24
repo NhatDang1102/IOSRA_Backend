@@ -77,6 +77,7 @@ namespace Service
             services.AddScoped<IStoryModerationService, StoryModerationService>();
             services.AddScoped<IStoryRatingService, StoryRatingService>();
             services.AddScoped<IChapterCommentService, ChapterCommentService>();
+            services.AddScoped<IAuthorRevenueService, AuthorRevenueService>();
             services.AddScoped<INotificationService, NotificationService>();
             services.AddScoped<IFollowerNotificationService, FollowerNotificationService>();
             services.AddScoped<IChapterPricingService, ChapterPricingService>();

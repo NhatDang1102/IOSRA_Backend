@@ -28,4 +28,8 @@ public interface IOpRequestRepository
     Task<IReadOnlyList<op_request>> ListRankPromotionRequestsAsync(Guid? authorId, string? status, CancellationToken ct = default);
     Task<op_request?> GetRankPromotionRequestAsync(Guid requestId, CancellationToken ct = default);
     Task UpdateOpRequestAsync(op_request entity, CancellationToken ct = default);
+    Task<bool> HasPendingWithdrawRequestAsync(Guid authorId, CancellationToken ct = default);
+    Task<op_request> CreateWithdrawRequestAsync(Guid authorId, string payloadJson, ulong amount, CancellationToken ct = default);
+    Task<IReadOnlyList<op_request>> ListWithdrawRequestsAsync(Guid? authorId, string? status, CancellationToken ct = default);
+    Task<op_request?> GetWithdrawRequestAsync(Guid requestId, CancellationToken ct = default);
 }

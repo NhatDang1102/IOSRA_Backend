@@ -536,7 +536,7 @@ ON DUPLICATE KEY UPDATE
 CREATE TABLE op_requests (
   request_id       CHAR(36) NOT NULL,
   requester_id     CHAR(36) NOT NULL,
-  request_type     ENUM('withdraw','rank_up','become_author','author_withdraw') NOT NULL DEFAULT 'withdraw',
+  request_type     ENUM('withdraw','rank_up','become_author') NOT NULL DEFAULT 'withdraw',
   request_content  TEXT NULL,
   withdraw_amount  BIGINT UNSIGNED NULL,
   omod_id          CHAR(36) NULL,

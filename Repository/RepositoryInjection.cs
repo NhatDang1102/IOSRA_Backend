@@ -30,6 +30,7 @@ namespace Repository
             services.AddScoped<IModerationRepository, ModerationRepository>();
             services.AddScoped<IBillingRepository, BillingRepository>();
             services.AddScoped<IChapterPurchaseRepository, ChapterPurchaseRepository>();
+            services.AddScoped<IAuthorRevenueRepository, AuthorRevenueRepository>();
 
             return services;
         }

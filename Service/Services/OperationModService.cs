@@ -1,26 +1,41 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using Contract.DTOs.Request.OperationMod;
+using Contract.DTOs.Respond.Author;
 using Contract.DTOs.Respond.OperationMod;
+using Repository.Entities;
 using Repository.Interfaces;
+using Repository.Utils;
 using Service.Constants;
 using Service.Exceptions;
 using Service.Interfaces;
+using Service.Models;
 
 namespace Service.Implementations
 {
     public class OperationModService : IOperationModService
     {
+        private static readonly JsonSerializerOptions JsonOptions = new()
+        {
+            PropertyNameCaseInsensitive = true
+        };
+
         private readonly IOpRequestRepository _opRepo;
         private readonly INotificationService _notificationService;
+        private readonly IAuthorRevenueRepository _authorRevenueRepository;
 
-        public OperationModService(IOpRequestRepository opRepo, INotificationService notificationService)
+        public OperationModService(
+            IOpRequestRepository opRepo,
+            INotificationService notificationService,
+            IAuthorRevenueRepository authorRevenueRepository)
         {
             _opRepo = opRepo;
             _notificationService = notificationService;
+            _authorRevenueRepository = authorRevenueRepository;
         }
 
         public async Task<List<OpRequestItemResponse>> ListAsync(string? status, CancellationToken ct = default)
@@ -107,5 +122,181 @@ namespace Service.Implementations
                 }), ct);
         }
 
+        public async Task<IReadOnlyList<AuthorWithdrawRequestResponse>> ListWithdrawRequestsAsync(string? status, CancellationToken ct = default)
+        {
+            var data = await _opRepo.ListWithdrawRequestsAsync(null, status, ct);
+            return data.Select(MapWithdrawResponse).ToList();
+        }
+
+        public async Task ApproveWithdrawAsync(Guid requestId, Guid omodAccountId, ApproveWithdrawRequest request, CancellationToken ct = default)
+        {
+            var entity = await _opRepo.GetWithdrawRequestAsync(requestId, ct)
+                         ?? throw new AppException("WithdrawRequestNotFound", "Withdraw request was not found.", 404);
+
+            if (!string.Equals(entity.status, "pending", StringComparison.OrdinalIgnoreCase))
+            {
+                throw new AppException("InvalidState", "Only pending withdraw requests can be approved.", 400);
+            }
+
+            if (!entity.withdraw_amount.HasValue)
+            {
+                throw new AppException("InvalidWithdrawAmount", "Withdraw amount was not specified.", 400);
+            }
+
+            var author = await _authorRevenueRepository.GetAuthorAsync(entity.requester_id, ct)
+                         ?? throw new AppException("AuthorProfileMissing", "Author profile was not found.", 404);
+
+            var amount = (long)entity.withdraw_amount.Value;
+            var note = string.IsNullOrWhiteSpace(request?.Note) ? null : request!.Note!.Trim();
+            var transactionCode = string.IsNullOrWhiteSpace(request?.TransactionCode) ? null : request!.TransactionCode!.Trim();
+            var metadata = entity.request_content;
+            var now = TimezoneConverter.VietnamNow;
+
+            await using var transaction = await _authorRevenueRepository.BeginTransactionAsync(ct);
+
+            author.revenue_pending_vnd -= amount;
+            author.revenue_withdrawn_vnd += amount;
+
+            entity.status = "approved";
+            entity.omod_id = omodAccountId;
+            entity.reviewed_at = now;
+            entity.omod_note = note;
+            entity.withdraw_code = transactionCode;
+
+            await _opRepo.UpdateOpRequestAsync(entity, ct);
+
+            await _authorRevenueRepository.AddTransactionAsync(new author_revenue_transaction
+            {
+                trans_id = Guid.NewGuid(),
+                author_id = author.account_id,
+                type = "withdraw_complete",
+                amount_vnd = -amount,
+                request_id = entity.request_id,
+                metadata = metadata,
+                created_at = now
+            }, ct);
+
+            await _authorRevenueRepository.SaveChangesAsync(ct);
+            await transaction.CommitAsync(ct);
+
+            await _notificationService.CreateAsync(new NotificationCreateModel(
+                entity.requester_id,
+                NotificationTypes.OperationRequest,
+                "Yêu cầu rút tiền được chấp thuận",
+                "Yêu cầu rút tiền của bạn đã được xử lý thành công.",
+                new
+                {
+                    requestId = entity.request_id,
+                    status = "approved",
+                    amount
+                }), ct);
+        }
+
+        public async Task RejectWithdrawAsync(Guid requestId, Guid omodAccountId, RejectWithdrawRequest request, CancellationToken ct = default)
+        {
+            var entity = await _opRepo.GetWithdrawRequestAsync(requestId, ct)
+                         ?? throw new AppException("WithdrawRequestNotFound", "Withdraw request was not found.", 404);
+
+            if (!string.Equals(entity.status, "pending", StringComparison.OrdinalIgnoreCase))
+            {
+                throw new AppException("InvalidState", "Only pending withdraw requests can be rejected.", 400);
+            }
+
+            if (!entity.withdraw_amount.HasValue)
+            {
+                throw new AppException("InvalidWithdrawAmount", "Withdraw amount was not specified.", 400);
+            }
+
+            if (string.IsNullOrWhiteSpace(request?.Note))
+            {
+                throw new AppException("ReasonRequired", "Rejection reason is required.", 400);
+            }
+
+            var author = await _authorRevenueRepository.GetAuthorAsync(entity.requester_id, ct)
+                         ?? throw new AppException("AuthorProfileMissing", "Author profile was not found.", 404);
+
+            var amount = (long)entity.withdraw_amount.Value;
+            var reason = request!.Note!.Trim();
+            var metadata = entity.request_content;
+            var now = TimezoneConverter.VietnamNow;
+
+            await using var transaction = await _authorRevenueRepository.BeginTransactionAsync(ct);
+
+            author.revenue_pending_vnd -= amount;
+            author.revenue_balance_vnd += amount;
+
+            entity.status = "rejected";
+            entity.omod_id = omodAccountId;
+            entity.reviewed_at = now;
+            entity.omod_note = reason;
+
+            await _opRepo.UpdateOpRequestAsync(entity, ct);
+
+            await _authorRevenueRepository.AddTransactionAsync(new author_revenue_transaction
+            {
+                trans_id = Guid.NewGuid(),
+                author_id = author.account_id,
+                type = "withdraw_release",
+                amount_vnd = amount,
+                request_id = entity.request_id,
+                metadata = metadata,
+                created_at = now
+            }, ct);
+
+            await _authorRevenueRepository.SaveChangesAsync(ct);
+            await transaction.CommitAsync(ct);
+
+            await _notificationService.CreateAsync(new NotificationCreateModel(
+                entity.requester_id,
+                NotificationTypes.OperationRequest,
+                "Yêu cầu rút tiền bị từ chối",
+                reason,
+                new
+                {
+                    requestId = entity.request_id,
+                    status = "rejected",
+                    reason
+                }), ct);
+        }
+
+        private static AuthorWithdrawRequestResponse MapWithdrawResponse(op_request entity)
+        {
+            var payload = ParseWithdrawPayload(entity);
+            var amount = entity.withdraw_amount.HasValue ? (long)entity.withdraw_amount.Value : 0L;
+            return new AuthorWithdrawRequestResponse
+            {
+                RequestId = entity.request_id,
+                Amount = amount,
+                Status = entity.status,
+                BankName = payload.BankName,
+                BankAccountNumber = payload.BankAccountNumber,
+                AccountHolderName = payload.AccountHolderName,
+                Commitment = payload.Commitment,
+                Note = payload.Note,
+                ModeratorNote = entity.omod_note,
+                ModeratorUsername = entity.omod?.account?.username,
+                TransactionCode = entity.withdraw_code,
+                CreatedAt = entity.created_at,
+                ReviewedAt = entity.reviewed_at
+            };
+        }
+
+        private static AuthorWithdrawPayload ParseWithdrawPayload(op_request entity)
+        {
+            if (string.IsNullOrWhiteSpace(entity.request_content))
+            {
+                return new AuthorWithdrawPayload();
+            }
+
+            try
+            {
+                return JsonSerializer.Deserialize<AuthorWithdrawPayload>(entity.request_content, JsonOptions)
+                       ?? new AuthorWithdrawPayload();
+            }
+            catch
+            {
+                return new AuthorWithdrawPayload();
+            }
+        }
     }
 }

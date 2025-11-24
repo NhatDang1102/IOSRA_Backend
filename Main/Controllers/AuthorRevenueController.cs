@@ -1,0 +1,52 @@
+using System.Collections.Generic;
+using System.Threading;
+using System.Threading.Tasks;
+using Contract.DTOs.Request.Author;
+using Contract.DTOs.Respond.Author;
+using Contract.DTOs.Respond.Common;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
+using Service.Interfaces;
+
+namespace Main.Controllers
+{
+    [Authorize]
+    [Route("api/AuthorRevenue")]
+    public class AuthorRevenueController : AppControllerBase
+    {
+        private readonly IAuthorRevenueService _authorRevenueService;
+
+        public AuthorRevenueController(IAuthorRevenueService authorRevenueService)
+        {
+            _authorRevenueService = authorRevenueService;
+        }
+
+        [HttpGet("summary")]
+        public async Task<ActionResult<AuthorRevenueSummaryResponse>> GetSummary(CancellationToken ct)
+        {
+            var result = await _authorRevenueService.GetSummaryAsync(AccountId, ct);
+            return Ok(result);
+        }
+
+        [HttpGet("transactions")]
+        public async Task<ActionResult<PagedResult<AuthorRevenueTransactionItemResponse>>> GetTransactions([FromQuery] AuthorRevenueTransactionQuery query, CancellationToken ct)
+        {
+            var result = await _authorRevenueService.GetTransactionsAsync(AccountId, query, ct);
+            return Ok(result);
+        }
+
+        [HttpPost("withdraw")]
+        public async Task<ActionResult<AuthorWithdrawRequestResponse>> SubmitWithdraw([FromBody] AuthorWithdrawRequest request, CancellationToken ct)
+        {
+            var result = await _authorRevenueService.SubmitWithdrawAsync(AccountId, request, ct);
+            return Ok(result);
+        }
+
+        [HttpGet("withdraw")]
+        public async Task<ActionResult<IReadOnlyList<AuthorWithdrawRequestResponse>>> ListWithdrawRequests([FromQuery] string? status, CancellationToken ct)
+        {
+            var result = await _authorRevenueService.GetWithdrawRequestsAsync(AccountId, status, ct);
+            return Ok(result);
+        }
+    }
+}

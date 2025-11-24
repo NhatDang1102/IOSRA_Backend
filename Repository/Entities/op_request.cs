@@ -18,7 +18,7 @@ public partial class op_request
     
     public Guid requester_id { get; set; }
 
-    [Column(TypeName = "enum('withdraw','rank_up','become_author','author_withdraw')")]
+    [Column(TypeName = "enum('withdraw','rank_up','become_author')")]
     public string request_type { get; set; } = null!;
 
     [Column(TypeName = "text")]
