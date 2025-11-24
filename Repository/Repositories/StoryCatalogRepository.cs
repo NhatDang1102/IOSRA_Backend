@@ -122,8 +122,15 @@ namespace Repository.Repositories
             // text search
             if (!string.IsNullOrWhiteSpace(query))
             {
-                var like = BuildLikePattern(query.Trim());
-                q = q.Where(s => EF.Functions.Like(s.title, like) || EF.Functions.Like(s.desc, like));
+                var term = query.Trim();
+                var like = BuildLikePattern(term);
+                const string escapeChar = "\\"; 
+
+                q = q.Where(s =>
+                    EF.Functions.Like(s.title, like, escapeChar)
+                    || (s.desc != null && EF.Functions.Like(s.desc, like, escapeChar))
+                    || EF.Functions.Like(s.author.account.username, like, escapeChar)
+                );
             }
 
             // filter tag
@@ -143,6 +150,7 @@ namespace Repository.Repositories
             {
                 q = q.Where(s => s.is_premium == isPremium.Value);
             }
+
 
             // subquery: aggregate rating (avg)
             var ratingAgg = _db.story_ratings
