@@ -2,7 +2,7 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 using Contract.DTOs.Request.Moderation;
-using Contract.DTOs.Respond.Moderation;
+using Contract.DTOs.Response.Moderation;
 
 namespace Service.Interfaces
 {

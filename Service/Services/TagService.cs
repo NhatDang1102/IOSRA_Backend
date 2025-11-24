@@ -1,7 +1,7 @@
 using System;
 using Contract.DTOs.Request.Tag;
-using Contract.DTOs.Respond.Common;
-using Contract.DTOs.Respond.Tag;
+using Contract.DTOs.Response.Common;
+using Contract.DTOs.Response.Tag;
 using Repository.Interfaces;
 using Service.Exceptions;
 using Service.Interfaces;

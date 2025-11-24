@@ -1,6 +1,6 @@
 using BCrypt.Net;
 using Contract.DTOs.Request.Auth;
-using Contract.DTOs.Respond.Auth;
+using Contract.DTOs.Response.Auth;
 using Repository.Entities;
 using Repository.Interfaces;
 using Service.Exceptions;

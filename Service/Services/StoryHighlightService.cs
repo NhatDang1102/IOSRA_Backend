@@ -4,7 +4,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Contract.DTOs.Internal;
-using Contract.DTOs.Respond.Story;
+using Contract.DTOs.Response.Story;
 using Repository.Interfaces;
 using Service.Helpers;
 using Service.Interfaces;

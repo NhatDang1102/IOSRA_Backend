@@ -2,9 +2,9 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 using Contract.DTOs.Request.Profile;
-using Contract.DTOs.Respond.Profile;
 using Microsoft.AspNetCore.Http;
 using System.Collections.Generic;
+using Contract.DTOs.Response.Profile;
 
 namespace Service.Interfaces
 {

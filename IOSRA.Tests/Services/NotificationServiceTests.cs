@@ -2,7 +2,6 @@
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
-using Contract.DTOs.Respond.Notification;
 using FluentAssertions;
 using Moq;
 using Repository.Entities;
@@ -10,6 +9,7 @@ using Repository.Interfaces;
 using Service.Services;        // NotificationService
 using Service.Interfaces;      // INotificationDispatcher
 using Xunit;
+using Contract.DTOs.Response.Notification;
 
 public class NotificationServiceTests
 {

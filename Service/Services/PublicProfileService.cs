@@ -2,7 +2,7 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 using Contract.DTOs.Internal;
-using Contract.DTOs.Respond.Profile;
+using Contract.DTOs.Response.Profile;
 using Microsoft.Extensions.Caching.Memory;
 using Repository.Interfaces;
 using Service.Exceptions;

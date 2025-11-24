@@ -1,5 +1,5 @@
 using System.Threading.Tasks;
-using Contract.DTOs.Respond.Notification;
+using Contract.DTOs.Response.Notification;
 
 namespace Service.Interfaces
 {

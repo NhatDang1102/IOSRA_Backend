@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
-using Contract.DTOs.Respond.Story;
+using Contract.DTOs.Response.Story;
 
 namespace Service.Interfaces
 {

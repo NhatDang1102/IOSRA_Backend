@@ -1,5 +1,5 @@
 ﻿using Contract.DTOs.Request.Chapter;
-using Contract.DTOs.Respond.Chapter;
+using Contract.DTOs.Response.Chapter;
 using Repository.Entities;
 using Repository.Interfaces;
 using Repository.Utils;

@@ -3,8 +3,8 @@ using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using Contract.DTOs.Request.Author;
-using Contract.DTOs.Respond.Author;
-using Contract.DTOs.Respond.Common;
+using Contract.DTOs.Response.Author;
+using Contract.DTOs.Response.Common;
 
 namespace Service.Interfaces
 {

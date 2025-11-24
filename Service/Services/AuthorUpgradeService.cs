@@ -1,6 +1,6 @@
 using Contract.DTOs.Request.Author;
-using Contract.DTOs.Respond.Author;
-using Contract.DTOs.Respond.OperationMod;
+using Contract.DTOs.Response.Author;
+using Contract.DTOs.Response.OperationMod;
 using Repository.Interfaces;
 using Repository.Utils;
 using Service.Exceptions;

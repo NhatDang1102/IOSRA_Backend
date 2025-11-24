@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using Contract.DTOs.Respond.Story;
+using Contract.DTOs.Response.Story;
 using Repository.Entities;
 
 namespace Service.Helpers

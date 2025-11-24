@@ -1,5 +1,4 @@
 using Contract.DTOs.Request.Story;
-using Contract.DTOs.Respond.Story;
 using Repository.Entities;
 using Repository.Interfaces;
 using Repository.Utils;
@@ -12,6 +11,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Service.Helpers;
+using Contract.DTOs.Response.Story;
 
 namespace Service.Services
 {

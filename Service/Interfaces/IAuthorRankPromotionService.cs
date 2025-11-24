@@ -4,7 +4,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Contract.DTOs.Request.Author;
 using Contract.DTOs.Request.OperationMod;
-using Contract.DTOs.Respond.Author;
+using Contract.DTOs.Response.Author;
 
 namespace Service.Interfaces
 {

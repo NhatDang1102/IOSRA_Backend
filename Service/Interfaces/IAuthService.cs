@@ -1,7 +1,7 @@
 ﻿using System.Threading;
 using System.Threading.Tasks;
 using Contract.DTOs.Request.Auth;
-using Contract.DTOs.Respond.Auth;
+using Contract.DTOs.Response.Auth;
 
 namespace Service.Interfaces
 {

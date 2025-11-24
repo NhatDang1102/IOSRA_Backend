@@ -2,8 +2,8 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 using Contract.DTOs.Request.Report;
-using Contract.DTOs.Respond.Common;
-using Contract.DTOs.Respond.Report;
+using Contract.DTOs.Response.Common;
+using Contract.DTOs.Response.Report;
 
 namespace Service.Interfaces
 {

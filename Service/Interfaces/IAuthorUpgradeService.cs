@@ -1,7 +1,7 @@
 ﻿using Contract.DTOs.Request.Author;
-using Contract.DTOs.Respond.Author;
 using System;
-using Contract.DTOs.Respond.OperationMod;
+using Contract.DTOs.Response.Author;
+using Contract.DTOs.Response.OperationMod;
 
 namespace Service.Interfaces
 {

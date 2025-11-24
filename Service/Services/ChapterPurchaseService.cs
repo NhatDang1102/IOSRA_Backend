@@ -2,7 +2,7 @@ using System;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
-using Contract.DTOs.Respond.Chapter;
+using Contract.DTOs.Response.Chapter;
 using Repository.Entities;
 using Repository.Interfaces;
 using Repository.Utils;

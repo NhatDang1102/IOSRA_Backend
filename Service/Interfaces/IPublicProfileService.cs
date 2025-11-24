@@ -1,7 +1,7 @@
 using System;
 using System.Threading;
 using System.Threading.Tasks;
-using Contract.DTOs.Respond.Profile;
+using Contract.DTOs.Response.Profile;
 
 namespace Service.Interfaces
 {

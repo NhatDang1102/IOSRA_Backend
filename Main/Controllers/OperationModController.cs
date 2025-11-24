@@ -3,10 +3,10 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Collections.Generic;
 using Contract.DTOs.Request.OperationMod;
-using Contract.DTOs.Respond.Author;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Service.Interfaces;
+using Contract.DTOs.Response.Author;
 
 namespace Main.Controllers
 {

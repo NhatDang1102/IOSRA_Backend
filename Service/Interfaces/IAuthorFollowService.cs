@@ -2,8 +2,8 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 using Contract.DTOs.Request.Follow;
-using Contract.DTOs.Respond.Common;
-using Contract.DTOs.Respond.Follow;
+using Contract.DTOs.Response.Common;
+using Contract.DTOs.Response.Follow;
 
 namespace Service.Interfaces
 {

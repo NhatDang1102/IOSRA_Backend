@@ -1,5 +1,5 @@
 ﻿using Contract.DTOs.Request.Chapter;
-using Contract.DTOs.Respond.Chapter;
+using Contract.DTOs.Response.Chapter;
 using System;
 using System.Collections.Generic;
 using System.Threading;

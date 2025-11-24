@@ -1,5 +1,4 @@
 using Contract.DTOs.Request.Profile;
-using Contract.DTOs.Respond.Profile;
 using Contract.DTOs.Response.Subscription;
 using Microsoft.AspNetCore.Http;
 using Repository.Interfaces;
@@ -11,6 +10,7 @@ using System;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
+using Contract.DTOs.Response.Profile;
 
 namespace Service.Implementations
 {

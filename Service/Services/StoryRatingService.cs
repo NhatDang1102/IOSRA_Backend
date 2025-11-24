@@ -4,8 +4,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Contract.DTOs.Request.Story;
-using Contract.DTOs.Respond.Common;
-using Contract.DTOs.Respond.Story;
+using Contract.DTOs.Response.Common;
 using Repository.Entities;
 using Repository.Interfaces;
 using Repository.DataModels;
@@ -13,6 +12,7 @@ using Repository.Utils;
 using Service.Constants;
 using Service.Exceptions;
 using Service.Interfaces;
+using Contract.DTOs.Response.Story;
 
 namespace Service.Services
 {

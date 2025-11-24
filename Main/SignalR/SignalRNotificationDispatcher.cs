@@ -1,5 +1,5 @@
 using System.Threading.Tasks;
-using Contract.DTOs.Respond.Notification;
+using Contract.DTOs.Response.Notification;
 using Main.Hubs;
 using Microsoft.AspNetCore.SignalR;
 using Service.Interfaces;
