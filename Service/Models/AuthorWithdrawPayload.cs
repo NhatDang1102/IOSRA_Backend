@@ -6,6 +6,5 @@ namespace Service.Models
         public string BankAccountNumber { get; set; } = string.Empty;
         public string AccountHolderName { get; set; } = string.Empty;
         public string? Commitment { get; set; }
-        public string? Note { get; set; }
     }
 }

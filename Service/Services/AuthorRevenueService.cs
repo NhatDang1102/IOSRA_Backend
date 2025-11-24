@@ -127,8 +127,7 @@ namespace Service.Services
                 BankName = request.BankName.Trim(),
                 BankAccountNumber = request.BankAccountNumber.Trim(),
                 AccountHolderName = request.AccountHolderName.Trim(),
-                Commitment = string.IsNullOrWhiteSpace(request.Commitment) ? null : request.Commitment.Trim(),
-                Note = string.IsNullOrWhiteSpace(request.Note) ? null : request.Note.Trim()
+                Commitment = string.IsNullOrWhiteSpace(request.Commitment) ? null : request.Commitment.Trim()
             };
 
             var payloadJson = JsonSerializer.Serialize(payload, JsonOptions);
@@ -227,7 +226,6 @@ namespace Service.Services
                 BankAccountNumber = payload.BankAccountNumber,
                 AccountHolderName = payload.AccountHolderName,
                 Commitment = payload.Commitment,
-                Note = payload.Note,
                 ModeratorNote = request.omod_note,
                 TransactionCode = request.withdraw_code,
                 ModeratorUsername = request.omod?.account?.username,

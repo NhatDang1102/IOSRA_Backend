@@ -21,8 +21,5 @@ namespace Contract.DTOs.Request.Author
 
         [StringLength(300)]
         public string? Commitment { get; set; }
-
-        [StringLength(300)]
-        public string? Note { get; set; }
     }
 }

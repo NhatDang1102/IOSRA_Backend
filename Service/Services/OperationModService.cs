@@ -272,7 +272,6 @@ namespace Service.Implementations
                 BankAccountNumber = payload.BankAccountNumber,
                 AccountHolderName = payload.AccountHolderName,
                 Commitment = payload.Commitment,
-                Note = payload.Note,
                 ModeratorNote = entity.omod_note,
                 ModeratorUsername = entity.omod?.account?.username,
                 TransactionCode = entity.withdraw_code,
