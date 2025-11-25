@@ -495,7 +495,7 @@ namespace Service.Services
                 .FirstOrDefault();
 
             var moderatorStatus = approval?.moderator_id.HasValue == true ? approval.status : null;
-            var moderatorNote = approval?.moderator_id.HasValue == true ? approval.moderator_feedback : null;
+            var moderatorFeedback = approval?.moderator_id.HasValue == true ? approval.moderator_feedback : null;
 
             return new StoryResponse
             {
@@ -509,7 +509,7 @@ namespace Service.Services
                 AiResult = ResolveAiDecision(approval),
                 AiFeedback = approval?.ai_feedback,
                 ModeratorStatus = moderatorStatus,
-                ModeratorNote = moderatorNote,
+                moderatorFeedback = moderatorFeedback,
                 Outline = story.outline,
                 LengthPlan = story.length_plan,
                 CreatedAt = story.created_at,
@@ -537,7 +537,7 @@ namespace Service.Services
                 .FirstOrDefault();
 
             var moderatorStatus = approval?.moderator_id.HasValue == true ? approval.status : null;
-            var moderatorNote = approval?.moderator_id.HasValue == true ? approval.moderator_feedback : null;
+            var moderatorFeedback = approval?.moderator_id.HasValue == true ? approval.moderator_feedback : null;
 
             return new StoryListItemResponse
             {
@@ -555,7 +555,7 @@ namespace Service.Services
                 AiResult = ResolveAiDecision(approval),
                 AiFeedback = approval?.ai_feedback,
                 ModeratorStatus = moderatorStatus,
-                ModeratorNote = moderatorNote
+                moderatorFeedback = moderatorFeedback
             };
         }
 

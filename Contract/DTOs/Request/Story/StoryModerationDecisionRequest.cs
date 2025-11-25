@@ -7,6 +7,6 @@ namespace Contract.DTOs.Request.Story
         public bool Approve { get; set; }
 
         [StringLength(1000)]
-        public string? ModeratorNote { get; set; }
+        public string? ModeratorFeedback { get; set; }
     }
 }

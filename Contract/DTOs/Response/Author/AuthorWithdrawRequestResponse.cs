@@ -11,7 +11,7 @@ namespace Contract.DTOs.Response.Author
         public string BankAccountNumber { get; set; } = null!;
         public string AccountHolderName { get; set; } = null!;
         public string? Commitment { get; set; }
-        public string? ModeratorNote { get; set; }
+        public string? ModeratorFeedback { get; set; }
         public string? ModeratorUsername { get; set; }
         public string? TransactionCode { get; set; }
         public DateTime CreatedAt { get; set; }

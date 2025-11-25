@@ -218,7 +218,7 @@ namespace Service.Services
                 Status = request.status,
                 ModeratorId = request.omod_id,
                 ModeratorUsername = request.omod?.account.username,
-                ModeratorNote = request.omod_note,
+                ModeratorFeedback = request.omod_note,
                 CreatedAt = request.created_at,
                 ReviewedAt = request.reviewed_at
             };

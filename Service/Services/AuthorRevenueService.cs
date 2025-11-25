@@ -226,7 +226,7 @@ namespace Service.Services
                 BankAccountNumber = payload.BankAccountNumber,
                 AccountHolderName = payload.AccountHolderName,
                 Commitment = payload.Commitment,
-                ModeratorNote = request.omod_note,
+                ModeratorFeedback = request.omod_note,
                 TransactionCode = request.withdraw_code,
                 ModeratorUsername = request.omod?.account?.username,
                 CreatedAt = request.created_at,

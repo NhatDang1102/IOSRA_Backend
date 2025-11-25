@@ -9,6 +9,6 @@ namespace Contract.DTOs.Response.Author
         public Guid? AssignedOmodId { get; set; }
         public DateTime CreatedAt { get; set; }
         public DateTime? ReviewedAt { get; set; }
-        public string? ModeratorNote { get; set; }
+        public string? ModeratorFeedback { get; set; }
     }
 }

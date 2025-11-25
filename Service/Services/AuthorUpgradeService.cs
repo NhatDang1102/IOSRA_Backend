@@ -67,7 +67,7 @@ namespace Service.Implementations
                 AssignedOmodId = created.omod_id,
                 CreatedAt = created.created_at,
                 ReviewedAt = created.reviewed_at,
-                ModeratorNote = created.omod_note
+                ModeratorFeedback = created.omod_note
             };
         }
 
@@ -88,7 +88,7 @@ namespace Service.Implementations
                 CreatedAt = x.created_at,
                 AssignedOmodId = x.omod_id,
                 ReviewedAt = x.reviewed_at,
-                ModeratorNote = x.omod_note
+                ModeratorFeedback = x.omod_note
             }).ToList();
         }
     }
