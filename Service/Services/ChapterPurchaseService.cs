@@ -197,6 +197,15 @@ namespace Service.Services
                 throw new AppException("AuthorCannotPurchase", "Authors already own their chapter voices.", 400);
             }
 
+            if (string.Equals(chapter.access_type, "dias", StringComparison.OrdinalIgnoreCase))
+            {
+                var hasChapter = await _chapterPurchaseRepository.HasReaderPurchasedChapterAsync(chapterId, readerAccountId, ct);
+                if (!hasChapter)
+                {
+                    throw new AppException("ChapterNotPurchased", "You must buy this chapter before buying voice.", 403);
+                }
+            }
+
             var readyVoices = chapter.chapter_voices
                 .Where(v => requestedVoiceIds.Contains(v.voice_id) &&
                             string.Equals(v.status, "ready", StringComparison.OrdinalIgnoreCase))
