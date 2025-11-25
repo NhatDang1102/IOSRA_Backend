@@ -7,7 +7,7 @@ namespace Contract.DTOs.Request.Chapter
         [Required]
         public bool Approve { get; set; }
 
-        [StringLength(2000, ErrorMessage = "Moderator feedback must not exceed 2000 characters.")]
-        public string? ModeratorFeedback { get; set; }
+        [StringLength(2000, ErrorMessage = "Moderator note must not exceed 2000 characters.")]
+        public string? ModeratorNote { get; set; }
     }
 }

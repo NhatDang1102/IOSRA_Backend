@@ -52,7 +52,7 @@ namespace Service.Implementations
                 CreatedAt = x.created_at,
                 AssignedOmodId = x.omod_id,
                 ReviewedAt = x.reviewed_at,
-                ModeratorFeedback = x.omod_note
+                ModeratorNote = x.omod_note
             }).ToList();
         }
 
@@ -272,7 +272,7 @@ namespace Service.Implementations
                 BankAccountNumber = payload.BankAccountNumber,
                 AccountHolderName = payload.AccountHolderName,
                 Commitment = payload.Commitment,
-                ModeratorFeedback = entity.omod_note,
+                ModeratorNote = entity.omod_note,
                 ModeratorUsername = entity.omod?.account?.username,
                 TransactionCode = entity.withdraw_code,
                 CreatedAt = entity.created_at,

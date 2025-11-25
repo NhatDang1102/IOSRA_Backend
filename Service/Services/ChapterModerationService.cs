@@ -93,8 +93,8 @@ namespace Service.Services
             }
 
             approval.status = request.Approve ? "approved" : "rejected";
-            var moderatorFeedback = string.IsNullOrWhiteSpace(request.ModeratorFeedback) ? null : request.ModeratorFeedback.Trim();
-            approval.moderator_feedback = moderatorFeedback;
+            var humanNote = string.IsNullOrWhiteSpace(request.ModeratorNote) ? null : request.ModeratorNote.Trim();
+            approval.moderator_feedback = humanNote;
             approval.moderator_id = moderatorAccountId;
             approval.created_at = TimezoneConverter.VietnamNow;
 
@@ -107,9 +107,9 @@ namespace Service.Services
             {
                 chapter.status = "rejected";
                 chapter.published_at = null;
-                if (!string.IsNullOrWhiteSpace(moderatorFeedback))
+                if (!string.IsNullOrWhiteSpace(humanNote))
                 {
-                    approval.ai_feedback = moderatorFeedback;
+                    approval.ai_feedback = humanNote;
                 }
             }
 
@@ -138,9 +138,9 @@ namespace Service.Services
 
             var message = request.Approve
                 ? $"Ban kiểm duyệt đã phê duyệt chương \"{chapter.title}\" thuộc truyện \"{story.title}\"."
-                : string.IsNullOrWhiteSpace(moderatorFeedback)
+                : string.IsNullOrWhiteSpace(humanNote)
                     ? $"Ban kiểm duyệt đã từ chối chương \"{chapter.title}\". Vui lòng kiểm tra lại nội dung."
-                    : $"Ban kiểm duyệt đã từ chối chương \"{chapter.title}\": {moderatorFeedback}";
+                    : $"Ban kiểm duyệt đã từ chối chương \"{chapter.title}\": {humanNote}";
 
             await _notificationService.CreateAsync(new NotificationCreateModel(
                 authorAccount.account_id,
@@ -153,7 +153,7 @@ namespace Service.Services
                     storyId = story.story_id,
                     chapterId = chapter.chapter_id,
                     status = statusText,
-                    moderatorFeedback = moderatorFeedback
+                    moderatorNote = humanNote
                 }), ct);
 
             if (request.Approve)

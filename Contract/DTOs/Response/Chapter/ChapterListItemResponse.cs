@@ -20,7 +20,7 @@ namespace Contract.DTOs.Response.Chapter
         public string? AiResult { get; set; }
         public string? AiFeedback { get; set; }
         public string? ModeratorStatus { get; set; }
-        public string? ModeratorFeedback { get; set; }
+        public string? ModeratorNote { get; set; }
     }
 }
 

@@ -1,4 +1,4 @@
-using Contract.DTOs.Request.Story;
+﻿using Contract.DTOs.Request.Story;
 using Contract.DTOs.Response.Story;
 using Repository.Entities;
 using Repository.Interfaces;
@@ -94,8 +94,8 @@ namespace Service.Services
             }
 
             approval.status = request.Approve ? "approved" : "rejected";
-            var moderatorFeedback = string.IsNullOrWhiteSpace(request.ModeratorFeedback) ? null : request.ModeratorFeedback.Trim();
-            approval.moderator_feedback = moderatorFeedback;
+            var humanNote = string.IsNullOrWhiteSpace(request.ModeratorNote) ? null : request.ModeratorNote.Trim();
+            approval.moderator_feedback = humanNote;
             approval.moderator_id = moderatorAccountId;
             approval.created_at = TimezoneConverter.VietnamNow;
 
@@ -129,14 +129,14 @@ namespace Service.Services
             }
 
             var title = request.Approve
-                ? $"Truy?n \"{story.title}\" d� dc duy?t"
-                : $"Truy?n \"{story.title}\" d� b? t? ch?i";
+                ? $"Truyện \"{story.title}\" đã được duyệt"
+                : $"Truyện \"{story.title}\" bị từ chối";
 
             var message = request.Approve
-                ? "Ban ki?m duy?t d� ph� duy?t truy?n c?a b?n."
-                : string.IsNullOrWhiteSpace(moderatorFeedback)
-                    ? "Ban ki?m duy?t d� t? ch?i truy?n c?a b?n."
-                    : $"Ban ki?m duy?t d� t? ch?i truy?n c?a b?n: {moderatorFeedback}";
+                ? "Ban kiểm duyệt đã phê duyệt truyện của bạn. Bạn có thể tiếp tục đăng chương mới."
+                : string.IsNullOrWhiteSpace(humanNote)
+                    ? "Ban kiểm duyệt đã từ chối truyện của bạn. Vui lòng kiểm tra lại nội dung."
+                    : $"Ban kiểm duyệt đã từ chối truyện của bạn: {humanNote}";
 
             await _notificationService.CreateAsync(new NotificationCreateModel(
                 authorAccount.account_id,
@@ -148,7 +148,7 @@ namespace Service.Services
                     reviewId = approval.review_id,
                     storyId = story.story_id,
                     status = statusText,
-                    moderatorFeedback = moderatorFeedback
+                    moderatorNote = humanNote
                 }), ct);
 
             if (request.Approve)
