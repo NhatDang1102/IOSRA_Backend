@@ -47,5 +47,12 @@ namespace Main.Controllers
 
             return Ok(chapter);
         }
+
+        [HttpGet("{chapterId:guid}/voices")]
+        public async Task<ActionResult<IReadOnlyList<ChapterCatalogVoiceResponse>>> GetVoices(Guid chapterId, CancellationToken ct)
+        {
+            var result = await _chapterCatalogService.GetChapterVoicesAsync(chapterId, TryGetAccountId(), ct);
+            return Ok(result);
+        }
     }
 }

@@ -43,6 +43,15 @@ namespace Repository.Repositories
                   .Include(c => c.story)
                   .FirstOrDefaultAsync(c => c.chapter_id == chapterId && c.status == PublishedStatus, ct);
 
+        public Task<chapter?> GetPublishedChapterWithVoicesAsync(Guid chapterId, CancellationToken ct = default)
+            => _db.chapters
+                .AsNoTracking()
+                .Include(c => c.language)
+                .Include(c => c.story)
+                .Include(c => c.chapter_voices)
+                    .ThenInclude(v => v.voice)
+                .FirstOrDefaultAsync(c => c.chapter_id == chapterId && c.status == PublishedStatus, ct);
+
         public async Task<Dictionary<Guid, int>> GetPublishedChapterCountsByStoryIdsAsync(IEnumerable<Guid> storyIds, CancellationToken ct = default)
         {
             var ids = storyIds?.Distinct().ToArray();

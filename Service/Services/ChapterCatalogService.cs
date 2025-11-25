@@ -128,5 +128,38 @@ namespace Service.Services
                 Voices = voices
             };
         }
+
+        public async Task<IReadOnlyList<ChapterCatalogVoiceResponse>> GetChapterVoicesAsync(Guid chapterId, Guid? viewerAccountId, CancellationToken ct = default)
+        {
+            var chapter = await _chapterRepository.GetPublishedChapterWithVoicesAsync(chapterId, ct)
+                           ?? throw new AppException("ChapterNotFound", "Chapter was not found or not available.", 404);
+
+            var ownedVoiceIds = Array.Empty<Guid>();
+            if (viewerAccountId.HasValue)
+            {
+                ownedVoiceIds = (await _chapterPurchaseRepository.GetPurchasedVoiceIdsAsync(chapterId, viewerAccountId.Value, ct)).ToArray();
+            }
+
+            if (chapter.chapter_voices == null || chapter.chapter_voices.Count == 0)
+            {
+                return Array.Empty<ChapterCatalogVoiceResponse>();
+            }
+
+            var ownedSet = ownedVoiceIds.Length > 0 ? new HashSet<Guid>(ownedVoiceIds) : null;
+
+            return chapter.chapter_voices
+                .OrderBy(v => v.voice?.voice_name)
+                .Select(v => new ChapterCatalogVoiceResponse
+                {
+                    VoiceId = v.voice_id,
+                    VoiceName = v.voice?.voice_name ?? string.Empty,
+                    VoiceCode = v.voice?.voice_code ?? string.Empty,
+                    Status = v.status,
+                    PriceDias = (int)v.dias_price,
+                    HasAudio = string.Equals(v.status, "ready", StringComparison.OrdinalIgnoreCase),
+                    Owned = ownedSet?.Contains(v.voice_id) ?? false
+                })
+                .ToArray();
+        }
     }
 }
