@@ -18,9 +18,6 @@ public partial class chapter_voice
     public Guid voice_id { get; set; }
 
     [StringLength(512)]
-    public string? cloud_url { get; set; }
-
-    [StringLength(512)]
     public string? storage_path { get; set; }
 
     [StringLength(16)]

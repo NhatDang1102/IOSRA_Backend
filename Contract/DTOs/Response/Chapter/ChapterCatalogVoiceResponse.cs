@@ -11,5 +11,6 @@ namespace Contract.DTOs.Response.Chapter
         public int PriceDias { get; set; }
         public bool HasAudio { get; set; }
         public bool Owned { get; set; }
+        public string? AudioUrl { get; set; }
     }
 }

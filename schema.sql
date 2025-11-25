@@ -298,10 +298,9 @@ CREATE TABLE story_rating (
       REFERENCES language_list(lang_id) ON DELETE RESTRICT ON UPDATE CASCADE
   ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
-CREATE TABLE chapter_voices (
+  CREATE TABLE chapter_voices (
       chapter_id   CHAR(36) NOT NULL,
       voice_id     CHAR(36) NOT NULL,
-      cloud_url    VARCHAR(512) NULL,
       storage_path VARCHAR(512) NULL,
       status       ENUM('pending','processing','ready','failed') NOT NULL DEFAULT 'pending',
       requested_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,

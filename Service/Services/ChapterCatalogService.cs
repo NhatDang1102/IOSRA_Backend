@@ -157,9 +157,42 @@ namespace Service.Services
                     Status = v.status,
                     PriceDias = (int)v.dias_price,
                     HasAudio = string.Equals(v.status, "ready", StringComparison.OrdinalIgnoreCase),
-                    Owned = ownedSet?.Contains(v.voice_id) ?? false
+                    Owned = ownedSet?.Contains(v.voice_id) ?? false,
+                    AudioUrl = (ownedSet?.Contains(v.voice_id) ?? false) && string.Equals(v.status, "ready", StringComparison.OrdinalIgnoreCase)
+                        ? v.storage_path
+                        : null
                 })
                 .ToArray();
+        }
+
+        public async Task<ChapterCatalogVoiceResponse> GetChapterVoiceAsync(Guid chapterId, Guid voiceId, Guid? viewerAccountId, CancellationToken ct = default)
+        {
+            var voice = await _chapterRepository.GetChapterVoiceAsync(chapterId, voiceId, ct)
+                       ?? throw new AppException("VoiceNotFound", "Voice was not found for this chapter.", 404);
+
+            var owned = false;
+            if (viewerAccountId.HasValue)
+            {
+                var ownedVoiceIds = await _chapterPurchaseRepository.GetPurchasedVoiceIdsAsync(chapterId, viewerAccountId.Value, ct);
+                if (ownedVoiceIds.Count > 0)
+                {
+                    owned = ownedVoiceIds.Contains(voiceId);
+                }
+            }
+
+            var ready = string.Equals(voice.status, "ready", StringComparison.OrdinalIgnoreCase);
+
+            return new ChapterCatalogVoiceResponse
+            {
+                VoiceId = voice.voice_id,
+                VoiceName = voice.voice?.voice_name ?? string.Empty,
+                VoiceCode = voice.voice?.voice_code ?? string.Empty,
+                Status = voice.status,
+                PriceDias = (int)voice.dias_price,
+                HasAudio = ready,
+                Owned = owned,
+                AudioUrl = owned && ready ? voice.storage_path : null
+            };
         }
     }
 }

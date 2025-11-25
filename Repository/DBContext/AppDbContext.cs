@@ -590,7 +590,6 @@ public partial class AppDbContext : DbContext
 
 
 
-            entity.Property(e => e.cloud_url).HasMaxLength(512);
 
             entity.Property(e => e.storage_path).HasMaxLength(512);
 

@@ -160,9 +160,7 @@ namespace Repository.Repositories
                        VoiceName = preset.voice_name,
                        VoiceCode = preset.voice_code,
                        PriceDias = voice.dia_price,
-                       AudioUrl = !string.IsNullOrWhiteSpace(generated.storage_path)
-                           ? generated.storage_path
-                           : generated.cloud_url,
+                    AudioUrl = generated.storage_path,
                        PurchasedAt = voice.created_at
                    };
         }

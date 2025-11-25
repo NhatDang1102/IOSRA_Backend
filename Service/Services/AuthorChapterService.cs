@@ -545,7 +545,7 @@ namespace Service.Services
                     VoiceName = v.voice?.voice_name ?? string.Empty,
                     VoiceCode = v.voice?.voice_code ?? string.Empty,
                     Status = v.status,
-                    AudioUrl = string.IsNullOrWhiteSpace(v.storage_path) ? v.cloud_url : v.storage_path,
+                    AudioUrl = v.storage_path,
                     RequestedAt = v.requested_at,
                     CompletedAt = v.completed_at,
                     CharCost = v.char_cost,

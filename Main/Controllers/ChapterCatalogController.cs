@@ -54,5 +54,12 @@ namespace Main.Controllers
             var result = await _chapterCatalogService.GetChapterVoicesAsync(chapterId, TryGetAccountId(), ct);
             return Ok(result);
         }
+
+        [HttpGet("{chapterId:guid}/voices/{voiceId:guid}")]
+        public async Task<ActionResult<ChapterCatalogVoiceResponse>> GetVoice(Guid chapterId, Guid voiceId, CancellationToken ct)
+        {
+            var result = await _chapterCatalogService.GetChapterVoiceAsync(chapterId, voiceId, TryGetAccountId(), ct);
+            return Ok(result);
+        }
     }
 }

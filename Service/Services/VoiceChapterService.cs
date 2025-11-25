@@ -268,9 +268,7 @@ namespace Service.Services
 
         private VoiceChapterVoiceResponse MapVoice(chapter_voice entity)
         {
-            var audioPath = !string.IsNullOrWhiteSpace(entity.storage_path)
-                ? entity.storage_path
-                : entity.cloud_url;
+            var audioPath = entity.storage_path;
 
             return new VoiceChapterVoiceResponse
             {
@@ -301,7 +299,6 @@ namespace Service.Services
                 var storageKey = await _voiceStorage.UploadAsync(chapter.story_id, chapter.chapter_id, preset.voice_id, audioBytes, ct);
 
                 row.storage_path = storageKey;
-                row.cloud_url = _voiceStorage.GetPublicUrl(storageKey);
                 row.status = "ready";
                 row.completed_at = TimezoneConverter.VietnamNow;
             }
