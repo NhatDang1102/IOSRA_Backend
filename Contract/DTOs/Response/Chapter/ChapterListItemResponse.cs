@@ -8,6 +8,7 @@ namespace Contract.DTOs.Response.Chapter
         public int ChapterNo { get; set; }
         public string Title { get; set; } = null!;
         public int WordCount { get; set; }
+        public int CharCount { get; set; }
         public string LanguageCode { get; set; } = null!;
         public string LanguageName { get; set; } = null!;
         public int PriceDias { get; set; }

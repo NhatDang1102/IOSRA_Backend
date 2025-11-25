@@ -24,7 +24,7 @@ public partial class chapter_localization
     public uint word_count { get; set; }
 
     [StringLength(512)]
-    public string? cloud_url { get; set; }
+    public string? content_url { get; set; }
 
     [ForeignKey("chapter_id")]
     [InverseProperty("chapter_localizations")]

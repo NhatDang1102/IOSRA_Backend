@@ -284,19 +284,19 @@ CREATE TABLE story_rating (
     REFERENCES reader(account_id) ON DELETE CASCADE ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
-CREATE TABLE chapter_localizations (
-  chapter_id CHAR(36) NOT NULL,
-  lang_id    CHAR(36) NOT NULL,
-  content    LONGTEXT NOT NULL,
-  word_count INT UNSIGNED NOT NULL DEFAULT 0,
-  cloud_url  VARCHAR(512) NULL,
-  PRIMARY KEY (chapter_id, lang_id),
-  KEY fk_chloc_lang (lang_id),
-  CONSTRAINT fk_chloc_chapter FOREIGN KEY (chapter_id)
-    REFERENCES chapters(chapter_id) ON DELETE CASCADE ON UPDATE CASCADE,
-  CONSTRAINT fk_chloc_lang FOREIGN KEY (lang_id)
-    REFERENCES language_list(lang_id) ON DELETE RESTRICT ON UPDATE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+  CREATE TABLE chapter_localizations (
+    chapter_id CHAR(36) NOT NULL,
+    lang_id    CHAR(36) NOT NULL,
+    content    LONGTEXT NOT NULL,
+    word_count INT UNSIGNED NOT NULL DEFAULT 0,
+    content_url  VARCHAR(512) NULL,
+    PRIMARY KEY (chapter_id, lang_id),
+    KEY fk_chloc_lang (lang_id),
+    CONSTRAINT fk_chloc_chapter FOREIGN KEY (chapter_id)
+      REFERENCES chapters(chapter_id) ON DELETE CASCADE ON UPDATE CASCADE,
+    CONSTRAINT fk_chloc_lang FOREIGN KEY (lang_id)
+      REFERENCES language_list(lang_id) ON DELETE RESTRICT ON UPDATE CASCADE
+  ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 CREATE TABLE chapter_voices (
       chapter_id   CHAR(36) NOT NULL,

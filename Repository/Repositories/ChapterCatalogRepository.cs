@@ -62,5 +62,21 @@ namespace Repository.Repositories
 
         public Task<bool> HasReaderPurchasedChapterAsync(Guid chapterId, Guid readerId, CancellationToken ct = default)
             => _db.chapter_purchase_logs.AnyAsync(p => p.chapter_id == chapterId && p.account_id == readerId, ct);
+
+        public Task<language_list?> GetLanguageByCodeAsync(string languageCode, CancellationToken ct = default)
+            => _db.language_lists.AsNoTracking().FirstOrDefaultAsync(l => l.lang_code == languageCode, ct);
+
+        public Task<chapter_localization?> GetLocalizationAsync(Guid chapterId, Guid langId, CancellationToken ct = default)
+            => _db.chapter_localizations.AsNoTracking()
+                .FirstOrDefaultAsync(l => l.chapter_id == chapterId && l.lang_id == langId, ct);
+
+        public Task AddLocalizationAsync(chapter_localization entity, CancellationToken ct = default)
+        {
+            _db.chapter_localizations.Add(entity);
+            return Task.CompletedTask;
+        }
+
+        public Task SaveChangesAsync(CancellationToken ct = default)
+            => _db.SaveChangesAsync(ct);
     }
 }

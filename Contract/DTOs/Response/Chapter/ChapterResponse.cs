@@ -11,6 +11,7 @@ namespace Contract.DTOs.Response.Chapter
         public string Title { get; set; } = null!;
         public string? Summary { get; set; }
         public int WordCount { get; set; }
+        public int CharCount { get; set; }
         public string LanguageCode { get; set; } = null!;
         public string LanguageName { get; set; } = null!;
         public int PriceDias { get; set; }

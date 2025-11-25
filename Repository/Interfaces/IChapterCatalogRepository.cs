@@ -13,5 +13,9 @@ namespace Repository.Interfaces
         Task<Dictionary<Guid, int>> GetPublishedChapterCountsByStoryIdsAsync(IEnumerable<Guid> storyIds, CancellationToken ct = default);
         Task<int> GetPublishedChapterCountAsync(Guid storyId, CancellationToken ct = default);
         Task<bool> HasReaderPurchasedChapterAsync(Guid chapterId, Guid readerId, CancellationToken ct = default);
+        Task<language_list?> GetLanguageByCodeAsync(string languageCode, CancellationToken ct = default);
+        Task<chapter_localization?> GetLocalizationAsync(Guid chapterId, Guid langId, CancellationToken ct = default);
+        Task AddLocalizationAsync(chapter_localization entity, CancellationToken ct = default);
+        Task SaveChangesAsync(CancellationToken ct = default);
     }
 }

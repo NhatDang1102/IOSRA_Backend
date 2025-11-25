@@ -22,26 +22,13 @@ namespace Service.Helpers
             _settings = options.Value;
         }
 
-        public async Task<string> UploadAsync(Guid storyId, Guid chapterId, string content, CancellationToken ct = default)
+        public Task<string> UploadAsync(Guid storyId, Guid chapterId, string content, CancellationToken ct = default)
+            => UploadInternalAsync(BuildObjectKey(storyId, chapterId), content, ct);
+
+        public Task<string> UploadLocalizationAsync(Guid storyId, Guid chapterId, string languageCode, string content, CancellationToken ct = default)
         {
-            var key = BuildObjectKey(storyId, chapterId);
-            var bytes = Encoding.UTF8.GetBytes(content);
-            using var stream = new MemoryStream(bytes, writable: false);
-            stream.Position = 0;
-
-            var request = new PutObjectRequest
-            {
-                BucketName = _settings.Bucket,
-                Key = key,
-                InputStream = stream,
-                ContentType = "text/plain; charset=utf-8",
-                AutoCloseStream = false,
-                UseChunkEncoding = false
-            };
-            request.Headers.ContentLength = stream.Length;
-
-            await _s3Client.PutObjectAsync(request, ct);
-            return key;
+            var key = BuildLocalizationKey(storyId, chapterId, languageCode);
+            return UploadInternalAsync(key, content, ct);
         }
 
         public async Task<string> DownloadAsync(string key, CancellationToken ct = default)
@@ -77,7 +64,31 @@ namespace Service.Helpers
             return $"{_settings.Endpoint.TrimEnd('/')}/{_settings.Bucket}/{key}";
         }
 
+        private async Task<string> UploadInternalAsync(string key, string content, CancellationToken ct)
+        {
+            var bytes = Encoding.UTF8.GetBytes(content);
+            using var stream = new MemoryStream(bytes, writable: false);
+            stream.Position = 0;
+
+            var request = new PutObjectRequest
+            {
+                BucketName = _settings.Bucket,
+                Key = key,
+                InputStream = stream,
+                ContentType = "text/plain; charset=utf-8",
+                AutoCloseStream = false,
+                UseChunkEncoding = false
+            };
+            request.Headers.ContentLength = stream.Length;
+
+            await _s3Client.PutObjectAsync(request, ct);
+            return key;
+        }
+
         private static string BuildObjectKey(Guid storyId, Guid chapterId)
             => $"stories/{storyId}/chapters/{chapterId}.txt";
+
+        private static string BuildLocalizationKey(Guid storyId, Guid chapterId, string languageCode)
+            => $"stories/{storyId}/chapters/{chapterId}/locales/{languageCode.ToLowerInvariant()}.txt";
     }
 }

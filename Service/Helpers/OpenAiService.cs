@@ -18,7 +18,7 @@ using System.Threading.Tasks;
 
 namespace Service.Helpers
 {
-    public class OpenAiService : IOpenAiModerationService, IOpenAiImageService
+    public class OpenAiService : IOpenAiModerationService, IOpenAiImageService, IOpenAiTranslationService
     {
         private const double AutoApproveThreshold = 7.0;
         private const double ManualReviewThreshold = 5.0;
@@ -172,6 +172,56 @@ namespace Service.Helpers
             stream.Position = 0;
 
             return new OpenAiImageResult(stream, fileName, contentType);
+        }
+
+        public async Task<string> TranslateAsync(string content, string sourceLanguageCode, string targetLanguageCode, CancellationToken ct = default)
+        {
+            if (string.IsNullOrWhiteSpace(content))
+            {
+                throw new ArgumentException("Content must not be empty.", nameof(content));
+            }
+
+            if (string.IsNullOrWhiteSpace(sourceLanguageCode) || string.IsNullOrWhiteSpace(targetLanguageCode))
+            {
+                throw new ArgumentException("Language codes are required.");
+            }
+
+            var systemPrompt = $"You are a professional literary translator. Translate from {sourceLanguageCode} to {targetLanguageCode}. Preserve the author's tone, keep paragraph breaks, and return plain text only without commentary.";
+            var payload = new ChatCompletionsRequest
+            {
+                Model = _settings.ChatModel,
+                Temperature = 0.1,
+                MaxTokens = 4096,
+                Messages = new[]
+                {
+                    new ChatMessage { Role = "system", Content = systemPrompt },
+                    new ChatMessage { Role = "user", Content = content }
+                }
+            };
+
+            using var request = new HttpRequestMessage(HttpMethod.Post, "chat/completions");
+            request.Content = new StringContent(JsonSerializer.Serialize(payload, _jsonOptions), Encoding.UTF8, "application/json");
+            using var response = await _httpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, ct);
+
+            if (!response.IsSuccessStatusCode)
+            {
+                var failureBody = await response.Content.ReadAsStringAsync(ct);
+                throw new InvalidOperationException($"OpenAI translation failed with status {(int)response.StatusCode}: {failureBody}");
+            }
+
+            var envelope = await response.Content.ReadFromJsonAsync<ChatCompletionsResponse>(_jsonOptions, ct)
+                          ?? throw new InvalidOperationException("OpenAI translation returned an empty response.");
+
+            var translated = envelope.Choices?
+                .Select(c => c.Message?.Content)
+                .FirstOrDefault(c => !string.IsNullOrWhiteSpace(c));
+
+            if (string.IsNullOrWhiteSpace(translated))
+            {
+                throw new InvalidOperationException("OpenAI translation response did not contain any content.");
+            }
+
+            return translated.Trim();
         }
 
 

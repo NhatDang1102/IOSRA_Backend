@@ -56,6 +56,7 @@ namespace Service
             });
             services.AddTransient<IOpenAiModerationService>(sp => sp.GetRequiredService<OpenAiService>());
             services.AddTransient<IOpenAiImageService>(sp => sp.GetRequiredService<OpenAiService>());
+            services.AddTransient<IOpenAiTranslationService>(sp => sp.GetRequiredService<OpenAiService>());
             services.AddSingleton<IStoryViewTracker, StoryViewTracker>();
 
             services.AddScoped<IJwtTokenFactory, JwtTokenFactory>();
@@ -81,6 +82,7 @@ namespace Service
             services.AddScoped<INotificationService, NotificationService>();
             services.AddScoped<IFollowerNotificationService, FollowerNotificationService>();
             services.AddScoped<IChapterPricingService, ChapterPricingService>();
+            services.AddScoped<IChapterTranslationService, ChapterTranslationService>();
             services.AddScoped<IVoicePricingService, VoicePricingService>();
             services.AddScoped<IPaymentService, PaymentService>();
             services.AddScoped<IVoicePaymentService, VoicePaymentService>();
