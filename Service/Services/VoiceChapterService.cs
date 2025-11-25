@@ -22,18 +22,21 @@ namespace Service.Services
         private readonly IVoiceAudioStorage _voiceStorage;
         private readonly IElevenLabsClient _elevenLabsClient;
         private readonly ILogger<VoiceChapterService> _logger;
+        private readonly IVoicePricingService _voicePricingService;
 
         public VoiceChapterService(
             AppDbContext db,
             IChapterContentStorage contentStorage,
             IVoiceAudioStorage voiceStorage,
             IElevenLabsClient elevenLabsClient,
+            IVoicePricingService voicePricingService,
             ILogger<VoiceChapterService> logger)
         {
             _db = db;
             _contentStorage = contentStorage;
             _voiceStorage = voiceStorage;
             _elevenLabsClient = elevenLabsClient;
+            _voicePricingService = voicePricingService;
             _logger = logger;
         }
 
@@ -143,6 +146,7 @@ namespace Service.Services
             }
 
             var charPerVoice = content.Length;
+            chapter.char_count = charPerVoice;
             var totalCharsNeeded = (long)charPerVoice * newPresets.Count;
             if (wallet.balance_chars < totalCharsNeeded)
             {
@@ -154,6 +158,8 @@ namespace Service.Services
             }
 
             var now = TimezoneConverter.VietnamNow;
+            var voicePrice = await _voicePricingService.GetPriceAsync(charPerVoice, ct);
+
             var chapterVoiceRows = new List<chapter_voice>();
             foreach (var preset in newPresets)
             {
@@ -164,7 +170,8 @@ namespace Service.Services
                     voice = preset,
                     status = "pending",
                     requested_at = now,
-                    char_cost = charPerVoice
+                    char_cost = charPerVoice,
+                    dias_price = (uint)voicePrice
                 };
                 chapter.chapter_voices.Add(entity);
                 chapterVoiceRows.Add(entity);
@@ -273,6 +280,7 @@ namespace Service.Services
                 RequestedAt = entity.requested_at,
                 CompletedAt = entity.completed_at,
                 CharCost = entity.char_cost,
+                PriceDias = (int)entity.dias_price,
                 ErrorMessage = entity.error_message
             };
         }

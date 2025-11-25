@@ -14,5 +14,6 @@ namespace Contract.DTOs.Response.Chapter
         public bool IsLocked { get; set; }
         public DateTime? PublishedAt { get; set; }
         public string ContentUrl { get; set; } = null!;
+        public PurchasedVoiceResponse[] Voices { get; set; } = Array.Empty<PurchasedVoiceResponse>();
     }
 }

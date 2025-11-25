@@ -16,13 +16,16 @@ namespace Service.Services
     {
         private readonly IChapterCatalogRepository _chapterRepository;
         private readonly IStoryCatalogRepository _storyRepository;
+        private readonly IChapterPurchaseRepository _chapterPurchaseRepository;
 
         public ChapterCatalogService(
             IChapterCatalogRepository chapterRepository,
-            IStoryCatalogRepository storyRepository)
+            IStoryCatalogRepository storyRepository,
+            IChapterPurchaseRepository chapterPurchaseRepository)
         {
             _chapterRepository = chapterRepository;
             _storyRepository = storyRepository;
+            _chapterPurchaseRepository = chapterPurchaseRepository;
         }
 
         public async Task<PagedResult<ChapterCatalogListItemResponse>> GetChaptersAsync(ChapterCatalogQuery query, CancellationToken ct = default)
@@ -89,6 +92,27 @@ namespace Service.Services
                 throw new AppException("ChapterContentMissing", "Chapter content is not available.", 500);
             }
 
+            var voices = Array.Empty<PurchasedVoiceResponse>();
+            if (viewerAccountId.HasValue)
+            {
+                var purchasedVoices = await _chapterPurchaseRepository.GetPurchasedVoicesAsync(viewerAccountId.Value, chapterId, ct);
+                if (purchasedVoices.Count > 0)
+                {
+                    voices = purchasedVoices.Select(v => new PurchasedVoiceResponse
+                    {
+                        PurchaseVoiceId = v.PurchaseVoiceId,
+                        ChapterId = v.ChapterId,
+                        StoryId = v.StoryId,
+                        VoiceId = v.VoiceId,
+                        VoiceName = v.VoiceName,
+                        VoiceCode = v.VoiceCode,
+                        PriceDias = (int)v.PriceDias,
+                        AudioUrl = v.AudioUrl,
+                        PurchasedAt = v.PurchasedAt
+                    }).ToArray();
+                }
+            }
+
             return new ChapterCatalogDetailResponse
             {
                 ChapterId = chapter.chapter_id,
@@ -100,7 +124,8 @@ namespace Service.Services
                 AccessType = chapter.access_type,
                 IsLocked = false,
                 PublishedAt = chapter.published_at,
-                ContentUrl = chapter.content_url
+                ContentUrl = chapter.content_url,
+                Voices = voices
             };
         }
     }

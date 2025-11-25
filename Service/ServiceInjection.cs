@@ -81,6 +81,7 @@ namespace Service
             services.AddScoped<INotificationService, NotificationService>();
             services.AddScoped<IFollowerNotificationService, FollowerNotificationService>();
             services.AddScoped<IChapterPricingService, ChapterPricingService>();
+            services.AddScoped<IVoicePricingService, VoicePricingService>();
             services.AddScoped<IPaymentService, PaymentService>();
             services.AddScoped<IVoicePaymentService, VoicePaymentService>();
             services.AddScoped<ISubscriptionService, SubscriptionService>();

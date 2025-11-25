@@ -24,6 +24,8 @@ public partial class author_revenue_transaction
 
     public Guid? purchase_log_id { get; set; }
 
+    public Guid? voice_purchase_id { get; set; }
+
     public Guid? request_id { get; set; }
 
     [Column(TypeName = "json")]
@@ -39,6 +41,10 @@ public partial class author_revenue_transaction
     [ForeignKey(nameof(purchase_log_id))]
     [InverseProperty("author_revenue_transactions")]
     public virtual chapter_purchase_log? purchase_log { get; set; }
+
+    [ForeignKey(nameof(voice_purchase_id))]
+    [InverseProperty("author_revenue_transactions")]
+    public virtual voice_purchase_log? voice_purchase { get; set; }
 
     [ForeignKey(nameof(request_id))]
     [InverseProperty("author_revenue_transactions")]

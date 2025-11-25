@@ -35,6 +35,8 @@ public partial class chapter_voice
 
     public int char_cost { get; set; }
 
+    public uint dias_price { get; set; }
+
     [Column(TypeName = "text")]
     public string? error_message { get; set; }
 

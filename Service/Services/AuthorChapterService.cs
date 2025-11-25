@@ -104,6 +104,7 @@ namespace Service.Services
                 throw new AppException("ChapterContentEmpty", "Chapter content must include words.", 400);
             }
 
+            var charCount = content.Length;
             var price = await _chapterPricingService.GetPriceAsync(wordCount, ct);
             var chapterNumber = await _chapterRepository.GetNextChapterNumberAsync(story.story_id, ct);
             var chapterId = Guid.NewGuid();
@@ -123,6 +124,7 @@ namespace Service.Services
                 access_type = accessType,
                 content_url = null,
                 word_count = wordCount,
+                char_count = charCount,
                 status = "draft",
                 created_at = TimezoneConverter.VietnamNow,
                 updated_at = TimezoneConverter.VietnamNow,
@@ -361,6 +363,7 @@ namespace Service.Services
                     throw new AppException("ChapterContentEmpty", "Chapter content must include words.", 400);
                 }
 
+                var charCount = content.Length;
                 var price = await _chapterPricingService.GetPriceAsync(wordCount, ct);
                 var previousContentKey = chapter.content_url;
                 string? newContentKey = null;
@@ -390,6 +393,7 @@ namespace Service.Services
                 }
 
                 chapter.word_count = wordCount;
+                chapter.char_count = charCount;
                 chapter.dias_price = (uint)price;
                 updated = true;
             }

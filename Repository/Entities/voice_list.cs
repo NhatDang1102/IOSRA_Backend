@@ -30,4 +30,7 @@ public partial class voice_list
 
     [InverseProperty("voice")]
     public virtual ICollection<chapter_voice> chapter_voices { get; set; } = new List<chapter_voice>();
+
+    [InverseProperty("voice")]
+    public virtual ICollection<voice_purchase_item> voice_purchase_items { get; set; } = new List<voice_purchase_item>();
 }

@@ -82,4 +82,10 @@ public partial class account
 
     [InverseProperty("account")]
     public virtual ICollection<subscription_payment> subscription_payments { get; set; } = new List<subscription_payment>();
+
+    [InverseProperty("account")]
+    public virtual ICollection<voice_purchase_log> voice_purchase_logs { get; set; } = new List<voice_purchase_log>();
+
+    [InverseProperty("account")]
+    public virtual ICollection<voice_purchase_item> voice_purchase_items { get; set; } = new List<voice_purchase_item>();
 }

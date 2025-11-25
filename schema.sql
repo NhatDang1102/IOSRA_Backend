@@ -173,8 +173,9 @@ CREATE TABLE chapters (
   summary      TEXT NULL,
   dias_price   INT UNSIGNED NOT NULL DEFAULT 0,
   access_type  ENUM('free','dias','sub_only') NOT NULL DEFAULT 'free',
-  content_url  VARCHAR(512) NULL,
-  word_count   INT UNSIGNED NOT NULL DEFAULT 0,
+    content_url  VARCHAR(512) NULL,
+    word_count   INT UNSIGNED NOT NULL DEFAULT 0,
+    char_count   INT UNSIGNED NOT NULL DEFAULT 0,
   status       ENUM('draft','pending','rejected','published','hidden','removed') NOT NULL DEFAULT 'draft',
   created_at   DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at   DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -298,16 +299,17 @@ CREATE TABLE chapter_localizations (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 CREATE TABLE chapter_voices (
-    chapter_id   CHAR(36) NOT NULL,
-    voice_id     CHAR(36) NOT NULL,
-    cloud_url    VARCHAR(512) NULL,
-    storage_path VARCHAR(512) NULL,
-    status       ENUM('pending','processing','ready','failed') NOT NULL DEFAULT 'pending',
-    requested_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    completed_at DATETIME NULL,
-    char_cost    INT NOT NULL DEFAULT 0,
-    error_message TEXT NULL,
-    PRIMARY KEY (chapter_id, voice_id),
+      chapter_id   CHAR(36) NOT NULL,
+      voice_id     CHAR(36) NOT NULL,
+      cloud_url    VARCHAR(512) NULL,
+      storage_path VARCHAR(512) NULL,
+      status       ENUM('pending','processing','ready','failed') NOT NULL DEFAULT 'pending',
+      requested_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      completed_at DATETIME NULL,
+      char_cost    INT NOT NULL DEFAULT 0,
+      dias_price   INT UNSIGNED NOT NULL DEFAULT 0,
+      error_message TEXT NULL,
+      PRIMARY KEY (chapter_id, voice_id),
     KEY fk_chvoice_voice (voice_id),
     CONSTRAINT fk_chvoice_chapter FOREIGN KEY (chapter_id)
       REFERENCES chapters(chapter_id) ON DELETE CASCADE ON UPDATE CASCADE,
@@ -419,15 +421,25 @@ CREATE TABLE voice_wallet (
     REFERENCES account(account_id) ON DELETE CASCADE ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
-CREATE TABLE voice_topup_pricing (
-  pricing_id       CHAR(36) NOT NULL,
-  amount_vnd       BIGINT UNSIGNED NOT NULL,
-  chars_granted    BIGINT UNSIGNED NOT NULL,
-  is_active        TINYINT(1) NOT NULL DEFAULT 1,
-  updated_at       DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  PRIMARY KEY (pricing_id),
-  UNIQUE KEY ux_voice_topup_amount (amount_vnd)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+  CREATE TABLE voice_topup_pricing (
+    pricing_id       CHAR(36) NOT NULL,
+    amount_vnd       BIGINT UNSIGNED NOT NULL,
+    chars_granted    BIGINT UNSIGNED NOT NULL,
+    is_active        TINYINT(1) NOT NULL DEFAULT 1,
+    updated_at       DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    PRIMARY KEY (pricing_id),
+    UNIQUE KEY ux_voice_topup_amount (amount_vnd)
+  ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+  CREATE TABLE voice_price_rule (
+    rule_id        CHAR(36) NOT NULL,
+    min_char_count INT UNSIGNED NOT NULL,
+    max_char_count INT UNSIGNED NULL,
+    dias_price     INT UNSIGNED NOT NULL,
+    created_at     DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (rule_id),
+    KEY ix_voice_price_min (min_char_count)
+  ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 CREATE TABLE voice_payment (
   topup_id        CHAR(36) NOT NULL,
@@ -445,20 +457,57 @@ CREATE TABLE voice_payment (
     REFERENCES voice_wallet(wallet_id) ON DELETE RESTRICT ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
-CREATE TABLE voice_wallet_payment (
-  trs_id     CHAR(36) NOT NULL,
-  wallet_id  CHAR(36) NOT NULL,
-  type       ENUM('topup','purchase','refund') NOT NULL DEFAULT 'purchase',
-  char_delta BIGINT NOT NULL,
-  char_after BIGINT NOT NULL,
-  ref_id     CHAR(36) NULL,
-  note       VARCHAR(255) NULL,
-  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  PRIMARY KEY (trs_id),
-  KEY ix_voice_wallet_payment_wallet (wallet_id),
-  CONSTRAINT fk_voice_wallet_payment_wallet FOREIGN KEY (wallet_id)
-    REFERENCES voice_wallet(wallet_id) ON DELETE CASCADE ON UPDATE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+  CREATE TABLE voice_wallet_payment (
+    trs_id     CHAR(36) NOT NULL,
+    wallet_id  CHAR(36) NOT NULL,
+    type       ENUM('topup','purchase','refund') NOT NULL DEFAULT 'purchase',
+    char_delta BIGINT NOT NULL,
+    char_after BIGINT NOT NULL,
+    ref_id     CHAR(36) NULL,
+    note       VARCHAR(255) NULL,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (trs_id),
+    KEY ix_voice_wallet_payment_wallet (wallet_id),
+    CONSTRAINT fk_voice_wallet_payment_wallet FOREIGN KEY (wallet_id)
+      REFERENCES voice_wallet(wallet_id) ON DELETE CASCADE ON UPDATE CASCADE
+  ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+  CREATE TABLE voice_purchase_log (
+    voice_purchase_id CHAR(36) NOT NULL,
+    chapter_id        CHAR(36) NOT NULL,
+    account_id        CHAR(36) NOT NULL,
+    total_dias        INT UNSIGNED NOT NULL,
+    created_at        DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (voice_purchase_id),
+    KEY ix_voice_purchase_chapter (chapter_id),
+    KEY ix_voice_purchase_account (account_id),
+    CONSTRAINT fk_voice_purchase_chapter FOREIGN KEY (chapter_id)
+      REFERENCES chapters(chapter_id) ON DELETE CASCADE ON UPDATE CASCADE,
+    CONSTRAINT fk_voice_purchase_account FOREIGN KEY (account_id)
+      REFERENCES account(account_id) ON DELETE CASCADE ON UPDATE CASCADE
+  ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+  CREATE TABLE voice_purchase_item (
+    purchase_item_id  CHAR(36) NOT NULL,
+    voice_purchase_id CHAR(36) NOT NULL,
+    account_id        CHAR(36) NOT NULL,
+    chapter_id        CHAR(36) NOT NULL,
+    voice_id          CHAR(36) NOT NULL,
+    dia_price         INT UNSIGNED NOT NULL,
+    created_at        DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (purchase_item_id),
+    UNIQUE KEY ux_voice_purchase_item (account_id, chapter_id, voice_id),
+    KEY ix_voice_purchase_item_purchase (voice_purchase_id),
+    KEY ix_voice_purchase_item_voice (voice_id),
+    CONSTRAINT fk_voice_purchase_item_purchase FOREIGN KEY (voice_purchase_id)
+      REFERENCES voice_purchase_log(voice_purchase_id) ON DELETE CASCADE ON UPDATE CASCADE,
+    CONSTRAINT fk_voice_purchase_item_account FOREIGN KEY (account_id)
+      REFERENCES account(account_id) ON DELETE CASCADE ON UPDATE CASCADE,
+    CONSTRAINT fk_voice_purchase_item_chapter FOREIGN KEY (chapter_id)
+      REFERENCES chapters(chapter_id) ON DELETE CASCADE ON UPDATE CASCADE,
+    CONSTRAINT fk_voice_purchase_item_voice FOREIGN KEY (voice_id)
+      REFERENCES voice_list(voice_id) ON DELETE CASCADE ON UPDATE CASCADE
+  ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 CREATE TABLE payment_receipt (
   receipt_id  CHAR(36) NOT NULL,
@@ -527,10 +576,21 @@ VALUES
   ('4fcb206b-544f-4d32-920f-b1c3159af645', 'Nữ trầm', 'female_low', '21m00Tcm4TlvDq8ikWAM', 'Female warm tone', 1),
   ('9c77afca-88f9-41bc-a13d-08d601b93a60', 'Nữ cao', 'female_high', 'AZnzlk1XvdvUeBnXmlld', 'Female bright tone', 1)
 ON DUPLICATE KEY UPDATE
-  voice_name = VALUES(voice_name),
-  provider_voice_id = VALUES(provider_voice_id),
-  description = VALUES(description),
-  is_active = VALUES(is_active);
+    voice_name = VALUES(voice_name),
+    provider_voice_id = VALUES(provider_voice_id),
+    description = VALUES(description),
+    is_active = VALUES(is_active);
+
+  INSERT INTO voice_price_rule (rule_id, min_char_count, max_char_count, dias_price)
+  VALUES
+    ('bb65ce30-0bdd-4f33-9f2d-7c28d21a5e3b', 0, 1500, 5),
+    ('a3f3e55e-90de-4d63-9ef2-6b1744931fcb', 1501, 5000, 7),
+    ('9f3fb829-4d70-4fe2-957b-0d4b6f3be7cc', 5001, 10000, 10),
+    ('c4af9db3-1dde-4b14-9b94-0888405c81f0', 10001, NULL, 15)
+  ON DUPLICATE KEY UPDATE
+    min_char_count = VALUES(min_char_count),
+    max_char_count = VALUES(max_char_count),
+    dias_price = VALUES(dias_price);
 
 -- ===================== Requests & moderation =====================
 CREATE TABLE op_requests (
@@ -559,21 +619,25 @@ CREATE TABLE author_revenue_transactions (
   author_id        CHAR(36) NOT NULL,
   type             ENUM('purchase','withdraw_reserve','withdraw_release','withdraw_complete') NOT NULL,
   amount_vnd       BIGINT NOT NULL DEFAULT 0,
-  purchase_log_id  CHAR(36) NULL,
-  request_id       CHAR(36) NULL,
-  metadata         JSON NULL,
+    purchase_log_id  CHAR(36) NULL,
+    voice_purchase_id CHAR(36) NULL,
+    request_id       CHAR(36) NULL,
+    metadata         JSON NULL,
   created_at       DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (trans_id),
   KEY ix_art_author (author_id),
   KEY ix_art_purchase (purchase_log_id),
-  KEY ix_art_request (request_id),
+    KEY ix_art_request (request_id),
+    KEY ix_art_voice_purchase (voice_purchase_id),
   CONSTRAINT fk_art_author FOREIGN KEY (author_id)
     REFERENCES author(account_id) ON DELETE CASCADE ON UPDATE CASCADE,
   CONSTRAINT fk_art_purchase FOREIGN KEY (purchase_log_id)
     REFERENCES chapter_purchase_log(chapter_purchase_id) ON DELETE SET NULL ON UPDATE CASCADE,
-  CONSTRAINT fk_art_request FOREIGN KEY (request_id)
-    REFERENCES op_requests(request_id) ON DELETE SET NULL ON UPDATE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+    CONSTRAINT fk_art_request FOREIGN KEY (request_id)
+      REFERENCES op_requests(request_id) ON DELETE SET NULL ON UPDATE CASCADE,
+    CONSTRAINT fk_art_voice_purchase FOREIGN KEY (voice_purchase_id)
+      REFERENCES voice_purchase_log(voice_purchase_id) ON DELETE SET NULL ON UPDATE CASCADE
+  ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 CREATE TABLE reports (
   report_id    CHAR(36) NOT NULL,

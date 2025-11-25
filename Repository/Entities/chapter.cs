@@ -36,6 +36,8 @@ public partial class chapter
 
     public int word_count { get; set; }
 
+    public int char_count { get; set; }
+
     [Column(TypeName = "enum('draft','pending','rejected','published','hidden','removed')")]
     public string status { get; set; } = null!;
 
@@ -65,6 +67,12 @@ public partial class chapter
 
     [InverseProperty("chapter")]
     public virtual ICollection<content_approve> content_approves { get; set; } = new List<content_approve>();
+
+    [InverseProperty("chapter")]
+    public virtual ICollection<voice_purchase_log> voice_purchase_logs { get; set; } = new List<voice_purchase_log>();
+
+    [InverseProperty("chapter")]
+    public virtual ICollection<voice_purchase_item> voice_purchase_items { get; set; } = new List<voice_purchase_item>();
 
     [ForeignKey("story_id")]
     [InverseProperty("chapters")]

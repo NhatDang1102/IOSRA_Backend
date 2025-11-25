@@ -12,6 +12,7 @@ namespace Contract.DTOs.Response.Voice
         public DateTime RequestedAt { get; set; }
         public DateTime? CompletedAt { get; set; }
         public int CharCost { get; set; }
+        public int PriceDias { get; set; }
         public string? ErrorMessage { get; set; }
     }
 }
