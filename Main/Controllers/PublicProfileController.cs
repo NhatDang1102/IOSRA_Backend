@@ -10,7 +10,7 @@ using Service.Interfaces;
 
 namespace Main.Controllers
 {
-    [Route("api/PublicProfile")]
+    [Route("api/[controller]")]
     [AllowAnonymous]
     public class PublicProfileController : AppControllerBase
     {
