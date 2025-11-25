@@ -33,5 +33,20 @@ namespace Main.Controllers
             return Ok(response);
         }
 
+        [HttpGet("{chapterId:guid}/char-count")]
+        public async Task<IActionResult> GetCharCount(Guid chapterId, CancellationToken ct = default)
+        {
+            var response = await _voiceChapterService.GetCharCountAsync(AccountId, chapterId, ct);
+            return Ok(response);
+        }
+
+        [HttpGet("voice-list")]
+        [AllowAnonymous]
+        public async Task<IActionResult> GetVoiceList(CancellationToken ct = default)
+        {
+            var response = await _voiceChapterService.GetPresetsAsync(ct);
+            return Ok(response);
+        }
+
     }
 }

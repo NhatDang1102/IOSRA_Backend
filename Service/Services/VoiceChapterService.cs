@@ -43,6 +43,48 @@ namespace Service.Services
             return MapChapter(chapter);
         }
 
+        public async Task<VoiceChapterCharCountResponse> GetCharCountAsync(Guid authorAccountId, Guid chapterId, CancellationToken ct = default)
+        {
+            var chapter = await LoadAuthorChapterAsync(chapterId, authorAccountId, includeVoices: false, ct);
+            if (string.IsNullOrWhiteSpace(chapter.content_url))
+            {
+                throw new AppException("ChapterContentMissing", "Chapter content is missing from storage.", 400);
+            }
+
+            var content = (await _contentStorage.DownloadAsync(chapter.content_url, ct)).Trim();
+            if (content.Length == 0)
+            {
+                throw new AppException("ChapterContentEmpty", "Chapter content is empty.", 400);
+            }
+
+            return new VoiceChapterCharCountResponse
+            {
+                ChapterId = chapter.chapter_id,
+                StoryId = chapter.story_id,
+                ChapterTitle = chapter.title,
+                WordCount = (int)chapter.word_count,
+                CharacterCount = content.Length
+            };
+        }
+
+        public async Task<IReadOnlyList<VoicePresetResponse>> GetPresetsAsync(CancellationToken ct = default)
+        {
+            var presets = await _db.voice_lists
+                .AsNoTracking()
+                .Where(v => v.is_active)
+                .OrderBy(v => v.voice_name)
+                .ToListAsync(ct);
+
+            return presets.Select(v => new VoicePresetResponse
+            {
+                VoiceId = v.voice_id,
+                VoiceName = v.voice_name,
+                VoiceCode = v.voice_code,
+                ProviderVoiceId = v.provider_voice_id,
+                Description = v.description ?? string.Empty
+            }).ToArray();
+        }
+
         public async Task<VoiceChapterOrderResponse> OrderVoicesAsync(Guid authorAccountId, Guid chapterId, VoiceChapterOrderRequest request, CancellationToken ct = default)
         {
             if (request?.VoiceIds == null || request.VoiceIds.Count == 0)
@@ -61,6 +103,7 @@ namespace Service.Services
             }
 
             var chapter = await LoadAuthorChapterAsync(chapterId, authorAccountId, includeVoices: true, ct);
+            EnsureVoiceEligibleChapter(chapter);
             if (!string.Equals(chapter.status, "published", StringComparison.OrdinalIgnoreCase))
             {
                 throw new AppException("ChapterNotPublished", "Only published chapters can be converted to audio.", 400);
@@ -165,6 +208,15 @@ namespace Service.Services
                 CharactersCharged = totalCharsNeeded,
                 WalletBalance = wallet.balance_chars
             };
+        }
+
+        private void EnsureVoiceEligibleChapter(chapter chapter)
+        {
+            var authorRank = chapter.story?.author?.rank?.rank_name;
+            if (string.IsNullOrWhiteSpace(authorRank) || string.Equals(authorRank, "Casual", StringComparison.OrdinalIgnoreCase))
+            {
+                throw new AppException("VoiceNotAllowed", "Only Bronze rank or higher authors can generate voice.", 403);
+            }
         }
 
         private async Task<chapter> LoadAuthorChapterAsync(Guid chapterId, Guid authorAccountId, bool includeVoices, CancellationToken ct)
