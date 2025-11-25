@@ -229,7 +229,9 @@ namespace Service.Services
         private async Task<chapter> LoadAuthorChapterAsync(Guid chapterId, Guid authorAccountId, bool includeVoices, CancellationToken ct)
         {
             IQueryable<chapter> query = _db.chapters
-                .Include(c => c.story);
+                .Include(c => c.story)
+                    .ThenInclude(s => s.author)
+                        .ThenInclude(a => a.rank);
 
             if (includeVoices)
             {
