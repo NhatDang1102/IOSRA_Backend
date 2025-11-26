@@ -126,6 +126,7 @@ namespace Service.Services
             }
 
             Guid? parentCommentId = null;
+            chapter_comment? replyTarget = null;
             if (request.ParentCommentId.HasValue && request.ParentCommentId.Value != Guid.Empty)
             {
                 var parent = await _commentRepository.GetAsync(chapter.chapter_id, request.ParentCommentId.Value, ct)
@@ -142,6 +143,7 @@ namespace Service.Services
                 }
 
                 parentCommentId = parent.parent_comment_id ?? parent.comment_id;
+                replyTarget = parent;
             }
 
             var now = TimezoneConverter.VietnamNow;
@@ -164,6 +166,7 @@ namespace Service.Services
                         ?? throw new InvalidOperationException("Failed to load comment after creation.");
 
             await NotifyAuthorCommentAsync(chapter, reader, saved, ct);
+            await NotifyCommentReplyAsync(replyTarget, reader, saved, ct);
             return MapPublicComment(saved);
         }
 
@@ -328,6 +331,39 @@ namespace Service.Services
                     storyId = story.story_id,
                     chapterId = chapter.chapter_id,
                     commentId = comment.comment_id
+                }), ct);
+        }
+
+        private async Task NotifyCommentReplyAsync(chapter_comment? repliedTo, reader replier, chapter_comment reply, CancellationToken ct)
+        {
+            if (repliedTo == null)
+            {
+                return;
+            }
+
+            var recipientAccount = repliedTo.reader?.account;
+            if (recipientAccount == null || recipientAccount.account_id == replier.account_id)
+            {
+                return;
+            }
+
+            var chapter = reply.chapter ?? throw new InvalidOperationException("Reply chapter navigation not loaded.");
+            var replierName = replier.account.username;
+            var chapterNo = (int)chapter.chapter_no;
+            var title = $"{replierName} đã trả lời bình luận của bạn";
+            var message = $"{replierName}: \"{Truncate(reply.content, 80)}\" (Chương {chapterNo} - \"{chapter.title}\").";
+
+            await _notificationService.CreateAsync(new NotificationCreateModel(
+                recipientAccount.account_id,
+                NotificationTypes.CommentReply,
+                title,
+                message,
+                new
+                {
+                    storyId = reply.story_id,
+                    chapterId = reply.chapter_id,
+                    commentId = reply.comment_id,
+                    parentCommentId = repliedTo.comment_id
                 }), ct);
         }
 

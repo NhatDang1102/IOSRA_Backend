@@ -10,8 +10,10 @@ using Repository.DataModels;
 using Repository.Entities;
 using Repository.Interfaces;
 using Repository.Utils;
+using Service.Constants;
 using Service.Exceptions;
 using Service.Interfaces;
+using Microsoft.Extensions.Logging;
 
 namespace Service.Services
 {
@@ -25,13 +27,22 @@ namespace Service.Services
 
         private readonly IChapterPurchaseRepository _chapterPurchaseRepository;
         private readonly IBillingRepository _billingRepository;
+        private readonly INotificationService _notificationService;
+        private readonly IProfileRepository _profileRepository;
+        private readonly ILogger<ChapterPurchaseService> _logger;
 
         public ChapterPurchaseService(
             IChapterPurchaseRepository chapterPurchaseRepository,
-            IBillingRepository billingRepository)
+            IBillingRepository billingRepository,
+            INotificationService notificationService,
+            IProfileRepository profileRepository,
+            ILogger<ChapterPurchaseService> logger)
         {
             _chapterPurchaseRepository = chapterPurchaseRepository;
             _billingRepository = billingRepository;
+            _notificationService = notificationService;
+            _profileRepository = profileRepository;
+            _logger = logger;
         }
 
         public async Task<ChapterPurchaseResponse> PurchaseAsync(Guid readerAccountId, Guid chapterId, CancellationToken ct = default)
@@ -142,6 +153,8 @@ namespace Service.Services
 
             await _chapterPurchaseRepository.SaveChangesAsync(ct);
             await tx.CommitAsync(ct);
+
+            await NotifyChapterPurchaseAsync(story, chapter, readerAccountId, priceDias, ct);
 
             return new ChapterPurchaseResponse
             {
@@ -324,6 +337,8 @@ namespace Service.Services
             await _chapterPurchaseRepository.SaveChangesAsync(ct);
             await tx.CommitAsync(ct);
 
+            await NotifyVoicePurchaseAsync(story, chapter, readerAccountId, newVoices, totalDias, ct);
+
             return new ChapterVoicePurchaseResponse
             {
                 ChapterId = chapter.chapter_id,
@@ -423,6 +438,98 @@ namespace Service.Services
                 AudioUrl = data.AudioUrl,
                 PurchasedAt = data.PurchasedAt
             };
+
+        private async Task NotifyChapterPurchaseAsync(story story, chapter chapter, Guid buyerAccountId, long priceDias, CancellationToken ct)
+        {
+            try
+            {
+                var authorAccount = story.author?.account;
+                if (authorAccount == null)
+                {
+                    return;
+                }
+
+                var buyerAccount = await _profileRepository.GetAccountByIdAsync(buyerAccountId, ct);
+                if (buyerAccount == null)
+                {
+                    return;
+                }
+
+                var buyerName = buyerAccount.username;
+                var title = $"{buyerName} đã mua chương của bạn";
+                var message = $"{buyerName} vừa mua Chương {(int)chapter.chapter_no} - \"{chapter.title}\" với {priceDias} dias.";
+
+                await _notificationService.CreateAsync(new NotificationCreateModel(
+                    authorAccount.account_id,
+                    NotificationTypes.ChapterPurchase,
+                    title,
+                    message,
+                    new
+                    {
+                        storyId = story.story_id,
+                        chapterId = chapter.chapter_id,
+                        chapterNo = (int)chapter.chapter_no,
+                        priceDias,
+                        buyerId = buyerAccount.account_id,
+                        buyerUsername = buyerName
+                    }), ct);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to send chapter purchase notification for chapter {ChapterId}", chapter.chapter_id);
+            }
+        }
+
+        private async Task NotifyVoicePurchaseAsync(story story, chapter chapter, Guid buyerAccountId, IReadOnlyList<chapter_voice> voices, long totalDias, CancellationToken ct)
+        {
+            if (voices == null || voices.Count == 0)
+            {
+                return;
+            }
+
+            try
+            {
+                var authorAccount = story.author?.account;
+                if (authorAccount == null)
+                {
+                    return;
+                }
+
+                var buyerAccount = await _profileRepository.GetAccountByIdAsync(buyerAccountId, ct);
+                if (buyerAccount == null)
+                {
+                    return;
+                }
+
+                var buyerName = buyerAccount.username;
+                var voiceNames = voices
+                    .Select(v => v.voice?.voice_name ?? "Voice")
+                    .ToArray();
+
+                var title = $"{buyerName} đã mua voice chương của bạn";
+                var message = $"{buyerName} vừa mua {voices.Count} voice cho Chương {(int)chapter.chapter_no} - \"{chapter.title}\": {string.Join(", ", voiceNames)}.";
+
+                await _notificationService.CreateAsync(new NotificationCreateModel(
+                    authorAccount.account_id,
+                    NotificationTypes.VoicePurchase,
+                    title,
+                    message,
+                    new
+                    {
+                        storyId = story.story_id,
+                        chapterId = chapter.chapter_id,
+                        chapterNo = (int)chapter.chapter_no,
+                        totalDias,
+                        voiceIds = voices.Select(v => v.voice_id),
+                        buyerId = buyerAccount.account_id,
+                        buyerUsername = buyerName
+                    }), ct);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to send voice purchase notification for chapter {ChapterId}", chapter.chapter_id);
+            }
+        }
 
     }
 }

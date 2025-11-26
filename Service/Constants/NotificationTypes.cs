@@ -13,5 +13,9 @@ namespace Service.Constants
         public const string StoryRating = "story_rating";
         public const string StrikeWarning = "strike_warning";
         public const string AuthorRankUpgrade = "author_rank_upgrade";
+        public const string SubscriptionReminder = "subscription_reminder";
+        public const string CommentReply = "comment_reply";
+        public const string ChapterPurchase = "chapter_purchase";
+        public const string VoicePurchase = "voice_purchase";
     }
 }

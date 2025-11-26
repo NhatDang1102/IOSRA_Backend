@@ -16,7 +16,7 @@ public partial class notification
     public Guid recipient_id { get; set; }
 
     [Required]
-    [Column(TypeName = "enum('op_request','story_decision','chapter_decision','new_story','new_chapter','general','new_follower','chapter_comment','story_rating','strike_warning','author_rank_upgrade')")]
+    [Column(TypeName = "enum('op_request','story_decision','chapter_decision','new_story','new_chapter','general','new_follower','chapter_comment','story_rating','strike_warning','author_rank_upgrade','subscription_reminder','comment_reply','chapter_purchase','voice_purchase')")]
     public string type { get; set; } = null!;
 
     [Required]

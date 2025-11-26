@@ -361,7 +361,7 @@ CREATE TABLE favorite_story (
 CREATE TABLE notifications (
   notification_id CHAR(36) NOT NULL,
   recipient_id    CHAR(36) NOT NULL,
-  type            ENUM('op_request','story_decision','chapter_decision','new_story','new_chapter','general','new_follower','chapter_comment','story_rating','strike_warning','author_rank_upgrade') NOT NULL,
+  type            ENUM('op_request','story_decision','chapter_decision','new_story','new_chapter','general','new_follower','chapter_comment','story_rating','strike_warning','author_rank_upgrade','subscription_reminder','comment_reply','chapter_purchase','voice_purchase') NOT NULL,
   title           VARCHAR(200) NOT NULL,
   message         TEXT NOT NULL,
   payload         JSON NULL,

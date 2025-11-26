@@ -25,6 +25,9 @@ namespace Repository.Repositories
                 .Include(c => c.story)
                     .ThenInclude(s => s.author)
                         .ThenInclude(a => a.rank)
+                .Include(c => c.story)
+                    .ThenInclude(s => s.author)
+                        .ThenInclude(a => a.account)
                 .FirstOrDefaultAsync(c => c.chapter_id == chapterId, ct);
 
         public Task<chapter?> GetChapterWithVoicesAsync(Guid chapterId, CancellationToken ct = default)
@@ -34,6 +37,9 @@ namespace Repository.Repositories
                 .Include(c => c.story)
                     .ThenInclude(s => s.author)
                         .ThenInclude(a => a.rank)
+                .Include(c => c.story)
+                    .ThenInclude(s => s.author)
+                        .ThenInclude(a => a.account)
                 .FirstOrDefaultAsync(c => c.chapter_id == chapterId, ct);
 
         public Task<bool> HasReaderPurchasedChapterAsync(Guid chapterId, Guid readerId, CancellationToken ct = default)
