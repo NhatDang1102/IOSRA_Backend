@@ -50,6 +50,7 @@ namespace Service.Services
                 WordCount = ch.word_count,
                 AccessType = ch.access_type,
                 IsLocked = !string.Equals(ch.access_type, "free", StringComparison.OrdinalIgnoreCase),
+                PriceDias = (int)ch.dias_price,
                 PublishedAt = ch.published_at
             }).ToList();
 
@@ -122,7 +123,8 @@ namespace Service.Services
                 LanguageCode = chapter.language?.lang_code ?? string.Empty,
                 WordCount = chapter.word_count,
                 AccessType = chapter.access_type,
-                IsLocked = false,
+                IsLocked = isLocked,
+                PriceDias = (int)chapter.dias_price,
                 PublishedAt = chapter.published_at,
                 ContentUrl = chapter.content_url,
                 Voices = voices

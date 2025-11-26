@@ -11,6 +11,7 @@ namespace Contract.DTOs.Response.Chapter
         public int WordCount { get; set; }
         public string AccessType { get; set; } = null!;
         public bool IsLocked { get; set; }
+        public int PriceDias { get; set; }
         public DateTime? PublishedAt { get; set; }
     }
 }
