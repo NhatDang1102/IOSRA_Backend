@@ -107,10 +107,6 @@ namespace Service.Services
             {
                 chapter.status = "rejected";
                 chapter.published_at = null;
-                if (!string.IsNullOrWhiteSpace(humanNote))
-                {
-                    approval.ai_feedback = humanNote;
-                }
             }
 
             chapter.updated_at = TimezoneConverter.VietnamNow;
