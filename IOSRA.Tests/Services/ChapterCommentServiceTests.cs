@@ -1,6 +1,6 @@
-﻿using Contract.DTOs.Respond.Chapter;        // ChapterCommentResponse, StoryCommentFeedResponse
-using Contract.DTOs.Respond.Common;         // PagedResult<T>
-using Contract.DTOs.Respond.Notification;   // NotificationCreateModel, NotificationResponse
+﻿using Contract.DTOs.Response.Chapter;        // ChapterCommentResponse, StoryCommentFeedResponse
+using Contract.DTOs.Response.Common;         // PagedResult<T>
+using Contract.DTOs.Response.Notification;   // NotificationCreateModel, NotificationResponse
 using FluentAssertions;
 using Moq;
 using Repository.Entities;                  // chapter, story, chapter_comment, reader, author, account

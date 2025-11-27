@@ -1,7 +1,7 @@
 ﻿using Contract.DTOs.Request.Chapter;
 using Contract.DTOs.Request.OperationMod;   // ChapterModerationDecisionRequest (sửa nếu khác)
-using Contract.DTOs.Respond.Notification;   // NotificationResponse (sửa nếu khác)
-using Contract.DTOs.Respond.OperationMod;   // ChapterModerationQueueItem (sửa nếu khác)
+using Contract.DTOs.Response.Notification;   // NotificationResponse (sửa nếu khác)
+using Contract.DTOs.Response.OperationMod;   // ChapterModerationQueueItem (sửa nếu khác)
 using FluentAssertions;
 using Moq;
 using Repository.Entities;

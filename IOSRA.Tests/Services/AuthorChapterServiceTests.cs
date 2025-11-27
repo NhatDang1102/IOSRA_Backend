@@ -5,7 +5,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Contract.DTOs.Request.Chapter;
-using Contract.DTOs.Respond.Chapter;
+using Contract.DTOs.Response.Chapter;
 using FluentAssertions;
 using Moq;
 using Repository.Entities;
