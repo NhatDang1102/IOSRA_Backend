@@ -47,14 +47,13 @@ namespace Service.Services
                 reader_id = readerId,
                 story_id = story.story_id,
                 noti_new_chapter = true,
-                created_at = TimezoneConverter.VietnamNow,
-                story = story
+                created_at = TimezoneConverter.VietnamNow
             };
 
             await _favoriteRepository.AddAsync(entity, ct);
             await _favoriteRepository.SaveChangesAsync(ct);
 
-            return Map(entity);
+            return Map(entity, story);
         }
 
         public async Task RemoveAsync(Guid readerId, Guid storyId, CancellationToken ct = default)
@@ -84,7 +83,7 @@ namespace Service.Services
             }
 
             var (items, total) = await _favoriteRepository.ListAsync(readerId, page, pageSize, ct);
-            var responses = items.Select(Map).ToArray();
+            var responses = items.Select(f => Map(f)).ToArray();
 
             return new PagedResult<FavoriteStoryResponse>
             {
@@ -95,9 +94,9 @@ namespace Service.Services
             };
         }
 
-        private static FavoriteStoryResponse Map(favorite_story entity)
+        private static FavoriteStoryResponse Map(favorite_story entity, story? storyOverride = null)
         {
-            var story = entity.story ?? throw new AppException("StoryNotLoaded", "Story info missing.", 500);
+            var story = storyOverride ?? entity.story ?? throw new AppException("StoryNotLoaded", "Story info missing.", 500);
             var authorAccount = story.author?.account;
 
             return new FavoriteStoryResponse
