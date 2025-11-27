@@ -19,8 +19,6 @@ public partial class chapter_localization
     
     public Guid lang_id { get; set; }
 
-    public string content { get; set; } = null!;
-
     public uint word_count { get; set; }
 
     [StringLength(512)]

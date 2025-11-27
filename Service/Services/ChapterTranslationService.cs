@@ -1,4 +1,6 @@
 using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
@@ -87,7 +89,6 @@ namespace Service.Services
             {
                 chapter_id = chapter.chapter_id,
                 lang_id = targetLanguage.lang_id,
-                content = translated,
                 word_count = (uint)wordCount,
                 content_url = storageKey
             };
@@ -95,7 +96,7 @@ namespace Service.Services
             await _chapterRepository.AddLocalizationAsync(localization, ct);
             await _chapterRepository.SaveChangesAsync(ct);
 
-            return MapResponse(chapter, targetLanguage, localization, cached: false);
+            return MapResponse(chapter, targetLanguage, localization, translated, cached: false);
         }
 
         public async Task<ChapterTranslationResponse> GetAsync(Guid chapterId, string languageCode, Guid? viewerAccountId, CancellationToken ct = default)
@@ -112,9 +113,51 @@ namespace Service.Services
             EnsureNotOriginalLanguage(chapter, targetLanguage);
 
             var localization = await _chapterRepository.GetLocalizationAsync(chapter.chapter_id, targetLanguage.lang_id, ct)
-                               ?? throw new AppException("TranslationNotFound", "Chapter này chưa có bản dịch, hãy dịch trước.", 404);
+                               ?? throw new AppException("TranslationNotFound", "Chapter nA?y ch??a cA3 b???n d??<ch, hA?y d??<ch tr????>c.", 404);
 
-            return MapResponse(chapter, targetLanguage, localization, cached: true);
+            var content = await LoadLocalizationContentAsync(localization, ct);
+            return MapResponse(chapter, targetLanguage, localization, content, cached: true);
+        }
+
+        public async Task<ChapterTranslationStatusResponse> GetStatusesAsync(Guid chapterId, Guid? viewerAccountId, CancellationToken ct = default)
+        {
+            var chapter = await LoadPublishedChapterAsync(chapterId, ct);
+            await EnsureChapterReadableAsync(chapter, viewerAccountId, ct);
+
+            var languages = await _chapterRepository.GetLanguagesAsync(ct);
+            var localizations = await _chapterRepository.GetLocalizationsByChapterAsync(chapter.chapter_id, ct);
+            var localizationMap = new Dictionary<Guid, chapter_localization>();
+            foreach (var localization in localizations)
+            {
+                localizationMap[localization.lang_id] = localization;
+            }
+
+            var originalCode = chapter.language?.lang_code ?? string.Empty;
+            var locales = new ChapterTranslationLocaleStatus[languages.Count];
+            for (var i = 0; i < languages.Count; i++)
+            {
+                var language = languages[i];
+                localizationMap.TryGetValue(language.lang_id, out var localization);
+                var isOriginal = string.Equals(language.lang_code, originalCode, StringComparison.OrdinalIgnoreCase);
+
+                locales[i] = new ChapterTranslationLocaleStatus
+                {
+                    LanguageCode = language.lang_code,
+                    LanguageName = language.lang_name ?? language.lang_code,
+                    IsOriginal = isOriginal,
+                    HasTranslation = isOriginal || localization != null,
+                    ContentUrl = isOriginal ? chapter.content_url : localization?.content_url,
+                    WordCount = isOriginal ? (int)chapter.word_count : (int)(localization?.word_count ?? 0)
+                };
+            }
+
+            return new ChapterTranslationStatusResponse
+            {
+                ChapterId = chapter.chapter_id,
+                StoryId = chapter.story_id,
+                OriginalLanguageCode = originalCode,
+                Locales = locales
+            };
         }
 
         private async Task<chapter> LoadPublishedChapterAsync(Guid chapterId, CancellationToken ct)
@@ -182,7 +225,23 @@ namespace Service.Services
             return WordRegex.Matches(content).Count;
         }
 
-        private ChapterTranslationResponse MapResponse(chapter chapter, language_list targetLanguage, chapter_localization localization, bool cached)
+        private async Task<string> LoadLocalizationContentAsync(chapter_localization localization, CancellationToken ct)
+        {
+            if (string.IsNullOrWhiteSpace(localization.content_url))
+            {
+                throw new AppException("TranslationFileMissing", "Translation content not found.", 500);
+            }
+
+            var content = await _contentStorage.DownloadAsync(localization.content_url, ct);
+            if (string.IsNullOrWhiteSpace(content))
+            {
+                throw new AppException("TranslationFileMissing", "Translation content is empty.", 500);
+            }
+
+            return content;
+        }
+
+        private ChapterTranslationResponse MapResponse(chapter chapter, language_list targetLanguage, chapter_localization localization, string content, bool cached)
         {
             return new ChapterTranslationResponse
             {
@@ -191,11 +250,12 @@ namespace Service.Services
                 OriginalLanguageCode = chapter.language?.lang_code ?? string.Empty,
                 TargetLanguageCode = targetLanguage.lang_code,
                 TargetLanguageName = targetLanguage.lang_name ?? targetLanguage.lang_code,
-                Content = localization.content,
-                ContentUrl = string.IsNullOrWhiteSpace(localization.content_url) ? null : _contentStorage.GetContentUrl(localization.content_url),
+                Content = content,
+                ContentUrl = localization.content_url,
                 WordCount = (int)localization.word_count,
                 Cached = cached
             };
         }
     }
 }
+

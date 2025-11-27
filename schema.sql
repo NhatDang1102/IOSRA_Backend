@@ -287,7 +287,6 @@ CREATE TABLE story_rating (
   CREATE TABLE chapter_localizations (
     chapter_id CHAR(36) NOT NULL,
     lang_id    CHAR(36) NOT NULL,
-    content    LONGTEXT NOT NULL,
     word_count INT UNSIGNED NOT NULL DEFAULT 0,
     content_url  VARCHAR(512) NULL,
     PRIMARY KEY (chapter_id, lang_id),

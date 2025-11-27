@@ -21,8 +21,14 @@ namespace Main.Controllers
 
         [HttpGet("{chapterId:guid}")]
         [AllowAnonymous]
-        public async Task<ActionResult<ChapterTranslationResponse>> Get(Guid chapterId, [FromQuery] string languageCode, CancellationToken ct)
+        public async Task<IActionResult> Get(Guid chapterId, [FromQuery] string? languageCode, CancellationToken ct)
         {
+            if (string.IsNullOrWhiteSpace(languageCode))
+            {
+                var summary = await _translationService.GetStatusesAsync(chapterId, TryGetAccountId(), ct);
+                return Ok(summary);
+            }
+
             var response = await _translationService.GetAsync(chapterId, languageCode, TryGetAccountId(), ct);
             return Ok(response);
         }

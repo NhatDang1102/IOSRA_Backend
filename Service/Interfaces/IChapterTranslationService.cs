@@ -10,5 +10,6 @@ namespace Service.Interfaces
     {
         Task<ChapterTranslationResponse> TranslateAsync(Guid chapterId, ChapterTranslationRequest request, Guid requesterAccountId, CancellationToken ct = default);
         Task<ChapterTranslationResponse> GetAsync(Guid chapterId, string languageCode, Guid? viewerAccountId, CancellationToken ct = default);
+        Task<ChapterTranslationStatusResponse> GetStatusesAsync(Guid chapterId, Guid? viewerAccountId, CancellationToken ct = default);
     }
 }

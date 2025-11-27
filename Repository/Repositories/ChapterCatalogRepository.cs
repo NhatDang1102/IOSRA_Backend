@@ -89,6 +89,23 @@ namespace Repository.Repositories
             => _db.chapter_localizations.AsNoTracking()
                 .FirstOrDefaultAsync(l => l.chapter_id == chapterId && l.lang_id == langId, ct);
 
+        public async Task<IReadOnlyList<chapter_localization>> GetLocalizationsByChapterAsync(Guid chapterId, CancellationToken ct = default)
+        {
+            return await _db.chapter_localizations
+                .AsNoTracking()
+                .Include(l => l.lang)
+                .Where(l => l.chapter_id == chapterId)
+                .ToListAsync(ct);
+        }
+
+        public async Task<IReadOnlyList<language_list>> GetLanguagesAsync(CancellationToken ct = default)
+        {
+            return await _db.language_lists
+                .AsNoTracking()
+                .OrderBy(l => l.lang_name)
+                .ToListAsync(ct);
+        }
+
         public Task AddLocalizationAsync(chapter_localization entity, CancellationToken ct = default)
         {
             _db.chapter_localizations.Add(entity);
