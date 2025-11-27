@@ -10,7 +10,7 @@ using Repository.Interfaces;
 using Service.Interfaces;
 using Service.Services;   // StoryHighlightService
 using Contract.DTOs.Internal; // StoryViewCount
-using Contract.DTOs.Respond.Story;
+using Contract.DTOs.Response.Story;
 using Xunit;
 
 public class StoryHighlightServiceTests

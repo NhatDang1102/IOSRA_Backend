@@ -1,7 +1,7 @@
 ﻿using Contract.DTOs.Request.Author;
 using Contract.DTOs.Request.Story;
-using Contract.DTOs.Respond.Author;
-using Contract.DTOs.Respond.Story;
+using Contract.DTOs.Response.Author;
+using Contract.DTOs.Response.Story;
 using FluentAssertions;
 using Microsoft.AspNetCore.Http;
 using Moq;

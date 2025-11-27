@@ -2,7 +2,7 @@
 using System.Threading;
 using System.Threading.Tasks;
 using Contract.DTOs.Internal;
-using Contract.DTOs.Respond.Profile;
+using Contract.DTOs.Response.Profile;
 using FluentAssertions;
 using Microsoft.Extensions.Caching.Memory;
 using Moq;

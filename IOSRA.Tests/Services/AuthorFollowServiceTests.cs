@@ -11,8 +11,8 @@ using Service.Exceptions;
 using Service.Interfaces;
 using Service.Services;
 using Contract.DTOs.Request.Follow;
-using Contract.DTOs.Respond.Follow;
-using Contract.DTOs.Respond.Common;
+using Contract.DTOs.Response.Follow;
+using Contract.DTOs.Response.Common;
 using Contract.DTOs.Internal;
 using Xunit;
 
@@ -208,7 +208,7 @@ public class AuthorFollowServiceTests
                     m.Type == NotificationTypes.NewFollower &&
                     m.Message.Contains(reader.account.username)),
                 It.IsAny<CancellationToken>()))
-               .ReturnsAsync(new Contract.DTOs.Respond.Notification.NotificationResponse());
+               .ReturnsAsync(new Contract.DTOs.Response.Notification.NotificationResponse());
 
         var result = await _svc.FollowAsync(readerId, authorId, new AuthorFollowRequest { EnableNotifications = true }, CancellationToken.None);
 

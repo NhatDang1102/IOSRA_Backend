@@ -1,7 +1,7 @@
 ﻿using Contract.DTOs.Request.OperationMod;   // StoryModerationDecisionRequest (sửa lại nếu cần)
 using Contract.DTOs.Request.Story;
-using Contract.DTOs.Respond.Notification;
-using Contract.DTOs.Respond.OperationMod;   // StoryModerationQueueItem, StoryTagResponse (nếu khác namespace thì sửa)
+using Contract.DTOs.Response.Notification;
+using Contract.DTOs.Response.OperationMod;   // StoryModerationQueueItem, StoryTagResponse (nếu khác namespace thì sửa)
 using FluentAssertions;
 using Moq;
 using Repository.Entities;
