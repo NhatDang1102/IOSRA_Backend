@@ -17,13 +17,15 @@ public class ChapterCatalogServiceTests
 {
     private readonly Mock<IChapterCatalogRepository> _chapterRepo;
     private readonly Mock<IStoryCatalogRepository> _storyRepo;
+    private readonly Mock<IChapterPurchaseRepository> _purchaseRepo;
     private readonly ChapterCatalogService _svc;
 
     public ChapterCatalogServiceTests()
     {
         _chapterRepo = new Mock<IChapterCatalogRepository>(MockBehavior.Strict);
         _storyRepo = new Mock<IStoryCatalogRepository>(MockBehavior.Strict);
-        _svc = new ChapterCatalogService(_chapterRepo.Object, _storyRepo.Object);
+        _purchaseRepo = new Mock<IChapterPurchaseRepository>(MockBehavior.Strict);
+        _svc = new ChapterCatalogService(_chapterRepo.Object, _storyRepo.Object, _purchaseRepo.Object);
     }
 
     #region GetChaptersAsync

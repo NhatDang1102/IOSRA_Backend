@@ -477,7 +477,7 @@ public class ChapterModerationServiceTests
         approval.status.Should().Be("rejected");
         approval.moderator_id.Should().Be(moderatorId);
         approval.moderator_feedback.Should().Be("Not appropriate");
-        approval.ai_feedback.Should().Be("Not appropriate"); // bị override nếu có note
+        approval.ai_feedback.Should().Be("ai feedback");
         chapter.status.Should().Be("rejected");
         chapter.published_at.Should().BeNull();
 

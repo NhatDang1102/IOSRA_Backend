@@ -200,7 +200,7 @@ public class AuthorChapterServiceTests
         var act = () => _svc.CreateAsync(accId, story.story_id, req, CancellationToken.None);
 
         await act.Should().ThrowAsync<AppException>()
-                 .WithMessage("*Chapters can only be created for published stories*");
+                 .WithMessage("*Chapters can only be created when the story is published or hidden*");
 
         _storyRepo.VerifyAll();
     }
@@ -403,7 +403,7 @@ public class AuthorChapterServiceTests
         res.LanguageCode.Should().Be("vi");
         res.PriceDias.Should().Be(25);
         res.Status.Should().Be("draft");
-        res.AccessType.Should().Be("coin"); // vì story.is_premium = true
+        res.AccessType.Should().Be("dias"); // vì story.is_premium = true
 
         _storyRepo.VerifyAll();
         _chapterRepo.VerifyAll();

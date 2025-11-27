@@ -3,6 +3,7 @@ using Contract.DTOs.Response.Common;         // PagedResult<T>
 using Contract.DTOs.Response.Notification;   // NotificationCreateModel, NotificationResponse
 using FluentAssertions;
 using Moq;
+using Repository.DataModels;
 using Repository.Entities;                  // chapter, story, chapter_comment, reader, author, account
 using Repository.Interfaces;                // IChapterCommentRepository, IStoryCatalogRepository, IProfileRepository
 using Service.Constants;                    // NotificationTypes
@@ -117,6 +118,12 @@ public class ChapterCommentServiceTests
         _commentRepo.Setup(r => r.GetByChapterAsync(chapterId, 2, 2, It.IsAny<CancellationToken>()))
                     .ReturnsAsync((new List<chapter_comment> { c1, c2 }, 8));
 
+        _commentRepo.Setup(r => r.GetReactionAggregatesAsync(
+            It.IsAny<Guid[]>(),
+            It.IsAny<Guid?>(),
+            It.IsAny<CancellationToken>()))
+                    .ReturnsAsync(new Dictionary<Guid, ChapterCommentReactionAggregate>());
+
         var res = await _svc.GetByChapterAsync(chapterId, page: 2, pageSize: 2, CancellationToken.None);
 
         res.Items.Should().HaveCount(2);
@@ -224,6 +231,12 @@ public class ChapterCommentServiceTests
         _commentRepo.Setup(r => r.GetByStoryAsync(storyId, chapterId, 1, 10, It.IsAny<CancellationToken>()))
                     .ReturnsAsync((new List<chapter_comment> { c1, c2 }, 2));
 
+        _commentRepo.Setup(r => r.GetReactionAggregatesAsync(
+            It.IsAny<Guid[]>(),
+            It.IsAny<Guid?>(),
+            It.IsAny<CancellationToken>()))
+                    .ReturnsAsync(new Dictionary<Guid, ChapterCommentReactionAggregate>());
+
         var res = await _svc.GetByStoryAsync(storyId, chapterId, page: 1, pageSize: 10, CancellationToken.None);
 
         res.StoryId.Should().Be(storyId);
@@ -304,6 +317,12 @@ public class ChapterCommentServiceTests
 
         _commentRepo.Setup(r => r.GetByStoryAsync(storyId, null, 3, 5, It.IsAny<CancellationToken>()))
                     .ReturnsAsync((new List<chapter_comment> { c1 }, 1));
+
+        _commentRepo.Setup(r => r.GetReactionAggregatesAsync(
+            It.IsAny<Guid[]>(),
+            It.IsAny<Guid?>(),
+            It.IsAny<CancellationToken>()))
+                    .ReturnsAsync(new Dictionary<Guid, ChapterCommentReactionAggregate>());
 
         var res = await _svc.GetByStoryAsync(storyId, chapterId: null, page: 3, pageSize: 5, CancellationToken.None);
 
