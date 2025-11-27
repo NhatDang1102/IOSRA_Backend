@@ -12,8 +12,8 @@ using Repository.DataModels;                 // StoryRatingSummaryData
 using Service.Services;                      // StoryRatingService
 using Service.Interfaces;                    // INotificationService
 using Contract.DTOs.Request.Story;           // StoryRatingRequest
-using Contract.DTOs.Respond.Notification;    // NotificationCreateModel, NotificationResponse
-using Contract.DTOs.Respond.Common;          
+using Contract.DTOs.Response.Notification;    // NotificationCreateModel, NotificationResponse
+using Contract.DTOs.Response.Common;          
 
 namespace IOSRA.Tests.Services
 {

@@ -43,7 +43,7 @@ public class FollowerNotificationServiceTests
 
         _notify.Setup(n => n.CreateAsync(It.IsAny<NotificationCreateModel>(), It.IsAny<CancellationToken>()))
               .Callback<NotificationCreateModel, CancellationToken>((m, _) => captured.Add(m))
-              .ReturnsAsync(new Contract.DTOs.Respond.Notification.NotificationResponse());
+              .ReturnsAsync(new Contract.DTOs.Response.Notification.NotificationResponse());
 
         await _svc.NotifyStoryPublishedAsync(authorId, authorName, storyId, storyTitle, CancellationToken.None);
 
@@ -87,7 +87,7 @@ public class FollowerNotificationServiceTests
 
         _notify.Setup(n => n.CreateAsync(It.IsAny<NotificationCreateModel>(), It.IsAny<CancellationToken>()))
               .Callback<NotificationCreateModel, CancellationToken>((m, _) => captured.Add(m))
-              .ReturnsAsync(new Contract.DTOs.Respond.Notification.NotificationResponse());
+              .ReturnsAsync(new Contract.DTOs.Response.Notification.NotificationResponse());
 
         await _svc.NotifyChapterPublishedAsync(
             authorId, authorName, storyId, storyTitle, chapterId, chapterTitle, chapterNo, CancellationToken.None);

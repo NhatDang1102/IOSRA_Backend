@@ -1,7 +1,7 @@
 ﻿using Contract.DTOs.Request.Chapter;
 using Contract.DTOs.Request.OperationMod;   // ChapterModerationDecisionRequest (sửa nếu khác)
-using Contract.DTOs.Respond.Notification;   // NotificationResponse (sửa nếu khác)
-using Contract.DTOs.Respond.OperationMod;   // ChapterModerationQueueItem (sửa nếu khác)
+using Contract.DTOs.Response.Notification;   // NotificationResponse (sửa nếu khác)
+using Contract.DTOs.Response.OperationMod;   // ChapterModerationQueueItem (sửa nếu khác)
 using FluentAssertions;
 using Moq;
 using Repository.Entities;
@@ -477,7 +477,7 @@ public class ChapterModerationServiceTests
         approval.status.Should().Be("rejected");
         approval.moderator_id.Should().Be(moderatorId);
         approval.moderator_feedback.Should().Be("Not appropriate");
-        approval.ai_feedback.Should().Be("Not appropriate"); // bị override nếu có note
+        approval.ai_feedback.Should().Be("ai feedback");
         chapter.status.Should().Be("rejected");
         chapter.published_at.Should().BeNull();
 

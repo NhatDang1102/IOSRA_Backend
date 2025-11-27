@@ -4,7 +4,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using BCrypt.Net;
 using Contract.DTOs.Request.Auth;
-using Contract.DTOs.Respond.Auth;
+using Contract.DTOs.Response.Auth;
 using FluentAssertions;
 using Moq;
 using Repository.Entities;

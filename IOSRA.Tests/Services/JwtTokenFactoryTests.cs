@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.IdentityModel.Tokens.Jwt;
 using System.Linq;
 using System.Security.Claims;
-using Contract.DTOs.Respond.Auth;
+using Contract.DTOs.Response.Auth;
 using FluentAssertions;
 using Microsoft.Extensions.Configuration;
 using Repository.Entities;
