@@ -37,6 +37,11 @@ namespace Service.Services
             var story = await _storyRepository.GetPublishedStoryByIdAsync(storyId, ct)
                         ?? throw new AppException("StoryNotFound", "Story was not found or unavailable.", 404);
 
+            if (story.author_id == readerId)
+            {
+                throw new AppException("CannotFavoriteOwnStory", "You cannot add your own story to favorites.", 400);
+            }
+
             var entity = new favorite_story
             {
                 reader_id = readerId,
