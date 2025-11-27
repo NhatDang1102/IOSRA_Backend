@@ -24,6 +24,7 @@ namespace Repository
             services.AddScoped<IStoryRatingRepository, StoryRatingRepository>();
             services.AddScoped<IChapterCommentRepository, ChapterCommentRepository>();
             services.AddScoped<IAuthorFollowRepository, AuthorFollowRepository>();
+            services.AddScoped<IFavoriteStoryRepository, FavoriteStoryRepository>();
             services.AddScoped<INotificationRepository, NotificationRepository>();
             services.AddScoped<IChapterPricingRepository, ChapterPricingRepository>();
             services.AddScoped<IVoicePricingRepository, VoicePricingRepository>();

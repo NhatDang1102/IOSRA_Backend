@@ -91,5 +91,48 @@ namespace Service.Implementations
                 ModeratorNote = x.omod_note
             }).ToList();
         }
+
+        public async Task<AuthorRankStatusResponse> GetRankStatusAsync(Guid accountId, CancellationToken ct = default)
+        {
+            _ = await _profileRepo.GetAccountByIdAsync(accountId, ct)
+                ?? throw new AppException("AccountNotFound", "Account was not found.", 404);
+
+            var author = await _opRepo.GetAuthorWithRankAsync(accountId, ct)
+                         ?? throw new AppException("AuthorProfileMissing", "Author profile was not found.", 404);
+
+            var ranks = await _opRepo.GetAllAuthorRanksAsync(ct);
+            if (ranks == null || ranks.Count == 0)
+            {
+                throw new AppException("RankSeedMissing", "Author ranks have not been configured.", 500);
+            }
+
+            var ordered = ranks.OrderBy(r => r.min_followers).ToList();
+            var currentRank = author.rank_id.HasValue
+                ? ordered.FirstOrDefault(r => r.rank_id == author.rank_id.Value)
+                : ordered.FirstOrDefault();
+
+            if (currentRank == null)
+            {
+                currentRank = ordered.First();
+            }
+
+            var currentIndex = ordered.FindIndex(r => r.rank_id == currentRank.rank_id);
+            if (currentIndex < 0)
+            {
+                currentIndex = 0;
+            }
+
+            var nextRank = currentIndex + 1 < ordered.Count ? ordered[currentIndex + 1] : null;
+
+            return new AuthorRankStatusResponse
+            {
+                CurrentRankName = currentRank.rank_name,
+                CurrentRewardRate = currentRank.reward_rate,
+                TotalFollowers = (int)author.total_follower,
+                NextRankName = nextRank?.rank_name,
+                NextRankRewardRate = nextRank?.reward_rate,
+                NextRankMinFollowers = nextRank != null ? (int?)nextRank.min_followers : null
+            };
+        }
     }
 }

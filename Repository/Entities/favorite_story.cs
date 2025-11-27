@@ -20,7 +20,7 @@ public partial class favorite_story
     public Guid story_id { get; set; }
 
     [Required]
-    public bool? noti_new_chapter { get; set; }
+    public bool noti_new_chapter { get; set; }
 
     [Column(TypeName = "datetime")]
     public DateTime created_at { get; set; }

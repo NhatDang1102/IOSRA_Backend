@@ -52,5 +52,13 @@ namespace Main.Controllers
             var res = await _rankPromotion.ListMineAsync(AccountId, ct);
             return Ok(res);
         }
+
+        [Authorize(Roles = "author,AUTHOR")]
+        [HttpGet("rank-status")]
+        public async Task<IActionResult> RankStatus(CancellationToken ct)
+        {
+            var res = await _authorUpgrade.GetRankStatusAsync(AccountId, ct);
+            return Ok(res);
+        }
     }
 }

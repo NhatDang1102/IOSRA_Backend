@@ -9,5 +9,6 @@ namespace Service.Interfaces
     {
         Task<AuthorUpgradeResponse> SubmitAsync(Guid accountId, SubmitAuthorUpgradeRequest req, CancellationToken ct = default);
         Task<List<OpRequestItemResponse>> ListMyRequestsAsync(Guid accountId, CancellationToken ct = default);
+        Task<AuthorRankStatusResponse> GetRankStatusAsync(Guid accountId, CancellationToken ct = default);
     }
 }
