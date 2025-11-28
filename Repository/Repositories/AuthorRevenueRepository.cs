@@ -25,7 +25,7 @@ namespace Repository.Repositories
 
         public async Task<(List<author_revenue_transaction> Items, int Total)> GetTransactionsAsync(Guid authorAccountId, int page, int pageSize, string? type, DateTime? from, DateTime? to, CancellationToken ct = default)
         {
-            var query = _db.author_revenue_transactions
+            IQueryable<author_revenue_transaction> query = _db.author_revenue_transactions
                 .AsNoTracking()
                 .Where(t => t.author_id == authorAccountId);
 
@@ -43,6 +43,19 @@ namespace Repository.Repositories
             {
                 query = query.Where(t => t.created_at <= to.Value);
             }
+
+            query = query
+                .Include(t => t.purchase_log)
+                    .ThenInclude(pl => pl!.chapter);
+
+            query = query
+                .Include(t => t.voice_purchase)
+                    .ThenInclude(vp => vp!.chapter);
+
+            query = query
+                .Include(t => t.voice_purchase)
+                    .ThenInclude(vp => vp!.voice_purchase_items)
+                        .ThenInclude(i => i.voice);
 
             var total = await query.CountAsync(ct);
             var skip = (page - 1) * pageSize;

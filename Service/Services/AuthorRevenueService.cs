@@ -76,15 +76,30 @@ namespace Service.Services
 
             var (items, total) = await _repository.GetTransactionsAsync(authorAccountId, query.Page, query.PageSize, type, query.From, query.To, ct);
 
-            var mapped = items.Select(t => new AuthorRevenueTransactionItemResponse
+            var mapped = items.Select(t =>
             {
-                TransactionId = t.trans_id,
-                Type = t.type,
-                AmountVnd = t.amount_vnd,
-                PurchaseLogId = t.purchase_log_id,
-                RequestId = t.request_id,
-                Metadata = ParseMetadata(t.metadata),
-                CreatedAt = t.created_at
+                var chapter = t.purchase_log?.chapter ?? t.voice_purchase?.chapter;
+                var voiceNames = t.voice_purchase?.voice_purchase_items?
+                    .Select(v => v.voice?.voice_name)
+                    .Where(name => !string.IsNullOrWhiteSpace(name))
+                    .Select(name => name!)
+                    .Distinct(StringComparer.OrdinalIgnoreCase)
+                    .ToArray();
+
+                return new AuthorRevenueTransactionItemResponse
+                {
+                    TransactionId = t.trans_id,
+                    Type = t.type,
+                    AmountVnd = t.amount_vnd,
+                    ChapterId = chapter?.chapter_id,
+                    ChapterTitle = chapter?.title,
+                    PurchaseLogId = t.purchase_log_id,
+                    VoicePurchaseId = t.voice_purchase_id,
+                    RequestId = t.request_id,
+                    VoiceNames = voiceNames != null && voiceNames.Length > 0 ? voiceNames : null,
+                    Metadata = ParseMetadata(t.metadata),
+                    CreatedAt = t.created_at
+                };
             }).ToList();
 
             return new PagedResult<AuthorRevenueTransactionItemResponse>
