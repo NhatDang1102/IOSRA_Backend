@@ -73,6 +73,8 @@ namespace Repository.Repositories
                     Provider = p.provider,
                     OrderCode = p.order_code,
                     AmountVnd = p.amount_vnd,
+                    GrantedValue = null,
+                    GrantedUnit = null,
                     Status = p.status,
                     CreatedAt = p.created_at,
                     PlanCode = p.plan_code,
