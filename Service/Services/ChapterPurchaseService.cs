@@ -60,7 +60,9 @@ namespace Service.Services
             var story = chapter.story
                        ?? throw new AppException("StoryNotFound", "Story information is missing.", 404);
 
-            if (!string.Equals(story.status, "published", StringComparison.OrdinalIgnoreCase))
+            var storyIsPublic = string.Equals(story.status, "published", StringComparison.OrdinalIgnoreCase)
+                                || string.Equals(story.status, "completed", StringComparison.OrdinalIgnoreCase);
+            if (!storyIsPublic)
             {
                 throw new AppException("StoryNotPublished", "Story must be published before chapters can be purchased.", 400);
             }
@@ -200,7 +202,9 @@ namespace Service.Services
             var story = chapter.story
                        ?? throw new AppException("StoryNotFound", "Story information is missing.", 404);
 
-            if (!string.Equals(story.status, "published", StringComparison.OrdinalIgnoreCase))
+            var storyIsPublic = string.Equals(story.status, "published", StringComparison.OrdinalIgnoreCase)
+                                || string.Equals(story.status, "completed", StringComparison.OrdinalIgnoreCase);
+            if (!storyIsPublic)
             {
                 throw new AppException("StoryNotPublished", "Story must be published.", 400);
             }
