@@ -44,7 +44,9 @@ namespace Repository.Repositories
                     GrantedValue = p.diamond_granted,
                     GrantedUnit = "dias",
                     Status = p.status,
-                    CreatedAt = p.created_at
+                    CreatedAt = p.created_at,
+                    PlanCode = null,
+                    PlanName = null
                 });
 
             var voiceQuery = _db.voice_payments
@@ -60,7 +62,9 @@ namespace Repository.Repositories
                     GrantedValue = p.chars_granted,
                     GrantedUnit = "chars",
                     Status = p.status,
-                    CreatedAt = p.created_at
+                    CreatedAt = p.created_at,
+                    PlanCode = null,
+                    PlanName = null
                 });
 
             var subscriptionQuery = _db.subscription_payments
