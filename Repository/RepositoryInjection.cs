@@ -33,6 +33,7 @@ namespace Repository
             services.AddScoped<IBillingRepository, BillingRepository>();
             services.AddScoped<IChapterPurchaseRepository, ChapterPurchaseRepository>();
             services.AddScoped<IAuthorRevenueRepository, AuthorRevenueRepository>();
+            services.AddScoped<IPaymentHistoryRepository, PaymentHistoryRepository>();
             services.AddScoped<IContentModStatRepository, ContentModStatRepository>();
             services.AddScoped<IOperationModStatRepository, OperationModStatRepository>();
 

@@ -94,6 +94,7 @@ namespace Service
             services.AddScoped<IAuthorRankPromotionService, AuthorRankPromotionService>();
             services.AddScoped<IContentModStatService, ContentModStatService>();
             services.AddScoped<IOperationModStatService, OperationModStatService>();
+            services.AddScoped<IPaymentHistoryService, PaymentHistoryService>();
             services.AddHostedService<StoryWeeklyViewSyncJob>();
             services.AddHostedService<SubscriptionReminderJob>();
 
