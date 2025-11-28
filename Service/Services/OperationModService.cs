@@ -165,17 +165,6 @@ namespace Service.Implementations
 
             await _opRepo.UpdateOpRequestAsync(entity, ct);
 
-            await _authorRevenueRepository.AddTransactionAsync(new author_revenue_transaction
-            {
-                trans_id = Guid.NewGuid(),
-                author_id = author.account_id,
-                type = "withdraw_complete",
-                amount_vnd = -amount,
-                request_id = entity.request_id,
-                metadata = metadata,
-                created_at = now
-            }, ct);
-
             await _authorRevenueRepository.SaveChangesAsync(ct);
             await transaction.CommitAsync(ct);
 

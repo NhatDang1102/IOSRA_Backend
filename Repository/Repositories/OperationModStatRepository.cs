@@ -60,24 +60,35 @@ namespace Repository.Repositories
 
         public Task<List<StatPointData>> GetAuthorRevenueStatsAsync(string metric, DateTime from, DateTime to, string period, CancellationToken ct = default)
         {
-            var query = _db.author_revenue_transactions
-                .AsNoTracking()
-                .Where(t => t.created_at >= from && t.created_at <= to);
+            IQueryable<StatPointSource> source;
 
             if (metric == "withdrawn")
             {
-                query = query.Where(t => t.type == "withdraw_complete");
+                source = _db.op_requests
+                    .AsNoTracking()
+                    .Where(r => r.request_type == "withdraw"
+                                && r.status == "approved"
+                                && r.reviewed_at >= from
+                                && r.reviewed_at <= to
+                                && r.withdraw_amount.HasValue)
+                    .Select(r => new StatPointSource
+                    {
+                        Timestamp = r.reviewed_at ?? r.created_at,
+                        Value = (long)r.withdraw_amount!.Value
+                    });
             }
             else
             {
-                query = query.Where(t => t.type == "purchase");
-            }
+                var purchases = _db.author_revenue_transactions
+                    .AsNoTracking()
+                    .Where(t => t.created_at >= from && t.created_at <= to && t.type == "purchase");
 
-            var source = query.Select(t => new StatPointSource
-            {
-                Timestamp = t.created_at,
-                Value = metric == "withdrawn" ? -t.amount_vnd : t.amount_vnd
-            });
+                source = purchases.Select(t => new StatPointSource
+                {
+                    Timestamp = t.created_at,
+                    Value = t.amount_vnd
+                });
+            }
 
             return GroupAsync(source, period, ct);
         }

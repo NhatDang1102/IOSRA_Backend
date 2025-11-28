@@ -615,7 +615,7 @@ CREATE TABLE op_requests (
 CREATE TABLE author_revenue_transactions (
   trans_id         CHAR(36) NOT NULL,
   author_id        CHAR(36) NOT NULL,
-  type             ENUM('purchase','withdraw_reserve','withdraw_release','withdraw_complete') NOT NULL,
+    type             ENUM('purchase','withdraw_reserve','withdraw_release') NOT NULL,
   amount_vnd       BIGINT NOT NULL DEFAULT 0,
     purchase_log_id  CHAR(36) NULL,
     voice_purchase_id CHAR(36) NULL,
