@@ -16,6 +16,8 @@ namespace Service.Services
 {
     public class ChapterTranslationService : IChapterTranslationService
     {
+        private const string PremiumPlanCode = "premium_month";
+
         private readonly IChapterCatalogRepository _chapterRepository;
         private readonly IChapterContentStorage _contentStorage;
         private readonly IOpenAiTranslationService _translationService;
@@ -44,12 +46,7 @@ namespace Service.Services
 
             var chapter = await LoadPublishedChapterAsync(chapterId, ct);
             await EnsureChapterReadableAsync(chapter, requesterAccountId, ct);
-
-            var subscriptionStatus = await _subscriptionService.GetStatusAsync(requesterAccountId, ct);
-            if (!subscriptionStatus.HasActiveSubscription)
-            {
-                throw new AppException("SubscriptionRequired", "Bạn cần gói subscription để dịch chương này.", 403);
-            }
+            await EnsurePremiumSubscriptionAsync(requesterAccountId, ct);
 
             var targetLanguage = await GetLanguageOrThrowAsync(request.TargetLanguageCode, ct);
             EnsureNotOriginalLanguage(chapter, targetLanguage);
@@ -57,7 +54,7 @@ namespace Service.Services
             var existingLocalization = await _chapterRepository.GetLocalizationAsync(chapter.chapter_id, targetLanguage.lang_id, ct);
             if (existingLocalization != null)
             {
-                throw new AppException("TranslationExists", "Ngôn ngữ này đã tồn tại.", 409);
+                throw new AppException("TranslationExists", "Translation for this language already exists.", 409);
             }
 
             if (string.IsNullOrWhiteSpace(chapter.content_url))
@@ -79,7 +76,7 @@ namespace Service.Services
 
             if (string.IsNullOrWhiteSpace(translated))
             {
-                throw new AppException("TranslationFailed", "Không thể dịch chương này.", 500);
+                throw new AppException("TranslationFailed", "Could not translate this chapter.", 500);
             }
 
             var wordCount = Math.Max(1, CountWords(translated));
@@ -96,7 +93,7 @@ namespace Service.Services
             await _chapterRepository.AddLocalizationAsync(localization, ct);
             await _chapterRepository.SaveChangesAsync(ct);
 
-            return MapResponse(chapter, targetLanguage, localization, translated, cached: false);
+            return MapResponse(chapter, targetLanguage, localization, cached: false);
         }
 
         public async Task<ChapterTranslationResponse> GetAsync(Guid chapterId, string languageCode, Guid? viewerAccountId, CancellationToken ct = default)
@@ -106,6 +103,13 @@ namespace Service.Services
                 throw new AppException("ValidationFailed", "Language code is required.", 400);
             }
 
+            if (!viewerAccountId.HasValue)
+            {
+                throw new AppException("SubscriptionRequired", "Bạn cần gói premium_month để xem bản dịch.", 403);
+            }
+
+            await EnsurePremiumSubscriptionAsync(viewerAccountId.Value, ct);
+
             var chapter = await LoadPublishedChapterAsync(chapterId, ct);
             await EnsureChapterReadableAsync(chapter, viewerAccountId, ct);
 
@@ -113,27 +117,30 @@ namespace Service.Services
             EnsureNotOriginalLanguage(chapter, targetLanguage);
 
             var localization = await _chapterRepository.GetLocalizationAsync(chapter.chapter_id, targetLanguage.lang_id, ct)
-                               ?? throw new AppException("TranslationNotFound", "Chapter nA?y ch??a cA3 b???n d??<ch, hA?y d??<ch tr????>c.", 404);
+                               ?? throw new AppException("TranslationNotFound", "Chapter has not been translated yet.", 404);
 
-            var content = await LoadLocalizationContentAsync(localization, ct);
-            return MapResponse(chapter, targetLanguage, localization, content, cached: true);
+            return MapResponse(chapter, targetLanguage, localization, cached: true);
         }
 
         public async Task<ChapterTranslationStatusResponse> GetStatusesAsync(Guid chapterId, Guid? viewerAccountId, CancellationToken ct = default)
         {
+            if (!viewerAccountId.HasValue)
+            {
+                throw new AppException("SubscriptionRequired", "Bạn cần gói premium_month để xem trạng thái dịch.", 403);
+            }
+
+            await EnsurePremiumSubscriptionAsync(viewerAccountId.Value, ct);
+
             var chapter = await LoadPublishedChapterAsync(chapterId, ct);
             await EnsureChapterReadableAsync(chapter, viewerAccountId, ct);
 
             var languages = await _chapterRepository.GetLanguagesAsync(ct);
             var localizations = await _chapterRepository.GetLocalizationsByChapterAsync(chapter.chapter_id, ct);
-            var localizationMap = new Dictionary<Guid, chapter_localization>();
-            foreach (var localization in localizations)
-            {
-                localizationMap[localization.lang_id] = localization;
-            }
+            var localizationMap = localizations.ToDictionary(l => l.lang_id, l => l);
 
             var originalCode = chapter.language?.lang_code ?? string.Empty;
             var locales = new ChapterTranslationLocaleStatus[languages.Count];
+
             for (var i = 0; i < languages.Count; i++)
             {
                 var language = languages[i];
@@ -202,7 +209,7 @@ namespace Service.Services
         private async Task<language_list> GetLanguageOrThrowAsync(string languageCode, CancellationToken ct)
         {
             var language = await _chapterRepository.GetLanguageByCodeAsync(languageCode.Trim(), ct)
-                          ?? throw new AppException("LanguageNotFound", "Ngôn ngữ này không được hỗ trợ.", 404);
+                          ?? throw new AppException("LanguageNotFound", "Language is not supported.", 404);
             return language;
         }
 
@@ -211,7 +218,7 @@ namespace Service.Services
             var originalCode = chapter.language?.lang_code ?? string.Empty;
             if (string.Equals(originalCode, targetLanguage.lang_code, StringComparison.OrdinalIgnoreCase))
             {
-                throw new AppException("TranslationNotNeeded", "Chapter đã ở ngôn ngữ này.", 400);
+                throw new AppException("TranslationNotNeeded", "Chapter already uses this language.", 400);
             }
         }
 
@@ -225,23 +232,7 @@ namespace Service.Services
             return WordRegex.Matches(content).Count;
         }
 
-        private async Task<string> LoadLocalizationContentAsync(chapter_localization localization, CancellationToken ct)
-        {
-            if (string.IsNullOrWhiteSpace(localization.content_url))
-            {
-                throw new AppException("TranslationFileMissing", "Translation content not found.", 500);
-            }
-
-            var content = await _contentStorage.DownloadAsync(localization.content_url, ct);
-            if (string.IsNullOrWhiteSpace(content))
-            {
-                throw new AppException("TranslationFileMissing", "Translation content is empty.", 500);
-            }
-
-            return content;
-        }
-
-        private ChapterTranslationResponse MapResponse(chapter chapter, language_list targetLanguage, chapter_localization localization, string content, bool cached)
+        private ChapterTranslationResponse MapResponse(chapter chapter, language_list targetLanguage, chapter_localization localization, bool cached)
         {
             return new ChapterTranslationResponse
             {
@@ -250,12 +241,19 @@ namespace Service.Services
                 OriginalLanguageCode = chapter.language?.lang_code ?? string.Empty,
                 TargetLanguageCode = targetLanguage.lang_code,
                 TargetLanguageName = targetLanguage.lang_name ?? targetLanguage.lang_code,
-                Content = content,
                 ContentUrl = localization.content_url,
                 WordCount = (int)localization.word_count,
                 Cached = cached
             };
         }
+
+        private async Task EnsurePremiumSubscriptionAsync(Guid accountId, CancellationToken ct)
+        {
+            var status = await _subscriptionService.GetStatusAsync(accountId, ct);
+            if (!status.HasActiveSubscription || !string.Equals(status.PlanCode, PremiumPlanCode, StringComparison.OrdinalIgnoreCase))
+            {
+                throw new AppException("SubscriptionRequired", "Bạn cần gói premium_month để sử dụng tính năng dịch chương.", 403);
+            }
+        }
     }
 }
-
