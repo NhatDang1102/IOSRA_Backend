@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
@@ -9,6 +9,7 @@ using System.Text;
 using System.Text.Encodings.Web;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using Contract.DTOs.Settings;
@@ -214,6 +215,20 @@ namespace Service.Helpers
 
         private async Task<ModerationAiResponse?> RequestModerationAsync(ModerationProfile profile, string content, CancellationToken ct)
         {
+            var moderationInstructions = @"Return JSON only with shape { ""score"": number, ""decision"": ""auto_approved|pending_manual_review|rejected"", ""violations"": [{ ""label"": string, ""evidence"": [string] }], ""explanation"": { ""english"": string, ""vietnamese"": string } }.
+Start from base score = 10.00 and subtract penalties exactly as defined in ""deductions"". Every time you subtract points you MUST add a violation entry (label must match the table) and quote the offending snippet inside ""evidence"".
+Rules that must always be enforced:
+- Any URL, external link, or redirect CTA (http, https, www, .com, bit.ly, telegram, discord.gg, invite codes, etc.) => label ""url_redirect"" and subtract at least 1.5 points per link.
+- Spam, nonsense, or repeated tokens (""up up up"", ""aaaaaaaa"", ""test test"", placeholder text) => label ""spam_repetition"" and subtract at least 1.0 point.
+- Explicit sexual content, violence, hate speech, self-harm, illegal instructions, personal data, and irrelevant ads must follow the deduction table. Protected-class hate or sexual content with minors should reduce the score below 5 and typically be rejected.
+- If ANY violation exists, the final score must be < 10 and the violation must be listed. Never return 10.00 when a deduction was applied.
+- Decision mapping: score >= 7 and no forced rejection => auto_approved; 5 <= score < 7 => pending_manual_review; score < 5 or forced labels => rejected.
+Explanation requirements:
+- Always provide both English and Vietnamese summaries.
+- Mention each deduction explicitly, e.g., ""-1.5 for url_redirect because the text contains http://example"".
+- Paraphrase slurs rather than repeating them verbatim.
+If no policy issue exists, state clearly that no deductions were applied.";
+
             var userPayload = new
             {
                 contentType = profile.ContentType,
@@ -224,7 +239,7 @@ namespace Service.Helpers
                 },
                 policies = PolicyStatements,
                 deductions = DeductionTable,
-                instructions = "Return JSON only: { score, decision, violations, explanation }. Decision must be one of auto_approved / pending_manual_review / rejected. Score must follow the deduction matrix, and every explanation sentence must cite the exact deduction (e.g., '-1.5 for url_redirect because...'). Explicitly check for URLs/redirect CTAs and spam/repeated nonsense even if the text tries to obfuscate them. Never repeat explicit slurs verbatim; paraphrase as 'inappropriate language'.",
+                instructions = moderationInstructions,
                 content
             };
 
@@ -238,7 +253,7 @@ namespace Service.Helpers
                     new ChatMessage
                     {
                         Role = "system",
-                        Content = "You are an automated moderation engine. Follow the scoring bands strictly and respond ONLY with JSON."
+                        Content = "You are an automated moderation engine. Start from score 10, subtract penalties exactly as defined, enforce every policy (URL/spam detection included), and respond ONLY with JSON in the requested schema."
                     },
                     new ChatMessage
                     {
@@ -286,7 +301,7 @@ namespace Service.Helpers
             var vietnamese = explanation?.Vietnamese;
             if (!string.IsNullOrWhiteSpace(english) && !string.IsNullOrWhiteSpace(vietnamese))
             {
-                return $"English:\n{english.Trim()}\n\nTiếng Việt:\n{vietnamese.Trim()}";
+                return $"English:\n{english.Trim()}\n\nTiáº¿ng Viá»‡t:\n{vietnamese.Trim()}";
             }
 
             var shouldReject = string.Equals(decision, "rejected", StringComparison.OrdinalIgnoreCase);
@@ -303,12 +318,12 @@ namespace Service.Helpers
                     : $"Automated moderation scored {score:0.00}/10 after policy deductions (details unavailable), which is below {AutoApproveThreshold:0.00} but at or above {ManualReviewThreshold:0.00}, so the {profile.ContentType} requires manual review.";
 
             var vietnamese = shouldReject
-                ? $"Điểm kiểm duyệt tự động là {score:0.00}/10 sau khi áp dụng các mức trừ (không có chi tiết), thấp hơn {ManualReviewThreshold:0.00} nên nội dung {profile.ContentType} bị từ chối."
+                   ? $"Điểm kiểm duyệt tự động là {score:0.00}/10 sau khi áp dụng các mức trừ (không có chi tiết), thấp hơn {ManualReviewThreshold:0.00} nên nội dung {profile.ContentType} bị từ chối."
                 : autoApproved
-                    ? $"Điểm kiểm duyệt tự động là {score:0.00}/10 sau khi áp dụng các mức trừ (không có chi tiết), đạt ngưỡng tự duyệt {AutoApproveThreshold:0.00} nên nội dung {profile.ContentType} được xuất bản."
+                         ? $"Điểm kiểm duyệt tự động là {score:0.00}/10 sau khi áp dụng các mức trừ (không có chi tiết), đạt ngưỡng tự duyệt {AutoApproveThreshold:0.00} nên nội dung {profile.ContentType} được xuất bản."
                     : $"Điểm kiểm duyệt tự động là {score:0.00}/10 sau khi áp dụng các mức trừ (không có chi tiết), thấp hơn {AutoApproveThreshold:0.00} nhưng không dưới {ManualReviewThreshold:0.00} nên nội dung {profile.ContentType} chuyển cho moderator.";
 
-            return $"English:\n{english}\n\nTiếng Việt:\n{vietnamese}";
+            return $"English:\n{english}\n\nTiáº¿ng Viá»‡t:\n{vietnamese}";
         }
 
         public async Task<OpenAiImageResult> GenerateCoverAsync(string prompt, CancellationToken ct = default)
@@ -540,3 +555,4 @@ namespace Service.Helpers
         }
     }
 }
+
