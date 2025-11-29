@@ -1,7 +1,4 @@
-﻿using System;
-using Contract.DTOs.Settings;
-using Microsoft.Extensions.Options;
-using Service.Interfaces;
+using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
@@ -12,9 +9,11 @@ using System.Text;
 using System.Text.Encodings.Web;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
+using Contract.DTOs.Settings;
+using Microsoft.Extensions.Options;
+using Service.Interfaces;
 
 namespace Service.Helpers
 {
@@ -22,53 +21,117 @@ namespace Service.Helpers
     {
         private const double AutoApproveThreshold = 7.0;
         private const double ManualReviewThreshold = 5.0;
-        private static readonly RegexOptions MatchOptions = RegexOptions.Compiled | RegexOptions.CultureInvariant | RegexOptions.IgnoreCase;
-        private static readonly Regex WordRegex = new Regex(@"\b[\p{L}\p{Nd}_']+\b", MatchOptions);
 
-        // Edit this list to control which words trigger deductions.
-        private static readonly string[] BannedKeywords =
+        private static readonly string[] PolicyStatements =
         {
-            "fuck",
-            "shit",
-            "bullshit",
-            "idiot",
-            "stupid",
-            "kill",
-            "murder",
-            "ngoc",
-            "ngu"
+            "Detect explicit/pornographic sexual content (especially involving minors or coercion).",
+            "Detect violent, gory, or extremist rhetoric that glorifies harm.",
+            "Detect URLs, links, or attempts to redirect readers off the platform.",
+            "Detect spam or nonsensical content (repeated characters/words, placeholder text).",
+            "Detect hate speech or harassment toward protected classes or individuals.",
+            "Detect self-harm or suicide promotion/instructions.",
+            "Detect instructions or promotion of illegal activities (drugs, hacking, weapons, etc.).",
+            "Detect sharing of personal data/doxxing (phone, address, bank info).",
+            "Detect low-quality/irrelevant filler or advertising masquerading as a chapter."
         };
+
+        private static readonly object[] DeductionTable =
+        {
+            new
+            {
+                category = "Explicit sexual content",
+                labels = new[] { "sexual_explicit", "sexual_minor", "sexual_transaction", "fetish_extreme" },
+                penalties = new[] { "-3.0 severe (graphic sex, minors, non-consensual)", "-1.5 moderate (nudity, heavy innuendo)", "-0.5 mild borderline romance" },
+                note = "Any minors + sexual context must be labelled and usually rejected."
+            },
+            new
+            {
+                category = "Violent / extremist",
+                labels = new[] { "violent_gore", "extremist_rhetoric" },
+                penalties = new[] { "-3.0 graphic gore or propaganda", "-1.5 praising violence", "-0.5 contextual combat" },
+                note = "Genocide/terror support should never be auto approved."
+            },
+            new
+            {
+                category = "URL / redirect",
+                labels = new[] { "url_redirect" },
+                penalties = new[] { "-1.5 per link or CTA to leave IOSRA" },
+                note = "Plain brand mentions without link = 0."
+            },
+            new
+            {
+                category = "Spam / gibberish",
+                labels = new[] { "spam_repetition" },
+                penalties = new[] { "-1.5 heavy spam or nonsense", "-0.5 short bursts" },
+                note = "Use when chapter lacks meaningful prose."
+            },
+            new
+            {
+                category = "Hate speech / harassment",
+                labels = new[] { "hate_speech", "harassment_targeted", "mild_insult" },
+                penalties = new[] { "-3.0 protected-class slurs", "-2.0 repeated harassment", "-0.5 mild insults" },
+                note = "Protected class attacks should drop score below 5."
+            },
+            new
+            {
+                category = "Self-harm & suicide",
+                labels = new[] { "self_harm_promotion", "self_harm_instruction", "self_harm_neutral" },
+                penalties = new[] { "-3.0 promotion/instructions", "-1.0 neutral mention needing caution" },
+                note = "Never glorify or teach self-harm."
+            },
+            new
+            {
+                category = "Illegal activities",
+                labels = new[] { "illegal_instruction", "illegal_promotion" },
+                penalties = new[] { "-2.5 actionable how-to guides", "-1.0 glorifying crimes", "-0.5 incidental mention" },
+                note = "Differentiate narrative vs instructions."
+            },
+            new
+            {
+                category = "Personal data / doxxing",
+                labels = new[] { "personal_data" },
+                penalties = new[] { "-2.5 exposing private info or urging doxxing" },
+                note = "Mask or paraphrase sensitive numbers."
+            },
+            new
+            {
+                category = "Low quality / irrelevant",
+                labels = new[] { "low_quality", "irrelevant_ad" },
+                penalties = new[] { "-1.5 advertisements/placeholder text", "-0.5 mild off-topic content" },
+                note = "Apply to chapters with <100 useful words."
+            }
+        };
+
+        private static readonly HashSet<string> ForceRejectLabels = new(
+            new[]
+            {
+                "sexual_minor",
+                "sexual_transaction",
+                "sexual_degradation",
+                "extremist_rhetoric",
+                "self_harm_promotion",
+                "self_harm_instruction"
+            },
+            StringComparer.OrdinalIgnoreCase);
+
+        private readonly HttpClient _httpClient;
+        private readonly OpenAiSettings _settings;
+        private readonly JsonSerializerOptions _jsonOptions;
 
         private static readonly ModerationProfile StoryProfile = new(
             ContentType: "story",
             PrimaryLabel: "Title",
-            SecondaryLabel: "Description",
-            PenaltyPerViolation: 0.10,
-            RejectThreshold: 0.5);
+            SecondaryLabel: "Description");
 
         private static readonly ModerationProfile ChapterProfile = new(
             ContentType: "chapter",
             PrimaryLabel: "Title",
-            SecondaryLabel: "Body",
-            PenaltyPerViolation: 0.10,
-            RejectThreshold: 0.5);
-
-        private readonly HttpClient _httpClient;
-        private readonly OpenAiSettings _settings;
-        private readonly Dictionary<string, string> _normalizedToOriginal;
-        private readonly JsonSerializerOptions _jsonOptions;
+            SecondaryLabel: "Body");
 
         public OpenAiService(HttpClient httpClient, IOptions<OpenAiSettings> options)
         {
             _httpClient = httpClient;
             _settings = options.Value;
-
-            _normalizedToOriginal = BannedKeywords
-                .Distinct(StringComparer.OrdinalIgnoreCase)
-                .Select(keyword => (keyword, normalized: NormalizeToken(keyword)))
-                .Where(entry => !string.IsNullOrWhiteSpace(entry.normalized))
-                .ToDictionary(entry => entry.normalized, entry => entry.keyword, StringComparer.OrdinalIgnoreCase);
-
             _jsonOptions = new JsonSerializerOptions
             {
                 PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
@@ -83,34 +146,169 @@ namespace Service.Helpers
         public Task<OpenAiModerationResult> ModerateChapterAsync(string title, string content, CancellationToken ct = default)
             => ModerateContentAsync(title, content, ChapterProfile, ct);
 
-        private async Task<OpenAiModerationResult> ModerateContentAsync(string primaryContent, string? secondaryContent, ModerationProfile profile, CancellationToken ct)
+        private async Task<OpenAiModerationResult> ModerateContentAsync(string primary, string? secondary, ModerationProfile profile, CancellationToken ct)
         {
-            var content = ComposeContent(primaryContent, secondaryContent);
-            var scan = ScanContent(content);
+            var combined = ComposeContent(primary, secondary);
+            var ai = await RequestModerationAsync(profile, combined, ct);
 
-            var totalViolations = scan.Violations.Sum(v => v.Count);
-            var scoreRatio = Math.Max(0.0, 1.0 - totalViolations * profile.PenaltyPerViolation);
-            var scaledScore = Math.Clamp(Math.Round(scoreRatio * 10.0, 2, MidpointRounding.AwayFromZero), 0.0, 10.0);
-            var shouldReject = scoreRatio < profile.RejectThreshold;
+            var rawScore = ai?.Score ?? 10.0;
+            var score = Math.Clamp(Math.Round(rawScore, 2, MidpointRounding.AwayFromZero), 0.0, 10.0);
+            var normalizedDecision = ai?.Decision?.ToLowerInvariant();
 
-            var autoApproved = !shouldReject && scaledScore >= AutoApproveThreshold;
-            var explanation = await RequestExplanationAsync(
-                profile,
-                primaryContent,
-                secondaryContent,
-                scan.Violations,
-                scaledScore,
-                shouldReject,
-                autoApproved,
-                ct);
+            bool shouldReject = normalizedDecision switch
+            {
+                "rejected" => true,
+                "auto_approved" => score < ManualReviewThreshold ? true : false,
+                "pending_manual_review" => score < ManualReviewThreshold,
+                _ => score < ManualReviewThreshold
+            };
+
+            if (normalizedDecision is null)
+            {
+                if (score >= AutoApproveThreshold)
+                {
+                    normalizedDecision = "auto_approved";
+                }
+                else if (score >= ManualReviewThreshold)
+                {
+                    normalizedDecision = "pending_manual_review";
+                }
+                else
+                {
+                    normalizedDecision = "rejected";
+                }
+            }
+
+            var autoApproved = !shouldReject && score >= AutoApproveThreshold;
+
+            var violations = ai?.Violations?
+                .Select(v =>
+                {
+                    var label = string.IsNullOrWhiteSpace(v.Label) ? "violation" : v.Label;
+                    var evidence = v.Evidence ?? Array.Empty<string>();
+                    return new ModerationViolation(label, Math.Max(1, evidence.Length), evidence);
+                })
+                .ToArray() ?? Array.Empty<ModerationViolation>();
+
+            if (!shouldReject && ai?.Violations != null)
+            {
+                var hasForced = ai.Violations.Any(v => v.Label != null && ForceRejectLabels.Contains(v.Label));
+                if (hasForced)
+                {
+                    shouldReject = true;
+                    normalizedDecision = "rejected";
+                }
+            }
+
+            var explanation = BuildExplanationFromAi(profile, score, normalizedDecision, ai?.Explanation)
+                              ?? BuildDecisionExplanation(profile, score, shouldReject, autoApproved);
 
             return new OpenAiModerationResult(
                 shouldReject,
-                scaledScore,
-                scan.Violations,
-                content,
-                scan.Sanitized,
+                score,
+                violations,
+                combined,
+                combined,
                 explanation);
+        }
+
+        private async Task<ModerationAiResponse?> RequestModerationAsync(ModerationProfile profile, string content, CancellationToken ct)
+        {
+            var userPayload = new
+            {
+                contentType = profile.ContentType,
+                scoring = new
+                {
+                    autoApprove = AutoApproveThreshold,
+                    manualReview = ManualReviewThreshold
+                },
+                policies = PolicyStatements,
+                deductions = DeductionTable,
+                instructions = "Return JSON only: { score, decision, violations, explanation }. Decision must be one of auto_approved / pending_manual_review / rejected. Score must follow the deduction matrix, and every explanation sentence must cite the exact deduction (e.g., '-1.5 for url_redirect because...'). Explicitly check for URLs/redirect CTAs and spam/repeated nonsense even if the text tries to obfuscate them. Never repeat explicit slurs verbatim; paraphrase as 'inappropriate language'.",
+                content
+            };
+
+            var payload = new ChatCompletionsRequest
+            {
+                Model = _settings.ChatModel,
+                Temperature = 0,
+                MaxTokens = 700,
+                Messages = new[]
+                {
+                    new ChatMessage
+                    {
+                        Role = "system",
+                        Content = "You are an automated moderation engine. Follow the scoring bands strictly and respond ONLY with JSON."
+                    },
+                    new ChatMessage
+                    {
+                        Role = "user",
+                        Content = JsonSerializer.Serialize(userPayload, _jsonOptions)
+                    }
+                }
+            };
+
+            try
+            {
+                using var request = new HttpRequestMessage(HttpMethod.Post, "chat/completions");
+                request.Content = new StringContent(JsonSerializer.Serialize(payload, _jsonOptions), Encoding.UTF8, "application/json");
+                using var response = await _httpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, ct);
+
+                if (!response.IsSuccessStatusCode)
+                {
+                    var failureBody = await response.Content.ReadAsStringAsync(ct);
+                    throw new InvalidOperationException($"OpenAI moderation request failed with status {(int)response.StatusCode}: {failureBody}");
+                }
+
+                var envelope = await response.Content.ReadFromJsonAsync<ChatCompletionsResponse>(_jsonOptions, ct)
+                              ?? throw new InvalidOperationException("OpenAI moderation response was empty.");
+
+                var contentResponse = envelope.Choices?
+                    .Select(c => c.Message?.Content)
+                    .FirstOrDefault(c => !string.IsNullOrWhiteSpace(c));
+
+                if (!string.IsNullOrWhiteSpace(contentResponse))
+                {
+                    return JsonSerializer.Deserialize<ModerationAiResponse>(contentResponse, _jsonOptions);
+                }
+            }
+            catch
+            {
+                // fall through to default handling
+            }
+
+            return null;
+        }
+
+        private static string? BuildExplanationFromAi(ModerationProfile profile, double score, string? decision, ModerationAiExplanation? explanation)
+        {
+            var english = explanation?.English;
+            var vietnamese = explanation?.Vietnamese;
+            if (!string.IsNullOrWhiteSpace(english) && !string.IsNullOrWhiteSpace(vietnamese))
+            {
+                return $"English:\n{english.Trim()}\n\nTiếng Việt:\n{vietnamese.Trim()}";
+            }
+
+            var shouldReject = string.Equals(decision, "rejected", StringComparison.OrdinalIgnoreCase);
+            var autoApproved = string.Equals(decision, "auto_approved", StringComparison.OrdinalIgnoreCase);
+            return BuildDecisionExplanation(profile, score, shouldReject, autoApproved);
+        }
+
+        private static string BuildDecisionExplanation(ModerationProfile profile, double score, bool shouldReject, bool autoApproved)
+        {
+            var english = shouldReject
+                ? $"Automated moderation scored {score:0.00}/10 after policy deductions (details unavailable), which is below {ManualReviewThreshold:0.00}, so this {profile.ContentType} was rejected."
+                : autoApproved
+                    ? $"Automated moderation scored {score:0.00}/10 after policy deductions (details unavailable), meeting the auto-approval threshold of {AutoApproveThreshold:0.00}, so the {profile.ContentType} was published."
+                    : $"Automated moderation scored {score:0.00}/10 after policy deductions (details unavailable), which is below {AutoApproveThreshold:0.00} but at or above {ManualReviewThreshold:0.00}, so the {profile.ContentType} requires manual review.";
+
+            var vietnamese = shouldReject
+                ? $"Điểm kiểm duyệt tự động là {score:0.00}/10 sau khi áp dụng các mức trừ (không có chi tiết), thấp hơn {ManualReviewThreshold:0.00} nên nội dung {profile.ContentType} bị từ chối."
+                : autoApproved
+                    ? $"Điểm kiểm duyệt tự động là {score:0.00}/10 sau khi áp dụng các mức trừ (không có chi tiết), đạt ngưỡng tự duyệt {AutoApproveThreshold:0.00} nên nội dung {profile.ContentType} được xuất bản."
+                    : $"Điểm kiểm duyệt tự động là {score:0.00}/10 sau khi áp dụng các mức trừ (không có chi tiết), thấp hơn {AutoApproveThreshold:0.00} nhưng không dưới {ManualReviewThreshold:0.00} nên nội dung {profile.ContentType} chuyển cho moderator.";
+
+            return $"English:\n{english}\n\nTiếng Việt:\n{vietnamese}";
         }
 
         public async Task<OpenAiImageResult> GenerateCoverAsync(string prompt, CancellationToken ct = default)
@@ -170,7 +368,6 @@ namespace Service.Helpers
             }
 
             stream.Position = 0;
-
             return new OpenAiImageResult(stream, fileName, contentType);
         }
 
@@ -224,190 +421,6 @@ namespace Service.Helpers
             return translated.Trim();
         }
 
-
-        private async Task<string> RequestExplanationAsync(
-            ModerationProfile profile,
-            string primaryContent,
-            string? secondaryContent,
-            IReadOnlyList<ModerationViolation> violations,
-            double score,
-            bool shouldReject,
-            bool autoApproved,
-            CancellationToken ct)
-        {
-            var decision = shouldReject ? "rejected" : autoApproved ? "auto_approved" : "pending_manual_review";
-            var penaltyText = (profile.PenaltyPerViolation * 10).ToString("0.00", CultureInfo.InvariantCulture);
-            var rejectionThresholdText = ManualReviewThreshold.ToString("0.00", CultureInfo.InvariantCulture);
-            var autoThresholdText = AutoApproveThreshold.ToString("0.00", CultureInfo.InvariantCulture);
-            var instruction =
-                $"Initial score is 10.00. Each detected word subtracts {penaltyText} points. Scores >= {autoThresholdText} are auto-approved, scores between {rejectionThresholdText} and {autoThresholdText} require moderator review, and scores below {rejectionThresholdText} are rejected.";
-
-            var summary = new
-            {
-                score = Math.Round(score, 2),
-                decision,
-                violations = violations.Count
-            };
-
-            var sanitizedContent = ComposeContent(primaryContent, secondaryContent);
-            var payload = new ChatCompletionsRequest
-            {
-                Model = _settings.ChatModel,
-                Temperature = 0,
-                MaxTokens = 400,
-                Messages = new[]
-                {
-                    new ChatMessage
-                    {
-                        Role = "system",
-                        Content = "You explain automated moderation results. Respond with JSON containing 'english' and 'vietnamese'. NEVER repeat or hint at the prohibited words. Use neutral phrases such as 'inappropriate vocabulary'. Mention the score/threshold and the final decision (auto approved / pending moderator / rejected)."
-                    },
-                    new ChatMessage
-                    {
-                        Role = "user",
-                        Content = BuildModerationPrompt(profile, instruction, summary, sanitizedContent)
-                    }
-                }
-            };
-
-            try
-            {
-                using var request = new HttpRequestMessage(HttpMethod.Post, "chat/completions");
-                request.Content = new StringContent(JsonSerializer.Serialize(payload, _jsonOptions), Encoding.UTF8, "application/json");
-                using var response = await _httpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, ct);
-
-                if (!response.IsSuccessStatusCode)
-                {
-                    var failureBody = await response.Content.ReadAsStringAsync(ct);
-                    throw new InvalidOperationException($"OpenAI chat completion failed with status {(int)response.StatusCode}: {failureBody}");
-                }
-
-                var envelope = await response.Content.ReadFromJsonAsync<ChatCompletionsResponse>(_jsonOptions, ct)
-                              ?? throw new InvalidOperationException("OpenAI chat completion returned an empty response.");
-
-                var content = envelope.Choices?
-                                   .Select(c => c.Message?.Content)
-                                   .FirstOrDefault(c => !string.IsNullOrWhiteSpace(c));
-
-                if (!string.IsNullOrWhiteSpace(content))
-                {
-                    using var doc = JsonDocument.Parse(content);
-                    if (doc.RootElement.TryGetProperty("english", out var englishProp) &&
-                        doc.RootElement.TryGetProperty("vietnamese", out var vietnameseProp))
-                    {
-                        var english = englishProp.GetString();
-                        var vietnamese = vietnameseProp.GetString();
-                        if (!string.IsNullOrWhiteSpace(english) && !string.IsNullOrWhiteSpace(vietnamese))
-                        {
-                            return $"English:\n{english.Trim()}\n\nTiếng Việt:\n{vietnamese.Trim()}";
-                        }
-                    }
-                }
-            }
-            catch
-            {
-                // Fallback below.
-            }
-
-            return BuildDecisionExplanation(profile, score, shouldReject, autoApproved);
-        }
-
-        private static string BuildModerationPrompt(ModerationProfile profile, string instruction, object summary, string sanitizedContent)
-        {
-            var sb = new StringBuilder();
-            sb.AppendLine(instruction);
-            sb.AppendLine($"Content type: {profile.ContentType}");
-            sb.AppendLine("Summary:");
-            sb.AppendLine(JsonSerializer.Serialize(summary, new JsonSerializerOptions { Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping }));
-            sb.AppendLine("Sanitized excerpt (with sensitive words masked):");
-            sb.AppendLine(string.IsNullOrWhiteSpace(sanitizedContent) ? "(empty)" : sanitizedContent);
-            sb.AppendLine("Remember: do NOT repeat or reveal blocked words. Just explain the score and next step.");
-            return sb.ToString();
-        }
-
-        private static string BuildDecisionExplanation(ModerationProfile profile, double score, bool shouldReject, bool autoApproved)
-        {
-            string english;
-            string vietnamese;
-
-            if (shouldReject)
-            {
-                english = $"Automated moderation scored {score:0.00}/10, which is below {ManualReviewThreshold:0.00}, so this {profile.ContentType} was rejected.";
-                vietnamese = $"Điểm kiểm duyệt tự động là {score:0.00}/10 (thấp hơn {ManualReviewThreshold:0.00}) nên nội dung {profile.ContentType} bị từ chối.";
-            }
-            else if (autoApproved)
-            {
-                english = $"Automated moderation scored {score:0.00}/10, meeting the auto-approval threshold of {AutoApproveThreshold:0.00}, so the {profile.ContentType} was published immediately.";
-                vietnamese = $"Điểm kiểm duyệt tự động là {score:0.00}/10 (đạt ngưỡng tự duyệt {AutoApproveThreshold:0.00}) nên nội dung {profile.ContentType} được xuất bản ngay.";
-            }
-            else
-            {
-                english = $"Automated moderation scored {score:0.00}/10, which is below {AutoApproveThreshold:0.00} but at or above {ManualReviewThreshold:0.00}, so the {profile.ContentType} was forwarded to a moderator.";
-                vietnamese = $"Điểm kiểm duyệt tự động là {score:0.00}/10 (thấp hơn {AutoApproveThreshold:0.00} nhưng không thấp hơn {ManualReviewThreshold:0.00}) nên nội dung {profile.ContentType} được chuyển cho moderator duyệt.";
-            }
-
-            return $"English:\n{english}\n\nTiếng Việt:\n{vietnamese}";
-        }
-
-        private ScanResult ScanContent(string content)
-        {
-            if (string.IsNullOrWhiteSpace(content))
-            {
-                return new ScanResult(string.Empty, Array.Empty<ModerationViolation>());
-            }
-
-            var buffer = content.ToCharArray();
-            var buckets = new Dictionary<string, KeywordAccumulator>(StringComparer.OrdinalIgnoreCase);
-
-            foreach (Match match in WordRegex.Matches(content))
-            {
-                if (!match.Success || match.Length == 0)
-                {
-                    continue;
-                }
-
-                var normalizedToken = NormalizeToken(match.Value);
-                if (string.IsNullOrWhiteSpace(normalizedToken))
-                {
-                    continue;
-                }
-
-                if (!_normalizedToOriginal.TryGetValue(normalizedToken, out var originalKeyword))
-                {
-                    continue;
-                }
-
-                if (!buckets.TryGetValue(originalKeyword, out var accumulator))
-                {
-                    accumulator = new KeywordAccumulator(originalKeyword);
-                    buckets[originalKeyword] = accumulator;
-                }
-
-                accumulator.Count++;
-                if (accumulator.Samples.Count < 3)
-                {
-                    accumulator.Samples.Add(GetExcerpt(content, match.Index, match.Length));
-                }
-
-                for (var i = match.Index; i < match.Index + match.Length && i < buffer.Length; i++)
-                {
-                    buffer[i] = '*';
-                }
-            }
-
-            var violations = buckets
-                .OrderByDescending(kvp => kvp.Value.Count)
-                .ThenBy(kvp => kvp.Key, StringComparer.OrdinalIgnoreCase)
-                .Select(kvp => new ModerationViolation(
-                    kvp.Key,
-                    kvp.Value.Count,
-                    kvp.Value.Samples.ToArray()))
-                .ToArray();
-
-            var sanitized = violations.Length == 0 ? content : new string(buffer);
-            return new ScanResult(sanitized, violations);
-        }
-
         private static string ComposeContent(string title, string? description)
         {
             var builder = new StringBuilder();
@@ -425,73 +438,10 @@ namespace Service.Helpers
             return builder.Length > 0 ? builder.ToString().Trim() : string.Empty;
         }
 
-        private static string NormalizeToken(string value)
-        {
-            if (string.IsNullOrWhiteSpace(value))
-            {
-                return string.Empty;
-            }
-
-            var noDiacritics = RemoveDiacritics(value);
-            return noDiacritics.ToLowerInvariant();
-        }
-
-        private static string RemoveDiacritics(string text)
-        {
-            var normalized = text.Normalize(NormalizationForm.FormD);
-            var builder = new StringBuilder(normalized.Length);
-
-            foreach (var c in normalized)
-            {
-                var category = CharUnicodeInfo.GetUnicodeCategory(c);
-                if (category != UnicodeCategory.NonSpacingMark)
-                {
-                    builder.Append(c);
-                }
-            }
-
-            return builder.ToString().Normalize(NormalizationForm.FormC);
-        }
-
-        private static string GetExcerpt(string content, int index, int length, int radius = 30)
-        {
-            var start = Math.Max(0, index - radius);
-            var end = Math.Min(content.Length, index + length + radius);
-
-            var excerpt = content.Substring(start, end - start);
-            if (start > 0)
-            {
-                excerpt = "…" + excerpt;
-            }
-
-            if (end < content.Length)
-            {
-                excerpt += "…";
-            }
-
-            return excerpt;
-        }
-
         private sealed record ModerationProfile(
             string ContentType,
             string PrimaryLabel,
-            string SecondaryLabel,
-            double PenaltyPerViolation,
-            double RejectThreshold);
-
-        private sealed record ScanResult(string Sanitized, IReadOnlyList<ModerationViolation> Violations);
-
-        private sealed class KeywordAccumulator
-        {
-            public KeywordAccumulator(string word)
-            {
-                Word = word;
-            }
-
-            public string Word { get; }
-            public int Count { get; set; }
-            public HashSet<string> Samples { get; } = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        }
+            string SecondaryLabel);
 
         private sealed record ChatCompletionsRequest
         {
@@ -555,8 +505,38 @@ namespace Service.Helpers
             [JsonPropertyName("url")]
             public string? Url { get; init; }
         }
+
+        private sealed record ModerationAiResponse
+        {
+            [JsonPropertyName("score")]
+            public double? Score { get; init; }
+
+            [JsonPropertyName("decision")]
+            public string? Decision { get; init; }
+
+            [JsonPropertyName("violations")]
+            public ModerationAiViolation[]? Violations { get; init; }
+
+            [JsonPropertyName("explanation")]
+            public ModerationAiExplanation? Explanation { get; init; }
+        }
+
+        private sealed record ModerationAiViolation
+        {
+            [JsonPropertyName("label")]
+            public string? Label { get; init; }
+
+            [JsonPropertyName("evidence")]
+            public string[]? Evidence { get; init; }
+        }
+
+        private sealed record ModerationAiExplanation
+        {
+            [JsonPropertyName("english")]
+            public string? English { get; init; }
+
+            [JsonPropertyName("vietnamese")]
+            public string? Vietnamese { get; init; }
+        }
     }
 }
-
-
-
