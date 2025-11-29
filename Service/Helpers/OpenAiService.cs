@@ -301,7 +301,7 @@ If no policy issue exists, state clearly that no deductions were applied.";
             var vietnamese = explanation?.Vietnamese;
             if (!string.IsNullOrWhiteSpace(english) && !string.IsNullOrWhiteSpace(vietnamese))
             {
-                return $"English:\n{english.Trim()}\n\nTiáº¿ng Viá»‡t:\n{vietnamese.Trim()}";
+                return $"English:\n{english.Trim()}\n\nTiếng việt:\n{vietnamese.Trim()}";
             }
 
             var shouldReject = string.Equals(decision, "rejected", StringComparison.OrdinalIgnoreCase);
