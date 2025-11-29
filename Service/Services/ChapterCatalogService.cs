@@ -50,6 +50,7 @@ namespace Service.Services
                 WordCount = ch.word_count,
                 AccessType = ch.access_type,
                 IsLocked = !string.Equals(ch.access_type, "free", StringComparison.OrdinalIgnoreCase),
+                IsOwned = false,
                 PriceDias = (int)ch.dias_price,
                 PublishedAt = ch.published_at
             }).ToList();
@@ -69,23 +70,28 @@ namespace Service.Services
                            ?? throw new AppException("ChapterNotFound", "Chapter was not found or not available.", 404);
 
             var isLocked = !string.Equals(chapter.access_type, "free", StringComparison.OrdinalIgnoreCase);
-            if (isLocked)
+            var isOwned = false;
+            if (viewerAccountId.HasValue)
             {
                 var storyAuthorId = chapter.story?.author_id;
-                var viewerIsAuthor = viewerAccountId.HasValue && storyAuthorId.HasValue && storyAuthorId.Value == viewerAccountId.Value;
-                if (!viewerIsAuthor)
+                var viewerIsAuthor = storyAuthorId.HasValue && storyAuthorId.Value == viewerAccountId.Value;
+                if (viewerIsAuthor)
                 {
-                    if (!viewerAccountId.HasValue)
-                    {
-                        throw new AppException("ChapterLocked", "This chapter requires purchase to view.", 403);
-                    }
-
+                    isOwned = true;
+                }
+                else if (isLocked)
+                {
                     var hasPurchased = await _chapterRepository.HasReaderPurchasedChapterAsync(chapterId, viewerAccountId.Value, ct);
                     if (!hasPurchased)
                     {
                         throw new AppException("ChapterLocked", "This chapter requires purchase to view.", 403);
                     }
+                    isOwned = true;
                 }
+            }
+            else if (isLocked)
+            {
+                throw new AppException("ChapterLocked", "This chapter requires purchase to view.", 403);
             }
 
             if (string.IsNullOrWhiteSpace(chapter.content_url))
@@ -124,6 +130,7 @@ namespace Service.Services
                 WordCount = chapter.word_count,
                 AccessType = chapter.access_type,
                 IsLocked = isLocked,
+                IsOwned = !isLocked || isOwned,
                 PriceDias = (int)chapter.dias_price,
                 PublishedAt = chapter.published_at,
                 ContentUrl = chapter.content_url,
