@@ -99,12 +99,16 @@ namespace Service.Services
             };
         }
 
-        private static AiChatMessageDto Map(AiChatStoredMessage message) => new AiChatMessageDto
+        private static AiChatMessageDto Map(AiChatStoredMessage message)
         {
-            Role = message.Role,
-            Content = message.Content,
-            Timestamp = message.Timestamp
-        };
+            var timestamp = new DateTimeOffset(message.Timestamp, TimezoneConverter.VietnamOffset);
+            return new AiChatMessageDto
+            {
+                Role = message.Role,
+                Content = message.Content,
+                Timestamp = timestamp
+            };
+        }
 
         private async Task EnsurePremiumSubscriptionAsync(Guid accountId, CancellationToken ct)
         {
