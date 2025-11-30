@@ -323,7 +323,7 @@ If no policy issue exists, state clearly that no deductions were applied.";
                          ? $"Điểm kiểm duyệt tự động là {score:0.00}/10 sau khi áp dụng các mức trừ (không có chi tiết), đạt ngưỡng tự duyệt {AutoApproveThreshold:0.00} nên nội dung {profile.ContentType} được xuất bản."
                     : $"Điểm kiểm duyệt tự động là {score:0.00}/10 sau khi áp dụng các mức trừ (không có chi tiết), thấp hơn {AutoApproveThreshold:0.00} nhưng không dưới {ManualReviewThreshold:0.00} nên nội dung {profile.ContentType} chuyển cho moderator.";
 
-            return $"English:\n{english}\n\nTiáº¿ng Viá»‡t:\n{vietnamese}";
+            return $"English:\n{english}\n\nTiếng việt:\n{vietnamese}";
         }
 
         public async Task<OpenAiImageResult> GenerateCoverAsync(string prompt, CancellationToken ct = default)
