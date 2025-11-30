@@ -103,6 +103,8 @@ namespace Service.Helpers
             }
         };
 
+        private static readonly string[] MoodCodes = { "calm", "sad", "mysterious", "excited", "romantic", "neutral" };
+
         private static readonly HashSet<string> ForceRejectLabels = new(
             new[]
             {
@@ -436,6 +438,62 @@ If no policy issue exists, state clearly that no deductions were applied.";
             return translated.Trim();
         }
 
+        public async Task<string> DetectMoodAsync(string content, CancellationToken ct = default)
+        {
+            if (string.IsNullOrWhiteSpace(content))
+            {
+                return "neutral";
+            }
+
+            var systemPrompt = $"You are a literary emotion classifier. Read the passage and respond with JSON only: {{ \"mood\": one_of[{string.Join(",", MoodCodes)}] }}";
+            var payload = new ChatCompletionsRequest
+            {
+                Model = _settings.ChatModel,
+                Temperature = 0,
+                MaxTokens = 60,
+                Messages = new[]
+                {
+                    new ChatMessage { Role = "system", Content = systemPrompt },
+                    new ChatMessage { Role = "user", Content = content }
+                }
+            };
+
+            try
+            {
+                using var request = new HttpRequestMessage(HttpMethod.Post, "chat/completions");
+                request.Content = new StringContent(JsonSerializer.Serialize(payload, _jsonOptions), Encoding.UTF8, "application/json");
+                using var response = await _httpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, ct);
+
+                if (!response.IsSuccessStatusCode)
+                {
+                    return "neutral";
+                }
+
+                var envelope = await response.Content.ReadFromJsonAsync<ChatCompletionsResponse>(_jsonOptions, ct);
+                var contentResponse = envelope?.Choices?
+                    .Select(c => c.Message?.Content)
+                    .FirstOrDefault(c => !string.IsNullOrWhiteSpace(c));
+
+                if (string.IsNullOrWhiteSpace(contentResponse))
+                {
+                    return "neutral";
+                }
+
+                var parsed = JsonSerializer.Deserialize<MoodDetectionResponse>(contentResponse, _jsonOptions);
+                var mood = parsed?.Mood?.Trim().ToLowerInvariant();
+                if (string.IsNullOrWhiteSpace(mood))
+                {
+                    return "neutral";
+                }
+
+                return MoodCodes.Contains(mood, StringComparer.OrdinalIgnoreCase) ? mood : "neutral";
+            }
+            catch
+            {
+                return "neutral";
+            }
+        }
+
         public async Task<string> ChatAsync(IReadOnlyList<AiChatPromptMessage> messages, CancellationToken ct = default)
         {
             if (messages == null || messages.Count == 0)
@@ -598,6 +656,12 @@ If no policy issue exists, state clearly that no deductions were applied.";
 
             [JsonPropertyName("vietnamese")]
             public string? Vietnamese { get; init; }
+        }
+
+        private sealed record MoodDetectionResponse
+        {
+            [JsonPropertyName("mood")]
+            public string? Mood { get; init; }
         }
     }
 }

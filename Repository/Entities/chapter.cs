@@ -38,6 +38,9 @@ public partial class chapter
 
     public int char_count { get; set; }
 
+    [StringLength(32)]
+    public string? mood_code { get; set; }
+
     [Column(TypeName = "enum('draft','pending','rejected','published','hidden','removed')")]
     public string status { get; set; } = null!;
 
@@ -81,4 +84,8 @@ public partial class chapter
     [ForeignKey("language_id")]
     [InverseProperty("chapters")]
     public virtual language_list language { get; set; } = null!;
+
+    [ForeignKey("mood_code")]
+    [InverseProperty("chapters")]
+    public virtual chapter_mood? mood { get; set; }
 }

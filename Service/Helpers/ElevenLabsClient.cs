@@ -61,5 +61,43 @@ namespace Service.Helpers
                 throw new AppException("VoiceSynthesisError", "Voice synthesis service is unavailable. Please try again later.", 502);
             }
         }
+
+        public async Task<byte[]> ComposeMusicAsync(string prompt, int lengthMs = 30000, string? outputFormat = null, CancellationToken ct = default)
+        {
+            if (string.IsNullOrWhiteSpace(prompt))
+            {
+                throw new ArgumentException("Prompt must not be empty.", nameof(prompt));
+            }
+
+            var payload = new
+            {
+                prompt,
+                music_length_ms = Math.Clamp(lengthMs, 3000, 300000),
+                output_format = string.IsNullOrWhiteSpace(outputFormat) ? _settings.MusicOutputFormat : outputFormat,
+                force_instrumental = _settings.ForceInstrumental
+            };
+
+            try
+            {
+                var response = await _httpClient.PostAsJsonAsync("v1/music", payload, cancellationToken: ct);
+                if (!response.IsSuccessStatusCode)
+                {
+                    var body = await response.Content.ReadAsStringAsync(ct);
+                    _logger.LogError("ElevenLabs music compose failed: {Status} - {Body}", response.StatusCode, body);
+                    throw new AppException("MusicGenerationFailed", "Failed to generate mood music.", (int)response.StatusCode);
+                }
+
+                return await response.Content.ReadAsByteArrayAsync(ct);
+            }
+            catch (AppException)
+            {
+                throw;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "ElevenLabs music compose threw an exception");
+                throw new AppException("MusicGenerationError", "Music generation service is unavailable. Please try again later.", 502);
+            }
+        }
     }
 }

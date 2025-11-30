@@ -22,6 +22,6 @@ namespace Contract.DTOs.Response.Chapter
         public string? AiFeedback { get; set; }
         public string? ModeratorStatus { get; set; }
         public string? ModeratorNote { get; set; }
+        public ChapterMoodResponse? Mood { get; set; }
     }
 }
-

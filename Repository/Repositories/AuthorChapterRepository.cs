@@ -30,6 +30,7 @@ namespace Repository.Repositories
             => _db.chapters
                   .Include(c => c.story).ThenInclude(s => s.author).ThenInclude(a => a.account)
                   .Include(c => c.language)
+                  .Include(c => c.mood)
                   .Include(c => c.chapter_voices).ThenInclude(cv => cv.voice)
                   .FirstOrDefaultAsync(c => c.chapter_id == chapterId, ct);
 
@@ -37,6 +38,7 @@ namespace Repository.Repositories
             => _db.chapters
                   .Include(c => c.story).ThenInclude(s => s.author).ThenInclude(a => a.account)
                   .Include(c => c.language)
+                  .Include(c => c.mood)
                   .Include(c => c.chapter_voices).ThenInclude(cv => cv.voice)
                   .FirstOrDefaultAsync(c => c.chapter_id == chapterId && c.story_id == storyId && c.story.author_id == authorId, ct);
 
@@ -64,7 +66,8 @@ namespace Repository.Repositories
 
             query = query
                 .Include(c => c.content_approves)
-                .Include(c => c.language);
+                .Include(c => c.language)
+                .Include(c => c.mood);
 
             return await query
                 .OrderBy(c => c.chapter_no)

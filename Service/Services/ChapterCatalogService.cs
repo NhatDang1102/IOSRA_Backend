@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using Contract.DTOs.Request.Chapter;
 using Contract.DTOs.Response.Chapter;
 using Contract.DTOs.Response.Common;
+using Repository.Entities;
 using Repository.Interfaces;
 using Service.Exceptions;
 using Service.Interfaces;
@@ -14,18 +15,26 @@ namespace Service.Services
 {
     public class ChapterCatalogService : IChapterCatalogService
     {
+        private const string PremiumPlanCode = "premium_month";
+
         private readonly IChapterCatalogRepository _chapterRepository;
         private readonly IStoryCatalogRepository _storyRepository;
         private readonly IChapterPurchaseRepository _chapterPurchaseRepository;
+        private readonly IMoodMusicRepository _moodMusicRepository;
+        private readonly ISubscriptionService _subscriptionService;
 
         public ChapterCatalogService(
             IChapterCatalogRepository chapterRepository,
             IStoryCatalogRepository storyRepository,
-            IChapterPurchaseRepository chapterPurchaseRepository)
+            IChapterPurchaseRepository chapterPurchaseRepository,
+            IMoodMusicRepository moodMusicRepository,
+            ISubscriptionService subscriptionService)
         {
             _chapterRepository = chapterRepository;
             _storyRepository = storyRepository;
             _chapterPurchaseRepository = chapterPurchaseRepository;
+            _moodMusicRepository = moodMusicRepository;
+            _subscriptionService = subscriptionService;
         }
 
         public async Task<PagedResult<ChapterCatalogListItemResponse>> GetChaptersAsync(ChapterCatalogQuery query, CancellationToken ct = default)
@@ -100,6 +109,8 @@ namespace Service.Services
             }
 
             var voices = Array.Empty<PurchasedVoiceResponse>();
+            var moodResponse = (ChapterMoodResponse?)null;
+            string[] moodMusicPaths = Array.Empty<string>();
             if (viewerAccountId.HasValue)
             {
                 var purchasedVoices = await _chapterPurchaseRepository.GetPurchasedVoicesAsync(viewerAccountId.Value, chapterId, ct);
@@ -118,6 +129,15 @@ namespace Service.Services
                         PurchasedAt = v.PurchasedAt
                     }).ToArray();
                 }
+
+                if (await HasPremiumAsync(viewerAccountId.Value, ct))
+                {
+                    (moodResponse, moodMusicPaths) = await ResolveMoodAsync(chapter, ct);
+                }
+            }
+            else if (!isLocked)
+            {
+                // anonymous users cannot access mood music
             }
 
             return new ChapterCatalogDetailResponse
@@ -134,6 +154,8 @@ namespace Service.Services
                 PriceDias = (int)chapter.dias_price,
                 PublishedAt = chapter.published_at,
                 ContentUrl = chapter.content_url,
+                Mood = moodResponse,
+                MoodMusicPaths = moodMusicPaths,
                 Voices = voices
             };
         }
@@ -202,6 +224,46 @@ namespace Service.Services
                 Owned = owned,
                 AudioUrl = owned && ready ? voice.storage_path : null
             };
+        }
+
+        private async Task<(ChapterMoodResponse? Mood, string[] MusicPaths)> ResolveMoodAsync(chapter chapter, CancellationToken ct)
+        {
+            var moodCode = string.IsNullOrWhiteSpace(chapter.mood_code) ? "neutral" : chapter.mood_code!;
+            var mood = await _moodMusicRepository.GetMoodAsync(moodCode, ct);
+            if (mood == null)
+            {
+                return (null, Array.Empty<string>());
+            }
+
+            var tracks = await _moodMusicRepository.GetTracksByMoodAsync(mood.mood_code, ct);
+            if (tracks.Count == 0 && !string.Equals(mood.mood_code, "neutral", StringComparison.OrdinalIgnoreCase))
+            {
+                tracks = await _moodMusicRepository.GetTracksByMoodAsync("neutral", ct);
+            }
+
+            var moodDto = new ChapterMoodResponse
+            {
+                Code = mood.mood_code,
+                Name = mood.mood_name
+            };
+
+            var paths = tracks.Select(t => t.storage_path).Where(p => !string.IsNullOrWhiteSpace(p)).ToArray();
+
+            return (moodDto, paths);
+        }
+
+        private async Task<bool> HasPremiumAsync(Guid accountId, CancellationToken ct)
+        {
+            try
+            {
+                var status = await _subscriptionService.GetStatusAsync(accountId, ct);
+                return status.HasActiveSubscription &&
+                       string.Equals(status.PlanCode, PremiumPlanCode, StringComparison.OrdinalIgnoreCase);
+            }
+            catch
+            {
+                return false;
+            }
         }
     }
 }

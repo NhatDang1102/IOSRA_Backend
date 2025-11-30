@@ -32,6 +32,7 @@ namespace Service
             });
             services.AddSingleton<IChapterContentStorage, CloudflareR2ChapterStorage>();
             services.AddSingleton<IVoiceAudioStorage, CloudflareR2VoiceStorage>();
+            services.AddSingleton<IMoodMusicStorage, CloudflareR2MoodMusicStorage>();
 
             services.AddHttpClient<OpenAiService>((sp, client) =>
             {
@@ -96,6 +97,7 @@ namespace Service
             services.AddScoped<IContentModStatService, ContentModStatService>();
             services.AddScoped<IOperationModStatService, OperationModStatService>();
             services.AddScoped<IPaymentHistoryService, PaymentHistoryService>();
+            services.AddScoped<IMoodMusicService, MoodMusicService>();
             services.AddScoped<IAIChatService, AIChatService>();
             services.AddHostedService<StoryWeeklyViewSyncJob>();
             services.AddHostedService<SubscriptionReminderJob>();

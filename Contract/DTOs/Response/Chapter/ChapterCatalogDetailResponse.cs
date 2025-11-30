@@ -16,6 +16,8 @@ namespace Contract.DTOs.Response.Chapter
         public int PriceDias { get; set; }
         public DateTime? PublishedAt { get; set; }
         public string ContentUrl { get; set; } = null!;
+        public ChapterMoodResponse? Mood { get; set; }
+        public string[] MoodMusicPaths { get; set; } = Array.Empty<string>();
         public PurchasedVoiceResponse[] Voices { get; set; } = Array.Empty<PurchasedVoiceResponse>();
     }
 }

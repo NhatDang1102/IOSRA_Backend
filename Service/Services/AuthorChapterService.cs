@@ -123,6 +123,7 @@ namespace Service.Services
                 dias_price = (uint)price,
                 access_type = accessType,
                 content_url = null,
+                mood_code = "neutral",
                 word_count = wordCount,
                 char_count = charCount,
                 status = "draft",
@@ -214,6 +215,7 @@ namespace Service.Services
             }
 
             var content = await _contentStorage.DownloadAsync(chapter.content_url, ct);
+            chapter.mood_code = await DetectMoodAsync(content, ct);
             var moderation = await _openAiModerationService.ModerateChapterAsync(chapter.title, content, ct);
             var aiScoreDecimal = (decimal)Math.Round(moderation.Score, 2, MidpointRounding.AwayFromZero);
             var timestamp = TimezoneConverter.VietnamNow;
@@ -522,6 +524,7 @@ namespace Service.Services
                 ModeratorStatus = moderatorStatus,
                 ModeratorNote = moderatorNote,
                 ContentPath = chapter.content_url,
+                Mood = MapMood(chapter),
                 CreatedAt = chapter.created_at,
                 UpdatedAt = chapter.updated_at,
                 SubmittedAt = chapter.submitted_at,
@@ -582,7 +585,8 @@ namespace Service.Services
                 AiResult = ResolveAiDecision(approval),
                 AiFeedback = approval?.ai_feedback,
                 ModeratorStatus = moderatorStatus,
-                ModeratorNote = moderatorNote
+                ModeratorNote = moderatorNote,
+                Mood = MapMood(chapter)
             };
         }
 
@@ -649,11 +653,38 @@ namespace Service.Services
             return matches.Count;
         }
 
+        private static ChapterMoodResponse? MapMood(chapter chapter)
+        {
+            if (chapter.mood != null)
+            {
+                return new ChapterMoodResponse
+                {
+                    Code = chapter.mood.mood_code,
+                    Name = chapter.mood.mood_name
+                };
+            }
+
+            if (!string.IsNullOrWhiteSpace(chapter.mood_code))
+            {
+                return new ChapterMoodResponse
+                {
+                    Code = chapter.mood_code,
+                    Name = chapter.mood_code
+                };
+            }
+
+            return null;
+        }
+
+        private async Task<string> DetectMoodAsync(string content, CancellationToken ct)
+        {
+            if (_openAiModerationService is OpenAiService concrete)
+            {
+                return await concrete.DetectMoodAsync(content, ct);
+            }
+
+            return "neutral";
+        }
     }
 }
-
-
-
-
-
 

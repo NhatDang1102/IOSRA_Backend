@@ -41,6 +41,7 @@ namespace Repository.Repositories
                   .AsNoTracking()
                   .Include(c => c.language)
                   .Include(c => c.story)
+                  .Include(c => c.mood)
                   .FirstOrDefaultAsync(c => c.chapter_id == chapterId && c.status == PublishedStatus, ct);
 
         public Task<chapter?> GetPublishedChapterWithVoicesAsync(Guid chapterId, CancellationToken ct = default)
@@ -50,6 +51,7 @@ namespace Repository.Repositories
                 .Include(c => c.story)
                 .Include(c => c.chapter_voices)
                     .ThenInclude(v => v.voice)
+                .Include(c => c.mood)
                 .FirstOrDefaultAsync(c => c.chapter_id == chapterId && c.status == PublishedStatus, ct);
 
         public Task<chapter_voice?> GetChapterVoiceAsync(Guid chapterId, Guid voiceId, CancellationToken ct = default)

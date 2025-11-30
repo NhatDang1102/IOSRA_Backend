@@ -27,6 +27,7 @@ namespace Contract.DTOs.Response.Chapter
         public DateTime UpdatedAt { get; set; }
         public DateTime? SubmittedAt { get; set; }
         public DateTime? PublishedAt { get; set; }
+        public ChapterMoodResponse? Mood { get; set; }
         public VoiceChapterVoiceResponse[] Voices { get; set; } = Array.Empty<VoiceChapterVoiceResponse>();
     }
 }
