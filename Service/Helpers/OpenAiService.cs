@@ -65,7 +65,7 @@ namespace Service.Helpers
                 labels = new[] { "spam_repetition" },
                 penalties = new[] { "-1.5 heavy spam or nonsense", "-0.5 short bursts" },
                 note = "Use when chapter lacks meaningful prose."
-            },
+            }, 
             new
             {
                 category = "Hate speech / harassment",

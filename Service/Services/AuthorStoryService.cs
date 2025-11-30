@@ -59,13 +59,13 @@ namespace Service.Services
             }
 
             var lastRejectedAt = await _storyRepository.GetLastAuthorStoryRejectedAtAsync(author.account_id, ct);
-            if (lastRejectedAt.HasValue && lastRejectedAt.Value > TimezoneConverter.VietnamNow.AddHours(-24))
-            {
-                throw new AppException("StoryCreationCooldown", "You must wait 24 hours after a rejection before creating a new story.", 400, new
-                {
-                    availableAtUtc = lastRejectedAt.Value.AddHours(24)
-                });
-            }
+            //if (lastRejectedAt.HasValue && lastRejectedAt.Value > TimezoneConverter.VietnamNow.AddHours(-24))
+            //{
+            //    throw new AppException("StoryCreationCooldown", "You must wait 24 hours after a rejection before creating a new story.", 400, new
+            //    {
+            //        availableAtUtc = lastRejectedAt.Value.AddHours(24)
+            //    });
+            //}
 
             if (await _storyRepository.AuthorHasPendingStoryAsync(author.account_id, null, ct))
             {
@@ -274,14 +274,14 @@ namespace Service.Services
                 story.published_at = publishedAt;
             }
 
-            var earliestCompletion = publishedAt.Value.AddDays(1);
-            if (TimezoneConverter.VietnamNow < earliestCompletion)
-            {
-                throw new AppException("StoryCompletionCooldown", "Story must be published for at least 30 days before completion.", 400, new
-                {
-                    availableAtUtc = earliestCompletion
-                });
-            }
+            //var earliestCompletion = publishedAt.Value.AddDays(1);
+            //if (TimezoneConverter.VietnamNow < earliestCompletion)
+            //{
+            //    throw new AppException("StoryCompletionCooldown", "Story must be published for at least 30 days before completion.", 400, new
+            //    {
+            //        availableAtUtc = earliestCompletion
+            //    });
+            //}
 
             story.status = "completed";
             story.updated_at = TimezoneConverter.VietnamNow;

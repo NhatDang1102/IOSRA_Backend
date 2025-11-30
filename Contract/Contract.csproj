@@ -7,8 +7,13 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Remove="DTOs\Respond\**" />
+    <EmbeddedResource Remove="DTOs\Respond\**" />
+    <None Remove="DTOs\Respond\**" />
+  </ItemGroup>
+
+  <ItemGroup>
     <Folder Include="DTOs\Request\NewFolder\" />
-    <Folder Include="DTOs\Respond\" />
     <Folder Include="Helpers\" />
   </ItemGroup>
 
