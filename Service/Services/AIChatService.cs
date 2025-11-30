@@ -102,12 +102,12 @@ namespace Service.Services
         private static AiChatMessageDto Map(AiChatStoredMessage message)
         {
             var local = DateTime.SpecifyKind(message.Timestamp, DateTimeKind.Unspecified);
-            var timestamp = new DateTimeOffset(local, TimezoneConverter.VietnamOffset);
+            var offset = new DateTimeOffset(local, TimezoneConverter.VietnamOffset);
             return new AiChatMessageDto
             {
                 Role = message.Role,
                 Content = message.Content,
-                Timestamp = timestamp
+                Timestamp = offset
             };
         }
 
