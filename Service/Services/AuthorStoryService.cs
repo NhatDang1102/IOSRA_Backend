@@ -98,9 +98,6 @@ namespace Service.Services
             }
 
             var coverUrl = await ResolveCoverUrlAsync(request.CoverMode, request.CoverFile, request.CoverPrompt, ct);
-            var isPremium = author.rank is not null &&
-                            !string.Equals(author.rank.rank_name, "Casual", StringComparison.OrdinalIgnoreCase);
-
             var story = new story
             {
                 author_id = author.account_id,
@@ -110,7 +107,7 @@ namespace Service.Services
                 length_plan = lengthPlan,
                 cover_url = coverUrl,
                 status = "draft",
-                is_premium = isPremium
+                is_premium = false
             };
 
             await _storyRepository.AddStoryAsync(story, tagIds, ct);
@@ -195,9 +192,7 @@ namespace Service.Services
                 story.status = "published";
                 story.published_at ??= TimezoneConverter.VietnamNow;
 
-                var authorRankName = author.rank?.rank_name;
-                story.is_premium = !string.IsNullOrWhiteSpace(authorRankName) &&
-                                   !string.Equals(authorRankName, "Casual", StringComparison.OrdinalIgnoreCase);
+                story.is_premium = false;
                 await _storyRepository.UpdateStoryAsync(story, ct);
 
                 await UpsertStoryApprovalAsync(story.story_id, "approved", aiScore, aiNote, ct);
