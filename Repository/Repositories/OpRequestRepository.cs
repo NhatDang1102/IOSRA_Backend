@@ -159,7 +159,9 @@ namespace Repository.Repositories
                   .FirstOrDefaultAsync(a => a.account_id == authorId, ct);
 
         public Task<bool> AuthorHasPublishedStoryAsync(Guid authorId, CancellationToken ct = default)
-            => _db.stories.AnyAsync(s => s.author_id == authorId && s.status == "published", ct);
+            => _db.stories.AnyAsync(s =>
+                s.author_id == authorId &&
+                (s.status == "published" || s.status == "completed"), ct);
 
         public Task<List<author_rank>> GetAllAuthorRanksAsync(CancellationToken ct = default)
             => _db.author_ranks
