@@ -101,7 +101,8 @@ namespace Service.Services
 
         private static AiChatMessageDto Map(AiChatStoredMessage message)
         {
-            var timestamp = new DateTimeOffset(message.Timestamp, TimezoneConverter.VietnamOffset);
+            var local = DateTime.SpecifyKind(message.Timestamp, DateTimeKind.Unspecified);
+            var timestamp = new DateTimeOffset(local, TimezoneConverter.VietnamOffset);
             return new AiChatMessageDto
             {
                 Role = message.Role,
