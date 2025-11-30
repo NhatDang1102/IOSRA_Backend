@@ -65,13 +65,13 @@ namespace Service.Services
             }
 
             var lastRejectedAt = await _chapterRepository.GetLastAuthorChapterRejectedAtAsync(author.account_id, ct);
-            if (lastRejectedAt.HasValue && lastRejectedAt.Value > TimezoneConverter.VietnamNow.AddHours(-24))
-            {
-                throw new AppException("ChapterCreationCooldown", "You must wait 24 hours after a chapter rejection before creating a new chapter.", 400, new
-                {
-                    availableAtUtc = lastRejectedAt.Value.AddHours(24)
-                });
-            }
+            //if (lastRejectedAt.HasValue && lastRejectedAt.Value > TimezoneConverter.VietnamNow.AddHours(-24))
+            //{
+            //    throw new AppException("ChapterCreationCooldown", "You must wait 24 hours after a chapter rejection before creating a new chapter.", 400, new
+            //    {
+            //        availableAtUtc = lastRejectedAt.Value.AddHours(24)
+            //    });
+            //}
 
             if (await _chapterRepository.StoryHasPendingChapterAsync(story.story_id, ct))
             {
