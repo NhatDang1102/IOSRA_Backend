@@ -4,9 +4,9 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
 using Repository.Base;
+using Repository.DataModels;
 using Repository.DBContext;
 using Repository.Interfaces;
-using Repository.Models;
 using Repository.Utils;
 
 namespace Repository.Repositories

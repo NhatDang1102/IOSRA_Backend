@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
-using Repository.Models;
+using Repository.DataModels;
 
 namespace Repository.Interfaces
 {

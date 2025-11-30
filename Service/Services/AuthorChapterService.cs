@@ -73,10 +73,10 @@ namespace Service.Services
             //    });
             //}
 
-            if (await _chapterRepository.StoryHasPendingChapterAsync(story.story_id, ct))
-            {
-                throw new AppException("ChapterPendingExists", "A chapter is already awaiting moderation for this story.", 400);
-            }
+            //if (await _chapterRepository.StoryHasPendingChapterAsync(story.story_id, ct))
+            //{
+            //    throw new AppException("ChapterPendingExists", "A chapter is already awaiting moderation for this story.", 400);
+            //}
 
             var title = (request.Title ?? string.Empty).Trim();
             if (string.IsNullOrWhiteSpace(title))

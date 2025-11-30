@@ -18,7 +18,7 @@ using Service.Interfaces;
 
 namespace Service.Helpers
 {
-    public class OpenAiService : IOpenAiModerationService, IOpenAiImageService, IOpenAiTranslationService
+    public class OpenAiService : IOpenAiModerationService, IOpenAiImageService, IOpenAiTranslationService, IOpenAiChatService
     {
         private const double AutoApproveThreshold = 7.0;
         private const double ManualReviewThreshold = 5.0;
@@ -434,6 +434,52 @@ If no policy issue exists, state clearly that no deductions were applied.";
             }
 
             return translated.Trim();
+        }
+
+        public async Task<string> ChatAsync(IReadOnlyList<AiChatPromptMessage> messages, CancellationToken ct = default)
+        {
+            if (messages == null || messages.Count == 0)
+            {
+                throw new ArgumentException("Conversation history is required.", nameof(messages));
+            }
+
+            var payload = new ChatCompletionsRequest
+            {
+                Model = _settings.ChatModel,
+                Temperature = 0.2,
+                MaxTokens = 700,
+                Messages = messages
+                    .Select(m => new ChatMessage
+                    {
+                        Role = string.IsNullOrWhiteSpace(m.Role) ? "user" : m.Role,
+                        Content = m.Content
+                    })
+                    .ToArray()
+            };
+
+            using var request = new HttpRequestMessage(HttpMethod.Post, "chat/completions");
+            request.Content = new StringContent(JsonSerializer.Serialize(payload, _jsonOptions), Encoding.UTF8, "application/json");
+            using var response = await _httpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, ct);
+
+            if (!response.IsSuccessStatusCode)
+            {
+                var failureBody = await response.Content.ReadAsStringAsync(ct);
+                throw new InvalidOperationException($"OpenAI chat request failed with status {(int)response.StatusCode}: {failureBody}");
+            }
+
+            var envelope = await response.Content.ReadFromJsonAsync<ChatCompletionsResponse>(_jsonOptions, ct)
+                          ?? throw new InvalidOperationException("OpenAI chat response was empty.");
+
+            var reply = envelope.Choices?
+                .Select(c => c.Message?.Content)
+                .FirstOrDefault(c => !string.IsNullOrWhiteSpace(c));
+
+            if (string.IsNullOrWhiteSpace(reply))
+            {
+                throw new InvalidOperationException("OpenAI chat response did not contain any content.");
+            }
+
+            return reply.Trim();
         }
 
         private static string ComposeContent(string title, string? description)

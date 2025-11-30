@@ -1,6 +1,6 @@
 using System;
 
-namespace Repository.Models
+namespace Repository.DataModels
 {
     public class StatPointData
     {

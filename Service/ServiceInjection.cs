@@ -57,6 +57,7 @@ namespace Service
             services.AddTransient<IOpenAiModerationService>(sp => sp.GetRequiredService<OpenAiService>());
             services.AddTransient<IOpenAiImageService>(sp => sp.GetRequiredService<OpenAiService>());
             services.AddTransient<IOpenAiTranslationService>(sp => sp.GetRequiredService<OpenAiService>());
+            services.AddTransient<IOpenAiChatService>(sp => sp.GetRequiredService<OpenAiService>());
             services.AddSingleton<IStoryViewTracker, StoryViewTracker>();
 
             services.AddScoped<IJwtTokenFactory, JwtTokenFactory>();
@@ -95,6 +96,7 @@ namespace Service
             services.AddScoped<IContentModStatService, ContentModStatService>();
             services.AddScoped<IOperationModStatService, OperationModStatService>();
             services.AddScoped<IPaymentHistoryService, PaymentHistoryService>();
+            services.AddScoped<IAIChatService, AIChatService>();
             services.AddHostedService<StoryWeeklyViewSyncJob>();
             services.AddHostedService<SubscriptionReminderJob>();
 

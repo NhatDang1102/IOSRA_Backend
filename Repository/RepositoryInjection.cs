@@ -36,6 +36,7 @@ namespace Repository
             services.AddScoped<IPaymentHistoryRepository, PaymentHistoryRepository>();
             services.AddScoped<IContentModStatRepository, ContentModStatRepository>();
             services.AddScoped<IOperationModStatRepository, OperationModStatRepository>();
+            services.AddScoped<IAIChatRepository, AIChatRepository>();
 
             return services;
         }
