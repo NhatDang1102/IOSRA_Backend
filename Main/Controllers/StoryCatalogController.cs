@@ -1,13 +1,14 @@
-using System;
-using System.Collections.Generic;
-using System.Threading;
-using System.Threading.Tasks;
 using Contract.DTOs.Request.Story;
 using Contract.DTOs.Response.Common;
 using Contract.DTOs.Response.Story;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Service.Interfaces;
+using System;
+using System.Collections.Generic;
+using System.Globalization;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace Main.Controllers
 {
@@ -53,10 +54,41 @@ namespace Main.Controllers
         [HttpGet("advance-filter")]
         [AllowAnonymous]
         public async Task<ActionResult<PagedResult<StoryCatalogListItemResponse>>> Filter(
-            [FromQuery] StoryCatalogQuery query,
-            CancellationToken ct)
+            [FromQuery] int page = 1,
+            [FromQuery] int pageSize = 20,
+            [FromQuery(Name = "Query")] string? queryText = null,
+            [FromQuery] Guid? tagId = null,
+            [FromQuery] Guid? authorId = null,
+            [FromQuery] bool? isPremium = null,
+            [FromQuery] double? minAvgRating = null,
+            [FromQuery] string? sortBy = null,
+            [FromQuery] string? sortDir = null,
+            CancellationToken ct = default)
         {
-            var result = await _storyCatalogService.GetStoriesAdvancedAsync(query, ct); // ⬅️ advanced
+            var query = new StoryCatalogQuery
+            {
+                Page = page,
+                PageSize = pageSize,
+                Query = queryText,
+                TagId = tagId,
+                AuthorId = authorId,
+                IsPremium = isPremium,
+                MinAvgRating = minAvgRating,
+            };
+
+            if (!string.IsNullOrWhiteSpace(sortBy) &&
+                Enum.TryParse<StorySortBy>(sortBy, ignoreCase: true, out var parsedSortBy))
+            {
+                query.SortBy = parsedSortBy;
+            }
+
+            if (!string.IsNullOrWhiteSpace(sortDir) &&
+                Enum.TryParse<SortDir>(sortDir, ignoreCase: true, out var parsedSortDir))
+            {
+                query.SortDir = parsedSortDir;
+            }
+
+            var result = await _storyCatalogService.GetStoriesAdvancedAsync(query, ct);
             return Ok(result);
         }
 
