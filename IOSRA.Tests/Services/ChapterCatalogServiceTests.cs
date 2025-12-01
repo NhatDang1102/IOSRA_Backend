@@ -1,8 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Threading;
-using System.Threading.Tasks;
-using Contract.DTOs.Request.Chapter;
+﻿using Contract.DTOs.Request.Chapter;
 using Contract.DTOs.Response.Chapter;
 using Contract.DTOs.Response.Common;
 using FluentAssertions;
@@ -10,7 +6,12 @@ using Moq;
 using Repository.Entities;
 using Repository.Interfaces;
 using Service.Exceptions;
+using Service.Interfaces;
 using Service.Services;
+using System;
+using System.Collections.Generic;
+using System.Threading;
+using System.Threading.Tasks;
 using Xunit;
 
 public class ChapterCatalogServiceTests
@@ -18,6 +19,8 @@ public class ChapterCatalogServiceTests
     private readonly Mock<IChapterCatalogRepository> _chapterRepo;
     private readonly Mock<IStoryCatalogRepository> _storyRepo;
     private readonly Mock<IChapterPurchaseRepository> _purchaseRepo;
+    private readonly Mock<IMoodMusicRepository> _musicRepo;
+    private readonly Mock<ISubscriptionService> _subService;
     private readonly ChapterCatalogService _svc;
 
     public ChapterCatalogServiceTests()
@@ -25,7 +28,7 @@ public class ChapterCatalogServiceTests
         _chapterRepo = new Mock<IChapterCatalogRepository>(MockBehavior.Strict);
         _storyRepo = new Mock<IStoryCatalogRepository>(MockBehavior.Strict);
         _purchaseRepo = new Mock<IChapterPurchaseRepository>(MockBehavior.Strict);
-        _svc = new ChapterCatalogService(_chapterRepo.Object, _storyRepo.Object, _purchaseRepo.Object);
+        _svc = new ChapterCatalogService(_chapterRepo.Object, _storyRepo.Object, _purchaseRepo.Object, _musicRepo.Object, _subService.Object);
     }
 
     #region GetChaptersAsync
