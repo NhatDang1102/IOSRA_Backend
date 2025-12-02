@@ -54,7 +54,7 @@ namespace Service.Implementations
 
             if (!await _otpStore.CanSendAsync(req.Email))
             {
-                throw new AppException("OtpRateLimit", "OTP request rate limit exceeded.", 429);
+                throw new AppException("OtpRateLimit", "OTP request vuot qua gioi han.", 429);
             }
 
             var otp = RandomNumberGenerator.GetInt32(100000, 1000000).ToString();
