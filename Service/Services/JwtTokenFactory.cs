@@ -37,7 +37,7 @@ namespace Service.Implementations
                 claims.AddRange(roles.Select(r => new Claim(ClaimTypes.Role, r)));
 
             // Thời gian hết hạn của token (mặc định 60 phút)
-            var expires = TimezoneConverter.VietnamNow.AddMinutes(int.Parse(jwt["ExpiresMinutes"] ?? "60000"));
+            var expires = TimezoneConverter.VietnamNow.AddMinutes(int.Parse(jwt["ExpiresMinutes"] ?? "1"));
 
             // Tạo JWT token
             var token = new JwtSecurityToken(
