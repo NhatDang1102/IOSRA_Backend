@@ -68,13 +68,13 @@ namespace Service.Implementations
             var entry = await _otpStore.GetAsync(req.Email);
             if (entry == null)
             {
-                throw new AppException("InvalidOtp", "OTP is invalid or expired.", 400);
+                throw new AppException("InvalidOtp", "OTP het han/ko hop le.", 400);
             }
 
             var (otpStored, pwdHashStored, usernameStored) = entry.Value;
             if (!string.Equals(otpStored, req.Otp, StringComparison.Ordinal))
             {
-                throw new AppException("InvalidOtp", "OTP is invalid or expired.", 400);
+                throw new AppException("InvalidOtp", "OTP het han/ko hop le.", 400);
             }
 
             var acc = new account
