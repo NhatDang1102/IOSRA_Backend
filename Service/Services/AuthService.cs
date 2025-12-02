@@ -44,7 +44,7 @@ namespace Service.Implementations
                 string.IsNullOrWhiteSpace(req.Email) ||
                 string.IsNullOrWhiteSpace(req.Password))
             {
-                throw new AppException("InvalidRequest", "Registration request is incomplete.", 400);
+                throw new AppException("InvalidRequest", "dki ko thanh cong.", 400);
             }
 
             if (await _authRepo.ExistsByUsernameOrEmailAsync(req.Username, req.Email, ct))
