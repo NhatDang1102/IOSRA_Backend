@@ -21,13 +21,13 @@ namespace Repository.Repositories
         public async Task<chapter> AddAsync(chapter entity, CancellationToken ct = default)
         {
             EnsureId(entity, nameof(chapter.chapter_id));
-            _db.chapters.Add(entity);
+            _db.chapter.Add(entity);
             await _db.SaveChangesAsync(ct);
             return entity;
         }
 
         public Task<chapter?> GetByIdAsync(Guid chapterId, CancellationToken ct = default)
-            => _db.chapters
+            => _db.chapter
                   .Include(c => c.story).ThenInclude(s => s.author).ThenInclude(a => a.account)
                   .Include(c => c.language)
                   .Include(c => c.mood)
@@ -35,7 +35,7 @@ namespace Repository.Repositories
                   .FirstOrDefaultAsync(c => c.chapter_id == chapterId, ct);
 
         public Task<chapter?> GetForAuthorAsync(Guid storyId, Guid chapterId, Guid authorId, CancellationToken ct = default)
-            => _db.chapters
+            => _db.chapter
                   .Include(c => c.story).ThenInclude(s => s.author).ThenInclude(a => a.account)
                   .Include(c => c.language)
                   .Include(c => c.mood)
@@ -44,7 +44,7 @@ namespace Repository.Repositories
 
         public async Task<IReadOnlyList<chapter>> GetByStoryAsync(Guid storyId, IEnumerable<string>? statuses = null, CancellationToken ct = default)
         {
-            var query = _db.chapters.Where(c => c.story_id == storyId);
+            var query = _db.chapter.Where(c => c.story_id == storyId);
 
             if (statuses is not null)
             {
@@ -81,11 +81,11 @@ namespace Repository.Repositories
         }
 
         public Task<bool> StoryHasPendingChapterAsync(Guid storyId, CancellationToken ct = default)
-            => _db.chapters.AnyAsync(c => c.story_id == storyId && c.status == "pending", ct);
+            => _db.chapter.AnyAsync(c => c.story_id == storyId && c.status == "pending", ct);
 
         public async Task<int> GetNextChapterNumberAsync(Guid storyId, CancellationToken ct = default)
         {
-            var max = await _db.chapters
+            var max = await _db.chapter
                 .Where(c => c.story_id == storyId)
                 .MaxAsync(c => (int?)c.chapter_no, ct);
             return (max ?? 0) + 1;
@@ -115,7 +115,7 @@ namespace Repository.Repositories
 
         public async Task UpdateAsync(chapter entity, CancellationToken ct = default)
         {
-            _db.chapters.Update(entity);
+            _db.chapter.Update(entity);
             await _db.SaveChangesAsync(ct);
         }
 

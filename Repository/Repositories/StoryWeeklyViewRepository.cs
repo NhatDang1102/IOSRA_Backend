@@ -29,7 +29,7 @@ namespace Repository.Repositories
             var normalizedWeekStart = weekStartUtc.TrimToMinute();
             var storyIds = items.Select(i => i.StoryId).ToArray();
 
-            var existing = await _db.story_weekly_views
+            var existing = await _db.story_weekly_view
                 .Where(x => x.week_start_utc == normalizedWeekStart && storyIds.Contains(x.story_id))
                 .ToListAsync(ct);
 
@@ -45,7 +45,7 @@ namespace Repository.Repositories
                 }
                 else
                 {
-                    _db.story_weekly_views.Add(new story_weekly_view
+                    _db.story_weekly_view.Add(new story_weekly_view
                     {
                         story_weekly_view_id = NewId(),
                         story_id = item.StoryId,
@@ -63,7 +63,7 @@ namespace Repository.Repositories
         {
             var normalizedWeekStart = weekStartUtc.TrimToMinute();
 
-            var data = await _db.story_weekly_views
+            var data = await _db.story_weekly_view
                 .Where(x => x.week_start_utc == normalizedWeekStart)
                 .OrderByDescending(x => x.view_count)
                 .ThenBy(x => x.story_id)

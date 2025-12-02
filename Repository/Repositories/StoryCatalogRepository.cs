@@ -188,7 +188,7 @@ namespace Repository.Repositories
                 }
 
                 var wk = weekStartUtc.Value;
-                viewAgg = _db.story_weekly_views
+                viewAgg = _db.story_weekly_view
                     .Where(v => v.week_start_utc == wk)
                     .Select(v => new { v.story_id, views = (long)v.view_count });
             }
@@ -204,7 +204,7 @@ namespace Repository.Repositories
 
                 var joined =
                     from s in q
-                    join vw in _db.story_weekly_views.Where(v => v.week_start_utc == wk)
+                    join vw in _db.story_weekly_view.Where(v => v.week_start_utc == wk)
                         on s.story_id equals vw.story_id into gj
                     from vw in gj.DefaultIfEmpty()
                     select new { s, views = (vw == null ? (decimal)0 : (decimal)vw.view_count) };

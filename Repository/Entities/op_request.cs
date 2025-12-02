@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Repository.Entities;
 
-[Table("op_requests")]
+[Table("op_request")]
 [Index(nameof(requester_id), Name = "ix_opreq_requester")]
 [Index(nameof(omod_id), Name = "ix_opreq_omod")]
 public partial class op_request

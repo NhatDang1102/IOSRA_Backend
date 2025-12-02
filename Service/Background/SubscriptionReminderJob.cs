@@ -67,7 +67,7 @@ namespace Service.Background
             var now = TimezoneConverter.VietnamNow;
             var today = DateOnly.FromDateTime(now);
 
-            var subscriptions = await db.subcriptions
+            var subscriptions = await db.subcription
                 .AsNoTracking()
                 .Include(s => s.plan_codeNavigation)
                 .Where(s => s.start_at <= now && s.end_at >= now)

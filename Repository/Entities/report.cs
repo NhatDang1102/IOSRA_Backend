@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Repository.Entities;
 
-[Table("reports")]
+[Table("report")]
 [Index("moderator_id", Name = "ix_reports_moderator")]
 [Index("reporter_id", Name = "ix_reports_reporter")]
 [Index("target_type", "target_id", Name = "ix_reports_target")]

@@ -36,7 +36,7 @@ namespace Repository.Repositories
 
         public Task<List<StatPointData>> GetPublishedChaptersAsync(DateTime from, DateTime to, string period, CancellationToken ct = default)
         {
-            var query = _db.chapters
+            var query = _db.chapter
                 .AsNoTracking()
                 .Where(c => c.status == "published"
                             && c.published_at != null
@@ -75,7 +75,7 @@ namespace Repository.Repositories
 
         public Task<List<StatPointData>> GetReportStatsAsync(string status, DateTime from, DateTime to, string period, CancellationToken ct = default)
         {
-            var query = _db.reports
+            var query = _db.report
                 .AsNoTracking()
                 .Where(r => r.created_at >= from && r.created_at <= to);
 
@@ -95,7 +95,7 @@ namespace Repository.Repositories
 
         public Task<List<StatPointData>> GetHandledReportsAsync(Guid moderatorAccountId, string status, DateTime from, DateTime to, string period, CancellationToken ct = default)
         {
-            var query = _db.reports
+            var query = _db.report
                 .AsNoTracking()
                 .Where(r => r.moderator_id == moderatorAccountId
                             && r.reviewed_at != null

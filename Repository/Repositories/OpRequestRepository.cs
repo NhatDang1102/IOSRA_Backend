@@ -35,14 +35,14 @@ namespace Repository.Repositories
                 omod_note = null
             };
 
-            _db.op_requests.Add(req);
+            _db.op_request.Add(req);
             await _db.SaveChangesAsync(ct);
             return req;
         }
 
         public async Task<List<op_request>> ListRequestsAsync(string? status, CancellationToken ct = default)
         {
-            var query = _db.op_requests
+            var query = _db.op_request
                             .Include(r => r.requester)
                             .AsNoTracking()
                             .AsQueryable();
@@ -55,18 +55,18 @@ namespace Repository.Repositories
         }
 
         public Task<List<op_request>> ListRequestsOfRequesterAsync(Guid accountId, CancellationToken ct = default)
-            => _db.op_requests
+            => _db.op_request
                   .Include(r => r.requester)
                   .Where(r => r.requester_id == accountId)
                   .OrderByDescending(r => r.created_at)
                   .ToListAsync(ct);
 
         public Task<op_request?> GetRequestAsync(Guid requestId, CancellationToken ct = default)
-            => _db.op_requests.FirstOrDefaultAsync(r => r.request_id == requestId, ct);
+            => _db.op_request.FirstOrDefaultAsync(r => r.request_id == requestId, ct);
 
         public async Task SetRequestApprovedAsync(Guid requestId, Guid omodId, CancellationToken ct = default)
         {
-            var req = await _db.op_requests.FirstOrDefaultAsync(r => r.request_id == requestId, ct);
+            var req = await _db.op_request.FirstOrDefaultAsync(r => r.request_id == requestId, ct);
             if (req is null) return;
 
             req.status = "approved";
@@ -78,7 +78,7 @@ namespace Repository.Repositories
 
         public async Task SetRequestRejectedAsync(Guid requestId, Guid omodId, string? reason, CancellationToken ct = default)
         {
-            var req = await _db.op_requests.FirstOrDefaultAsync(r => r.request_id == requestId, ct);
+            var req = await _db.op_request.FirstOrDefaultAsync(r => r.request_id == requestId, ct);
             if (req is null) return;
 
             req.status = "rejected";
@@ -126,7 +126,7 @@ namespace Repository.Repositories
 
         public async Task<Guid?> GetRoleIdByCodeAsync(string roleCode, CancellationToken ct = default)
         {
-            return await _db.roles
+            return await _db.role
                               .Where(r => r.role_code == roleCode)
                               .Select(r => (Guid?)r.role_id)
                               .FirstOrDefaultAsync(ct);
@@ -134,19 +134,19 @@ namespace Repository.Repositories
 
         public async Task AddAccountRoleIfNotExistsAsync(Guid accountId, Guid roleId, CancellationToken ct = default)
         {
-            var exists = await _db.account_roles.AnyAsync(ar => ar.account_id == accountId && ar.role_id == roleId, ct);
+            var exists = await _db.account_role.AnyAsync(ar => ar.account_id == accountId && ar.role_id == roleId, ct);
             if (!exists)
             {
-                _db.account_roles.Add(new account_role { account_id = accountId, role_id = roleId });
+                _db.account_role.Add(new account_role { account_id = accountId, role_id = roleId });
                 await _db.SaveChangesAsync(ct);
             }
         }
 
         public Task<bool> HasPendingAsync(Guid accountId, CancellationToken ct = default)
-            => _db.op_requests.AnyAsync(r => r.requester_id == accountId && r.status == "pending", ct);
+            => _db.op_request.AnyAsync(r => r.requester_id == accountId && r.status == "pending", ct);
 
         public Task<DateTime?> GetLastRejectedAtAsync(Guid accountId, CancellationToken ct = default)
-            => _db.op_requests
+            => _db.op_request
                   .Where(r => r.requester_id == accountId && r.status == "rejected")
                   .OrderByDescending(r => r.created_at)
                   .Select(r => (DateTime?)r.created_at)
@@ -179,7 +179,7 @@ namespace Repository.Repositories
         }
 
         public Task<bool> HasPendingRankPromotionRequestAsync(Guid authorId, CancellationToken ct = default)
-            => _db.op_requests.AnyAsync(r =>
+            => _db.op_request.AnyAsync(r =>
                 r.requester_id == authorId &&
                 r.request_type == "rank_up" &&
                 r.status == "pending", ct);
@@ -201,14 +201,14 @@ namespace Repository.Repositories
                 reviewed_at = null
             };
 
-            _db.op_requests.Add(entity);
+            _db.op_request.Add(entity);
             await _db.SaveChangesAsync(ct);
             return entity;
         }
 
         public async Task<IReadOnlyList<op_request>> ListRankPromotionRequestsAsync(Guid? authorId, string? status, CancellationToken ct = default)
         {
-            var query = _db.op_requests
+            var query = _db.op_request
                            .AsNoTracking()
                            .Include(r => r.requester)
                                .ThenInclude(a => a.author)
@@ -235,7 +235,7 @@ namespace Repository.Repositories
         }
 
         public Task<op_request?> GetRankPromotionRequestAsync(Guid requestId, CancellationToken ct = default)
-            => _db.op_requests
+            => _db.op_request
                   .Include(r => r.requester)
                       .ThenInclude(a => a.author)
                           .ThenInclude(ar => ar.rank)
@@ -245,12 +245,12 @@ namespace Repository.Repositories
 
         public async Task UpdateOpRequestAsync(op_request entity, CancellationToken ct = default)
         {
-            _db.op_requests.Update(entity);
+            _db.op_request.Update(entity);
             await _db.SaveChangesAsync(ct);
         }
 
         public Task<bool> HasPendingWithdrawRequestAsync(Guid authorId, CancellationToken ct = default)
-            => _db.op_requests.AnyAsync(r =>
+            => _db.op_request.AnyAsync(r =>
                 r.requester_id == authorId &&
                 r.request_type == "withdraw" &&
                 r.status == "pending", ct);
@@ -272,14 +272,14 @@ namespace Repository.Repositories
                 reviewed_at = null
             };
 
-            _db.op_requests.Add(entity);
+            _db.op_request.Add(entity);
             await _db.SaveChangesAsync(ct);
             return entity;
         }
 
         public async Task<IReadOnlyList<op_request>> ListWithdrawRequestsAsync(Guid? authorId, string? status, CancellationToken ct = default)
         {
-            var query = _db.op_requests
+            var query = _db.op_request
                 .AsNoTracking()
                 .Include(r => r.requester)
                 .Include(r => r.omod)
@@ -304,7 +304,7 @@ namespace Repository.Repositories
         }
 
         public Task<op_request?> GetWithdrawRequestAsync(Guid requestId, CancellationToken ct = default)
-            => _db.op_requests
+            => _db.op_request
                 .Include(r => r.requester)
                 .Include(r => r.omod)
                     .ThenInclude(o => o.account)

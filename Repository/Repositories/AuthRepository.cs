@@ -64,7 +64,7 @@ namespace Repository.Repositories
         // Lấy role ID từ role code - throw exception nếu role chưa được seed
         public async Task<Guid> GetRoleIdByCodeAsync(string roleCode, CancellationToken ct = default)
         {
-            var role = await _db.roles
+            var role = await _db.role
                 .Where(r => r.role_code == roleCode)
                 .FirstOrDefaultAsync(ct);
 
@@ -78,15 +78,15 @@ namespace Repository.Repositories
 
         // Lấy danh sách role codes của một account (join account_roles với roles)
         public Task<List<string>> GetRoleCodesOfAccountAsync(Guid accountId, CancellationToken ct = default)
-            => _db.account_roles
+            => _db.account_role
                   .Where(ar => ar.account_id == accountId)
-                  .Join(_db.roles, ar => ar.role_id, r => r.role_id, (ar, r) => r.role_code)
+                  .Join(_db.role, ar => ar.role_id, r => r.role_id, (ar, r) => r.role_code)
                   .ToListAsync(ct);
 
         // Gán role cho account (thêm vào bảng junction account_roles)
         public async Task AddAccountRoleAsync(Guid accountId, Guid roleId, CancellationToken ct = default)
         {
-            _db.account_roles.Add(new account_role
+            _db.account_role.Add(new account_role
             {
                 account_id = accountId,
                 role_id = roleId

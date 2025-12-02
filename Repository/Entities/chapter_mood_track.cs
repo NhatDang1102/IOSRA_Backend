@@ -5,7 +5,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Repository.Entities;
 
-[Table("chapter_mood_tracks")]
+[Table("chapter_mood_track")]
 [Index("mood_code", Name = "ix_mood_track_mood")]
 public partial class chapter_mood_track
 {

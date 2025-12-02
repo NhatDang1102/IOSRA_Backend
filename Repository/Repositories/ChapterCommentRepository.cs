@@ -24,7 +24,7 @@ namespace Repository.Repositories
         }
 
         public Task<chapter?> GetChapterWithStoryAsync(Guid chapterId, CancellationToken ct = default)
-            => _db.chapters
+            => _db.chapter
                   .Include(c => c.story).ThenInclude(s => s.author).ThenInclude(a => a.account)
                   .FirstOrDefaultAsync(c => c.chapter_id == chapterId, ct);
 

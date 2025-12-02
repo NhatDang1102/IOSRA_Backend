@@ -27,13 +27,13 @@ namespace Repository.Repositories
         }
 
         public Task<chapter?> GetChapterAsync(Guid chapterId, CancellationToken ct = default)
-            => _db.chapters
+            => _db.chapter
                   .Include(c => c.story).ThenInclude(s => s.author).ThenInclude(a => a.account)
                   .FirstOrDefaultAsync(c => c.chapter_id == chapterId, ct);
 
         public async Task UpdateChapterAsync(chapter entity, CancellationToken ct = default)
         {
-            _db.chapters.Update(entity);
+            _db.chapter.Update(entity);
             await _db.SaveChangesAsync(ct);
         }
 

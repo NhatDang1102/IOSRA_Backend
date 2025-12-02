@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Repository.Entities;
 
-[Table("subcriptions")]
+[Table("subcription")]
 [Index("plan_code", Name = "ix_sub_plan")]
 [Index("user_id", Name = "ix_sub_user")]
 public partial class subcription

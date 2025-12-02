@@ -20,16 +20,16 @@ namespace Repository.Repositories
         }
 
         public Task<List<tag>> ListAsync(CancellationToken ct = default)
-            => _db.tags
+            => _db.tag
                   .OrderBy(t => t.tag_name)
                   .ToListAsync(ct);
 
         public Task<tag?> GetByIdAsync(Guid tagId, CancellationToken ct = default)
-            => _db.tags.FirstOrDefaultAsync(t => t.tag_id == tagId, ct);
+            => _db.tag.FirstOrDefaultAsync(t => t.tag_id == tagId, ct);
 
         public Task<bool> ExistsByNameAsync(string name, Guid? excludeId = null, CancellationToken ct = default)
         {
-            var query = _db.tags.AsQueryable();
+            var query = _db.tag.AsQueryable();
             if (excludeId.HasValue)
             {
                 query = query.Where(t => t.tag_id != excludeId.Value);
@@ -44,23 +44,23 @@ namespace Repository.Repositories
                 tag_id = Guid.NewGuid(),
                 tag_name = name
             };
-            _db.tags.Add(entity);
+            _db.tag.Add(entity);
             await _db.SaveChangesAsync(ct);
             return entity;
         }
 
         public async Task UpdateAsync(tag entity, CancellationToken ct = default)
         {
-            _db.tags.Update(entity);
+            _db.tag.Update(entity);
             await _db.SaveChangesAsync(ct);
         }
 
         public Task<bool> HasStoriesAsync(Guid tagId, CancellationToken ct = default)
-            => _db.story_tags.AnyAsync(st => st.tag_id == tagId, ct);
+            => _db.story_tag.AnyAsync(st => st.tag_id == tagId, ct);
 
         public async Task DeleteAsync(tag entity, CancellationToken ct = default)
         {
-            _db.tags.Remove(entity);
+            _db.tag.Remove(entity);
             await _db.SaveChangesAsync(ct);
         }
 
@@ -70,9 +70,9 @@ namespace Repository.Repositories
 
             // Đếm số story published/completed đang gắn tag và sort theo usage desc, name asc
             var q =
-                from t in _db.tags
+                from t in _db.tag
                 let usage =
-                    (from st in _db.story_tags
+                    (from st in _db.story_tag
                      join s in _db.stories on st.story_id equals s.story_id
                      where st.tag_id == t.tag_id
                            && (s.status == "published" || s.status == "completed")
@@ -88,7 +88,7 @@ namespace Repository.Repositories
             var set = (ids ?? Array.Empty<Guid>()).ToHashSet();
             if (set.Count == 0) return new List<tag>();
 
-            return await _db.tags
+            return await _db.tag
                 .Where(t => set.Contains(t.tag_id))
                 .OrderBy(t => t.tag_name)
                 .ToListAsync(ct);
@@ -102,7 +102,7 @@ namespace Repository.Repositories
             var q = term.Trim();
 
             // 1) Ưu tiên bắt đầu bằng q
-            var starts = await _db.tags
+            var starts = await _db.tag
                 .Where(t => t.tag_name.StartsWith(q))     
                 .OrderBy(t => t.tag_name)
                 .Take(limit)
@@ -114,7 +114,7 @@ namespace Repository.Repositories
             var takenIds = starts.Select(t => t.tag_id).ToHashSet();
             var remain = limit - starts.Count;
 
-            var contains = await _db.tags
+            var contains = await _db.tag
                 .Where(t => t.tag_name.Contains(q) && !takenIds.Contains(t.tag_id))
                 .OrderBy(t => t.tag_name)
                 .Take(remain)
@@ -129,7 +129,7 @@ namespace Repository.Repositories
             if (page <= 0) page = 1;
             if (pageSize <= 0) pageSize = 20;
 
-            var query = _db.tags.AsQueryable();
+            var query = _db.tag.AsQueryable();
 
             if (!string.IsNullOrWhiteSpace(q))
                 query = query.Where(t => t.tag_name.Contains(q));
@@ -149,7 +149,7 @@ namespace Repository.Repositories
             // Đếm usage các story đã published|completed
             var usageMap = await
             (
-                from st in _db.story_tags
+                from st in _db.story_tag
                 join s in _db.stories on st.story_id equals s.story_id
                 where ids.Contains(st.tag_id)
                       && (s.status == "published" || s.status == "completed")

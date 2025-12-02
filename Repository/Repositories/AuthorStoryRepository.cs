@@ -27,7 +27,7 @@ namespace Repository.Repositories
         public Task<List<tag>> GetTagsByIdsAsync(IEnumerable<Guid> tagIds, CancellationToken ct = default)
         {
             var ids = tagIds.Distinct().ToArray();
-            return _db.tags.Where(t => ids.Contains(t.tag_id)).ToListAsync(ct);
+            return _db.tag.Where(t => ids.Contains(t.tag_id)).ToListAsync(ct);
         }
 
         public async Task<story> AddStoryAsync(story entity, IEnumerable<Guid> tagIds, CancellationToken ct = default)
@@ -40,7 +40,7 @@ namespace Repository.Repositories
             {
                 foreach (var tagId in tags)
                 {
-                    _db.story_tags.Add(new story_tag
+                    _db.story_tag.Add(new story_tag
                     {
                         story_id = entity.story_id,
                         tag_id = tagId
@@ -103,16 +103,16 @@ namespace Repository.Repositories
         public async Task ReplaceStoryTagsAsync(Guid storyId, IEnumerable<Guid> tagIds, CancellationToken ct = default)
         {
             var tagSet = tagIds.Distinct().ToArray();
-            var existing = await _db.story_tags.Where(st => st.story_id == storyId).ToListAsync(ct);
+            var existing = await _db.story_tag.Where(st => st.story_id == storyId).ToListAsync(ct);
 
             if (existing.Count > 0)
             {
-                _db.story_tags.RemoveRange(existing);
+                _db.story_tag.RemoveRange(existing);
             }
 
             foreach (var tagId in tagSet)
             {
-                _db.story_tags.Add(new story_tag
+                _db.story_tag.Add(new story_tag
                 {
                     story_id = storyId,
                     tag_id = tagId
@@ -170,7 +170,7 @@ namespace Repository.Repositories
                   .FirstOrDefaultAsync(ct);
 
         public Task<int> GetChapterCountAsync(Guid storyId, CancellationToken ct = default)
-            => _db.chapters.CountAsync(c => c.story_id == storyId, ct);
+            => _db.chapter.CountAsync(c => c.story_id == storyId, ct);
 
         public Task<DateTime?> GetStoryPublishedAtAsync(Guid storyId, CancellationToken ct = default)
             => _db.stories

@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Repository.Entities;
 
-[Table("tags")]
+[Table("tag")]
 [Index("tag_name", Name = "ux_tag_name", IsUnique = true)]
 public partial class tag
 {

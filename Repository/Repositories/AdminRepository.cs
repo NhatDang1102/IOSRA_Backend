@@ -65,7 +65,7 @@ namespace Repository.Repositories
 
         public async Task<List<string>> GetRoleCodesAsync(Guid accountId, CancellationToken ct)
         {
-            return await _db.account_roles
+            return await _db.account_role
                 .Where(ar => ar.account_id == accountId)
                 .Select(ar => ar.role.role_code)
                 .ToListAsync(ct);
@@ -73,13 +73,13 @@ namespace Repository.Repositories
 
         public async Task ReplaceRolesAsync(Guid accountId, IEnumerable<Guid> roleIds, CancellationToken ct)
         {
-            var olds = _db.account_roles.Where(r => r.account_id == accountId);
-            _db.account_roles.RemoveRange(olds);
+            var olds = _db.account_role.Where(r => r.account_id == accountId);
+            _db.account_role.RemoveRange(olds);
 
             var now = TimezoneConverter.VietnamNow;
             foreach (var rid in roleIds.Distinct())
             {
-                _db.account_roles.Add(new account_role
+                _db.account_role.Add(new account_role
                 {
                     account_id = accountId,
                     role_id = rid,

@@ -20,18 +20,18 @@ namespace Repository.Repositories
         public async Task AddAsync(report entity, CancellationToken ct = default)
         {
             EnsureId(entity, nameof(report.report_id));
-            _db.reports.Add(entity);
+            _db.report.Add(entity);
             await _db.SaveChangesAsync(ct);
         }
 
         public async Task UpdateAsync(report entity, CancellationToken ct = default)
         {
-            _db.reports.Update(entity);
+            _db.report.Update(entity);
             await _db.SaveChangesAsync(ct);
         }
 
         public Task<report?> GetByIdAsync(Guid reportId, CancellationToken ct = default)
-            => _db.reports
+            => _db.report
                   .AsNoTracking()
                   .Include(r => r.reporter)
                   .Include(r => r.moderator).ThenInclude(m => m.account)
@@ -42,7 +42,7 @@ namespace Repository.Repositories
             if (page <= 0) page = 1;
             if (pageSize <= 0) pageSize = 20;
 
-            var query = _db.reports
+            var query = _db.report
                 .AsNoTracking()
                 .Include(r => r.reporter)
                 .Include(r => r.moderator).ThenInclude(m => m.account)
@@ -75,7 +75,7 @@ namespace Repository.Repositories
         }
 
         public Task<bool> HasPendingReportAsync(Guid reporterId, string targetType, Guid targetId, CancellationToken ct = default)
-            => _db.reports
+            => _db.report
                   .AsNoTracking()
                   .AnyAsync(r => r.reporter_id == reporterId
                                  && r.target_type == targetType
@@ -87,7 +87,7 @@ namespace Repository.Repositories
             if (page <= 0) page = 1;
             if (pageSize <= 0) pageSize = 20;
 
-            var query = _db.reports
+            var query = _db.report
                 .AsNoTracking()
                 .Include(r => r.reporter)
                 .Where(r => r.reporter_id == reporterId)

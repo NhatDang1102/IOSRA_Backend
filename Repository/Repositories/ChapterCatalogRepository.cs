@@ -24,7 +24,7 @@ namespace Repository.Repositories
             if (page < 1) page = 1;
             if (pageSize < 1) pageSize = 50;
 
-            var query = _db.chapters
+            var query = _db.chapter
                 .AsNoTracking()
                 .Include(c => c.language)
                 .Where(c => c.story_id == storyId && c.status == PublishedStatus)
@@ -37,7 +37,7 @@ namespace Repository.Repositories
         }
 
         public Task<chapter?> GetPublishedChapterByIdAsync(Guid chapterId, CancellationToken ct = default)
-            => _db.chapters
+            => _db.chapter
                   .AsNoTracking()
                   .Include(c => c.language)
                   .Include(c => c.story)
@@ -45,7 +45,7 @@ namespace Repository.Repositories
                   .FirstOrDefaultAsync(c => c.chapter_id == chapterId && c.status == PublishedStatus, ct);
 
         public Task<chapter?> GetPublishedChapterWithVoicesAsync(Guid chapterId, CancellationToken ct = default)
-            => _db.chapters
+            => _db.chapter
                 .AsNoTracking()
                 .Include(c => c.language)
                 .Include(c => c.story)
@@ -55,7 +55,7 @@ namespace Repository.Repositories
                 .FirstOrDefaultAsync(c => c.chapter_id == chapterId && c.status == PublishedStatus, ct);
 
         public Task<chapter_voice?> GetChapterVoiceAsync(Guid chapterId, Guid voiceId, CancellationToken ct = default)
-            => _db.chapter_voices
+            => _db.chapter_voice
                 .AsNoTracking()
                 .Include(cv => cv.voice)
                 .Include(cv => cv.chapter)
@@ -72,14 +72,14 @@ namespace Repository.Repositories
                 return new Dictionary<Guid, int>();
             }
 
-            return await _db.chapters
+            return await _db.chapter
                 .Where(c => ids.Contains(c.story_id) && c.status == PublishedStatus)
                 .GroupBy(c => c.story_id)
                 .ToDictionaryAsync(g => g.Key, g => g.Count(), ct);
         }
 
         public Task<int> GetPublishedChapterCountAsync(Guid storyId, CancellationToken ct = default)
-            => _db.chapters.CountAsync(c => c.story_id == storyId && c.status == PublishedStatus, ct);
+            => _db.chapter.CountAsync(c => c.story_id == storyId && c.status == PublishedStatus, ct);
 
         public Task<bool> HasReaderPurchasedChapterAsync(Guid chapterId, Guid readerId, CancellationToken ct = default)
             => _db.chapter_purchase_logs.AnyAsync(p => p.chapter_id == chapterId && p.account_id == readerId, ct);
@@ -88,12 +88,12 @@ namespace Repository.Repositories
             => _db.language_lists.AsNoTracking().FirstOrDefaultAsync(l => l.lang_code == languageCode, ct);
 
         public Task<chapter_localization?> GetLocalizationAsync(Guid chapterId, Guid langId, CancellationToken ct = default)
-            => _db.chapter_localizations.AsNoTracking()
+            => _db.chapter_localization.AsNoTracking()
                 .FirstOrDefaultAsync(l => l.chapter_id == chapterId && l.lang_id == langId, ct);
 
         public async Task<IReadOnlyList<chapter_localization>> GetLocalizationsByChapterAsync(Guid chapterId, CancellationToken ct = default)
         {
-            return await _db.chapter_localizations
+            return await _db.chapter_localization
                 .AsNoTracking()
                 .Include(l => l.lang)
                 .Where(l => l.chapter_id == chapterId)
@@ -110,7 +110,7 @@ namespace Repository.Repositories
 
         public Task AddLocalizationAsync(chapter_localization entity, CancellationToken ct = default)
         {
-            _db.chapter_localizations.Add(entity);
+            _db.chapter_localization.Add(entity);
             return Task.CompletedTask;
         }
 

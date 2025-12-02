@@ -21,7 +21,7 @@ namespace Repository.Repositories
         }
 
         public Task<chapter?> GetChapterForPurchaseAsync(Guid chapterId, CancellationToken ct = default)
-            => _db.chapters
+            => _db.chapter
                 .Include(c => c.story)
                     .ThenInclude(s => s.author)
                         .ThenInclude(a => a.rank)
@@ -31,7 +31,7 @@ namespace Repository.Repositories
                 .FirstOrDefaultAsync(c => c.chapter_id == chapterId, ct);
 
         public Task<chapter?> GetChapterWithVoicesAsync(Guid chapterId, CancellationToken ct = default)
-            => _db.chapters
+            => _db.chapter
                 .Include(c => c.chapter_voices)
                     .ThenInclude(v => v.voice)
                 .Include(c => c.story)
@@ -74,7 +74,7 @@ namespace Repository.Repositories
 
         public Task AddAuthorRevenueTransactionAsync(author_revenue_transaction entity, CancellationToken ct = default)
         {
-            _db.author_revenue_transactions.Add(entity);
+            _db.author_revenue_transaction.Add(entity);
             return Task.CompletedTask;
         }
 
@@ -82,7 +82,7 @@ namespace Repository.Repositories
         {
             var query =
                 from log in _db.chapter_purchase_logs.AsNoTracking()
-                join ch in _db.chapters.AsNoTracking() on log.chapter_id equals ch.chapter_id
+                join ch in _db.chapter.AsNoTracking() on log.chapter_id equals ch.chapter_id
                 join st in _db.stories.AsNoTracking() on ch.story_id equals st.story_id
                 where log.account_id == readerId
                 select new { log, ch, st };
@@ -148,10 +148,10 @@ namespace Repository.Repositories
         private IQueryable<PurchasedVoiceData> BuildVoicePurchaseQuery(Guid readerId)
         {
             return from voice in _db.voice_purchase_items.AsNoTracking()
-                   join chapter in _db.chapters.AsNoTracking() on voice.chapter_id equals chapter.chapter_id
+                   join chapter in _db.chapter.AsNoTracking() on voice.chapter_id equals chapter.chapter_id
                    join story in _db.stories.AsNoTracking() on chapter.story_id equals story.story_id
                    join preset in _db.voice_lists.AsNoTracking() on voice.voice_id equals preset.voice_id
-                   join generated in _db.chapter_voices.AsNoTracking()
+                   join generated in _db.chapter_voice.AsNoTracking()
                         on new { voice.chapter_id, voice.voice_id } equals new { generated.chapter_id, generated.voice_id }
                    where voice.account_id == readerId
                    select new PurchasedVoiceData

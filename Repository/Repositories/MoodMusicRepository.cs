@@ -28,11 +28,11 @@ namespace Repository.Repositories
             => _db.chapter_moods.FirstOrDefaultAsync(m => m.mood_code == moodCode, ct);
 
         public Task<chapter_mood_track?> GetTrackAsync(Guid trackId, CancellationToken ct = default)
-            => _db.chapter_mood_tracks.FirstOrDefaultAsync(t => t.track_id == trackId, ct);
+            => _db.chapter_mood_track.FirstOrDefaultAsync(t => t.track_id == trackId, ct);
 
         public async Task<IReadOnlyList<chapter_mood_track>> GetTracksAsync(string? moodCode, CancellationToken ct = default)
         {
-            var query = _db.chapter_mood_tracks
+            var query = _db.chapter_mood_track
                 .AsNoTracking()
                 .Include(t => t.mood_codeNavigation)
                 .AsQueryable();
@@ -47,23 +47,23 @@ namespace Repository.Repositories
         }
 
         public Task<chapter_mood_track?> GetRandomTrackAsync(string moodCode, CancellationToken ct = default)
-            => _db.chapter_mood_tracks
+            => _db.chapter_mood_track
                 .AsNoTracking()
                 .Where(t => t.mood_code == moodCode)
                 .OrderBy(_ => EF.Functions.Random())
                 .FirstOrDefaultAsync(ct);
 
         public Task<IReadOnlyList<chapter_mood_track>> GetTracksByMoodAsync(string moodCode, CancellationToken ct = default)
-            => _db.chapter_mood_tracks
+            => _db.chapter_mood_track
                 .AsNoTracking()
                 .Where(t => t.mood_code == moodCode)
                 .OrderByDescending(t => t.created_at)
                 .ToListAsync(ct)
                 .ContinueWith(t => (IReadOnlyList<chapter_mood_track>)t.Result, ct);
 
-        public void AddTrack(chapter_mood_track track) => _db.chapter_mood_tracks.Add(track);
+        public void AddTrack(chapter_mood_track track) => _db.chapter_mood_track.Add(track);
 
-        public void RemoveTrack(chapter_mood_track track) => _db.chapter_mood_tracks.Remove(track);
+        public void RemoveTrack(chapter_mood_track track) => _db.chapter_mood_track.Remove(track);
 
         public Task SaveChangesAsync(CancellationToken ct = default) => _db.SaveChangesAsync(ct);
     }

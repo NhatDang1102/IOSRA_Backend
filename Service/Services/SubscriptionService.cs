@@ -46,7 +46,7 @@ namespace Service.Services
         public async Task<SubscriptionStatusResponse> GetStatusAsync(Guid accountId, CancellationToken ct = default)
         {
             var now = TimezoneConverter.VietnamNow;
-            var subscription = await _db.subcriptions
+            var subscription = await _db.subcription
                 .Include(s => s.plan_codeNavigation)
                 .Where(s => s.user_id == accountId && s.end_at >= now)
                 .OrderByDescending(s => s.end_at)
@@ -82,7 +82,7 @@ namespace Service.Services
         public async Task<SubscriptionClaimResponse> ClaimDailyAsync(Guid accountId, CancellationToken ct = default)
         {
             var now = TimezoneConverter.VietnamNow;
-            var subscription = await _db.subcriptions
+            var subscription = await _db.subcription
                 .Include(s => s.plan_codeNavigation)
                 .FirstOrDefaultAsync(s => s.user_id == accountId && s.end_at >= now, ct);
 
@@ -148,7 +148,7 @@ namespace Service.Services
                        ?? throw new AppException("SubscriptionPlanNotFound", "Gói subscription không tồn tại.", 404);
 
             var now = TimezoneConverter.VietnamNow;
-            var subscription = await _db.subcriptions.FirstOrDefaultAsync(s => s.user_id == accountId && s.plan_code == planCode, ct);
+            var subscription = await _db.subcription.FirstOrDefaultAsync(s => s.user_id == accountId && s.plan_code == planCode, ct);
 
             if (subscription == null)
             {
@@ -162,7 +162,7 @@ namespace Service.Services
                     last_claim_date = null,
                     claimed_today = false
                 };
-                _db.subcriptions.Add(subscription);
+                _db.subcription.Add(subscription);
             }
             else
             {

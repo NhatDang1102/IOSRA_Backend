@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Repository.Entities;
 
-[Table("roles")]
+[Table("role")]
 [Index("role_code", Name = "ux_roles_code", IsUnique = true)]
 public partial class role
 {

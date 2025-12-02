@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Repository.Entities;
 
-[Table("chapters")]
+[Table("chapter")]
 [Index("story_id", Name = "ix_chapter_story")]
 [Index("story_id", "chapter_no", Name = "ux_chapter_story_no", IsUnique = true)]
 public partial class chapter

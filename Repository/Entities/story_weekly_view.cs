@@ -4,7 +4,7 @@ using System.ComponentModel.DataAnnotations.Schema;
 
 namespace Repository.Entities;
 
-[Table("story_weekly_views")]
+[Table("story_weekly_view")]
 public partial class story_weekly_view
 {
     [Key]

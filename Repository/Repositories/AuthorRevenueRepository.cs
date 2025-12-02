@@ -25,7 +25,7 @@ namespace Repository.Repositories
 
         public async Task<(List<author_revenue_transaction> Items, int Total)> GetTransactionsAsync(Guid authorAccountId, int page, int pageSize, string? type, DateTime? from, DateTime? to, CancellationToken ct = default)
         {
-            IQueryable<author_revenue_transaction> query = _db.author_revenue_transactions
+            IQueryable<author_revenue_transaction> query = _db.author_revenue_transaction
                 .AsNoTracking()
                 .Where(t => t.author_id == authorAccountId);
 
@@ -71,7 +71,7 @@ namespace Repository.Repositories
 
         public Task AddTransactionAsync(author_revenue_transaction transaction, CancellationToken ct = default)
         {
-            _db.author_revenue_transactions.Add(transaction);
+            _db.author_revenue_transaction.Add(transaction);
             return Task.CompletedTask;
         }
 

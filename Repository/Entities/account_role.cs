@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Repository.Entities;
 
-[Table("account_roles")]
+[Table("account_role")]
 [PrimaryKey("account_id", "role_id")]
 [Index("role_id", Name = "fk_account_roles_role")]
 public partial class account_role

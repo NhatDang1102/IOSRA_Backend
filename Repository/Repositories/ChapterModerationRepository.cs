@@ -30,7 +30,7 @@ namespace Repository.Repositories
                 return Array.Empty<chapter>();
             }
 
-            return await _db.chapters
+            return await _db.chapter
                 .Include(c => c.story).ThenInclude(s => s.author).ThenInclude(a => a.account)
                 .Include(c => c.language)
                 .Include(c => c.content_approves)

@@ -5,7 +5,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Repository.Entities;
 
-[Table("author_revenue_transactions")]
+[Table("author_revenue_transaction")]
 [Index(nameof(author_id), Name = "ix_art_author")]
 [Index(nameof(purchase_log_id), Name = "ix_art_purchase")]
 [Index(nameof(request_id), Name = "ix_art_request")]

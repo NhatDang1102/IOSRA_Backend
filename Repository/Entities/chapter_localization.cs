@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Repository.Entities;
 
-[Table("chapter_localizations")]
+[Table("chapter_localization")]
 [PrimaryKey("chapter_id", "lang_id")]
 [Index("lang_id", Name = "fk_chloc_lang")]
 public partial class chapter_localization

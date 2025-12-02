@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Repository.Entities;
 
-[Table("story_tags")]
+[Table("story_tag")]
 [PrimaryKey("story_id", "tag_id")]
 [Index("tag_id", Name = "ix_story_tags_tag")]
 public partial class story_tag

@@ -44,7 +44,7 @@ namespace Repository.Repositories
 
         public Task<List<StatPointData>> GetRequestStatsAsync(string requestType, DateTime from, DateTime to, string period, CancellationToken ct = default)
         {
-            var query = _db.op_requests
+            var query = _db.op_request
                 .AsNoTracking()
                 .Where(r => r.request_type == requestType
                             && r.created_at >= from
@@ -64,7 +64,7 @@ namespace Repository.Repositories
 
             if (metric == "withdrawn")
             {
-                source = _db.op_requests
+                source = _db.op_request
                     .AsNoTracking()
                     .Where(r => r.request_type == "withdraw"
                                 && r.status == "approved"
@@ -79,7 +79,7 @@ namespace Repository.Repositories
             }
             else
             {
-                var purchases = _db.author_revenue_transactions
+                var purchases = _db.author_revenue_transaction
                     .AsNoTracking()
                     .Where(t => t.created_at >= from && t.created_at <= to && t.type == "purchase");
 
