@@ -31,7 +31,7 @@ namespace Service.Helpers
             var key = BuildKey(tokenId);
 
             var vietnamNow = TimezoneConverter.VietnamNow;
-            var issuedAt = new DateTimeOffset(vietnamNow, TimezoneConverter.VietnamOffset);
+            var issuedAt = new DateTimeOffset(DateTime.SpecifyKind(vietnamNow, DateTimeKind.Unspecified), TimezoneConverter.VietnamOffset);
             var expiresAt = issuedAt.Add(_lifetime);
 
             var payload = new RefreshPayload
