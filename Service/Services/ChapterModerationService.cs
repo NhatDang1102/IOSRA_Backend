@@ -20,17 +20,20 @@ namespace Service.Services
         private readonly IMailSender _mailSender;
         private readonly INotificationService _notificationService;
         private readonly IFollowerNotificationService _followerNotificationService;
+        private readonly IContentModRepository _contentModRepository;
 
         public ChapterModerationService(
             IChapterModerationRepository chapterRepository,
             IMailSender mailSender,
             INotificationService notificationService,
-            IFollowerNotificationService followerNotificationService)
+            IFollowerNotificationService followerNotificationService,
+            IContentModRepository contentModRepository)
         {
             _chapterRepository = chapterRepository;
             _mailSender = mailSender;
             _notificationService = notificationService;
             _followerNotificationService = followerNotificationService;
+            _contentModRepository = contentModRepository;
         }
 
         private static readonly string[] AllowedStatuses = { "pending", "published", "rejected" };
@@ -112,6 +115,7 @@ namespace Service.Services
             chapter.updated_at = TimezoneConverter.VietnamNow;
 
             await _chapterRepository.SaveChangesAsync(ct);
+            await _contentModRepository.IncrementChapterDecisionAsync(moderatorAccountId, request.Approve, ct);
 
             var story = chapter.story ?? throw new InvalidOperationException("Chapter story navigation was not loaded.");
             var author = story.author ?? throw new InvalidOperationException("Story author navigation was not loaded.");

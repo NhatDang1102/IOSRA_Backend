@@ -101,6 +101,8 @@ CREATE TABLE ContentMod (
   total_approved_stories INT UNSIGNED NOT NULL DEFAULT 0,
   total_rejected_stories INT UNSIGNED NOT NULL DEFAULT 0,
   total_reported_handled INT UNSIGNED NOT NULL DEFAULT 0,
+  total_approved_chapters INT UNSIGNED NOT NULL DEFAULT 0,
+  total_rejected_chapters INT UNSIGNED NOT NULL DEFAULT 0,
   PRIMARY KEY (account_id),
   CONSTRAINT fk_cmod_account FOREIGN KEY (account_id)
     REFERENCES account(account_id) ON DELETE CASCADE ON UPDATE CASCADE

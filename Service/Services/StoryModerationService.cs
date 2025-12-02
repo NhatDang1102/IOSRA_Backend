@@ -20,17 +20,20 @@ namespace Service.Services
         private readonly IMailSender _mailSender;
         private readonly INotificationService _notificationService;
         private readonly IFollowerNotificationService _followerNotificationService;
+        private readonly IContentModRepository _contentModRepository;
 
         public StoryModerationService(
             IStoryModerationRepository storyRepository,
             IMailSender mailSender,
             INotificationService notificationService,
-            IFollowerNotificationService followerNotificationService)
+            IFollowerNotificationService followerNotificationService,
+            IContentModRepository contentModRepository)
         {
             _storyRepository = storyRepository;
             _mailSender = mailSender;
             _notificationService = notificationService;
             _followerNotificationService = followerNotificationService;
+            _contentModRepository = contentModRepository;
         }
 
         private static readonly string[] AllowedStatuses = { "pending", "published", "rejected" };
@@ -93,6 +96,7 @@ namespace Service.Services
                 throw new AppException("StoryNotPending", "Story is not awaiting moderation.", 400);
             }
 
+            var wasPublished = string.Equals(story.status, "published", StringComparison.OrdinalIgnoreCase);
             approval.status = request.Approve ? "approved" : "rejected";
             var humanNote = string.IsNullOrWhiteSpace(request.ModeratorNote) ? null : request.ModeratorNote.Trim();
             approval.moderator_feedback = humanNote;
@@ -105,6 +109,11 @@ namespace Service.Services
                 story.published_at ??= TimezoneConverter.VietnamNow;
                 var authorRank = story.author.rank?.rank_name;
                 story.is_premium = !string.IsNullOrWhiteSpace(authorRank) && !string.Equals(authorRank, "Casual", StringComparison.OrdinalIgnoreCase);
+                if (!wasPublished)
+                {
+                    var storyAuthor = story.author ?? throw new InvalidOperationException("Story author navigation was not loaded.");
+                    storyAuthor.total_story += 1;
+                }
             }
             else
             {
@@ -114,6 +123,7 @@ namespace Service.Services
             story.updated_at = TimezoneConverter.VietnamNow;
 
             await _storyRepository.SaveChangesAsync(ct);
+            await _contentModRepository.IncrementStoryDecisionAsync(moderatorAccountId, request.Approve, ct);
 
             var authorAccount = story.author.account;
             var authorEmail = authorAccount.email;

@@ -193,6 +193,10 @@ namespace Service.Services
                 story.published_at ??= TimezoneConverter.VietnamNow;
 
                 story.is_premium = false;
+                if (!string.Equals(initialStatus, "published", StringComparison.OrdinalIgnoreCase))
+                {
+                    author.total_story += 1;
+                }
                 await _storyRepository.UpdateStoryAsync(story, ct);
 
                 await UpsertStoryApprovalAsync(story.story_id, "approved", aiScore, aiNote, ct);

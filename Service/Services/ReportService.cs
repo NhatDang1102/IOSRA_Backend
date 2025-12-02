@@ -23,19 +23,22 @@ namespace Service.Services
         private readonly IProfileRepository _profileRepository;
         private readonly IMailSender _mailSender;
         private readonly INotificationService _notificationService;
+        private readonly IContentModRepository _contentModRepository;
 
         public ReportService(
             IReportRepository reportRepository,
             IModerationRepository moderationRepository,
             IProfileRepository profileRepository,
             IMailSender mailSender,
-            INotificationService notificationService)
+            INotificationService notificationService,
+            IContentModRepository contentModRepository)
         {
             _reportRepository = reportRepository;
             _moderationRepository = moderationRepository;
             _profileRepository = profileRepository;
             _mailSender = mailSender;
             _notificationService = notificationService;
+            _contentModRepository = contentModRepository;
         }
 
         public async Task<ReportResponse> CreateAsync(Guid reporterAccountId, ReportCreateRequest request, CancellationToken ct = default)
@@ -111,10 +114,18 @@ namespace Service.Services
             var saved = await _reportRepository.GetByIdAsync(report.report_id, ct)
                         ?? throw new InvalidOperationException("Failed to load report after update.");
 
+            var transitionedFromPending = string.Equals(previousStatus, ReportStatuses.Pending, StringComparison.OrdinalIgnoreCase)
+                                          && !string.Equals(normalizedStatus, ReportStatuses.Pending, StringComparison.OrdinalIgnoreCase);
+
             if (normalizedStatus == ReportStatuses.Resolved &&
                 !string.Equals(previousStatus, ReportStatuses.Resolved, StringComparison.OrdinalIgnoreCase))
             {
                 await ApplyStrikePenaltyAsync(saved, ct);
+            }
+
+            if (transitionedFromPending)
+            {
+                await _contentModRepository.IncrementReportHandledAsync(moderatorAccountId, ct);
             }
 
             return Map(saved);

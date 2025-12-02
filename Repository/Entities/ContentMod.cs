@@ -25,6 +25,10 @@ public partial class ContentMod
 
     public uint total_reported_handled { get; set; }
 
+    public uint total_approved_chapters { get; set; }
+
+    public uint total_rejected_chapters { get; set; }
+
     [ForeignKey("account_id")]
     [InverseProperty("ContentMod")]
     public virtual account account { get; set; } = null!;

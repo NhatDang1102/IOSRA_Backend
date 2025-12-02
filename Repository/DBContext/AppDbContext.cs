@@ -74,6 +74,11 @@ namespace Repository.DBContext
                 entity.HasKey(e => e.account_id).HasName("PRIMARY");
                 entity.Property(e => e.account_id).ValueGeneratedNever();
                 entity.Property(e => e.assigned_date).HasDefaultValueSql("CURRENT_TIMESTAMP");
+                entity.Property(e => e.total_approved_stories).HasDefaultValue(0u);
+                entity.Property(e => e.total_rejected_stories).HasDefaultValue(0u);
+                entity.Property(e => e.total_reported_handled).HasDefaultValue(0u);
+                entity.Property(e => e.total_approved_chapters).HasDefaultValue(0u);
+                entity.Property(e => e.total_rejected_chapters).HasDefaultValue(0u);
                 entity.HasOne(d => d.account).WithOne(p => p.ContentMod).HasConstraintName("fk_cmod_account");
             });
 
