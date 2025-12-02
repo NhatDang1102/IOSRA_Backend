@@ -21,6 +21,9 @@ namespace Repository.Interfaces
         // Tìm account theo email
         Task<account?> FindAccountByEmailAsync(string email, CancellationToken ct = default);
 
+        // Tìm account theo accountId
+        Task<account?> FindAccountByIdAsync(Guid accountId, CancellationToken ct = default);
+
         // Cập nhật password hash cho account
         Task UpdatePasswordHashAsync(Guid accountId, string newHash, CancellationToken ct = default);
 

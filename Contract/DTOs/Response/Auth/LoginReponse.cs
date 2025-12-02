@@ -13,6 +13,7 @@ namespace Contract.DTOs.Response.Auth
         public string Username { get; set; } = null!; // Tên người dùng
         public string Email { get; set; } = null!; // Email
         public string Token { get; set; } = null!; // JWT token
+        public DateTime TokenExpiresAt { get; set; }
         public List<string> Roles { get; set; } = new(); // Danh sách roles của user
 
     }

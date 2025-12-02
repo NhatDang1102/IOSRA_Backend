@@ -42,6 +42,9 @@ namespace Repository.Repositories
         public Task<account?> FindAccountByEmailAsync(string email, CancellationToken ct = default)
             => _db.accounts.FirstOrDefaultAsync(a => a.email == email, ct);
 
+        public Task<account?> FindAccountByIdAsync(Guid accountId, CancellationToken ct = default)
+            => _db.accounts.FirstOrDefaultAsync(a => a.account_id == accountId, ct);
+
         // Cập nhật password hash cho account
         public async Task UpdatePasswordHashAsync(Guid accountId, string newHash, CancellationToken ct = default)
         {
