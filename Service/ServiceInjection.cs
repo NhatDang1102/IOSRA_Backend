@@ -33,6 +33,7 @@ namespace Service
             services.AddSingleton<IChapterContentStorage, CloudflareR2ChapterStorage>();
             services.AddSingleton<IVoiceAudioStorage, CloudflareR2VoiceStorage>();
             services.AddSingleton<IMoodMusicStorage, CloudflareR2MoodMusicStorage>();
+            services.AddSingleton<IRefreshTokenStore, RedisRefreshTokenStore>();
 
             services.AddHttpClient<OpenAiService>((sp, client) =>
             {

@@ -3,6 +3,7 @@ using Microsoft.IdentityModel.Tokens;
 using Repository.Entities;
 using Repository.Utils;
 using Service.Interfaces;
+using Service.Models;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
@@ -16,7 +17,7 @@ namespace Service.Implementations
         public JwtTokenFactory(IConfiguration config) => _config = config;
 
         // Tạo JWT token từ account và roles
-        public string CreateToken(account acc, IEnumerable<string>? roles = null)
+        public JwtTokenResult CreateToken(account acc, IEnumerable<string>? roles = null)
         {
             // Lấy cấu hình JWT từ appsettings
             var jwt = _config.GetSection("Jwt");
@@ -47,7 +48,12 @@ namespace Service.Implementations
                 signingCredentials: creds);
 
             // Serialize token thành string
-            return new JwtSecurityTokenHandler().WriteToken(token);
+            var raw = new JwtSecurityTokenHandler().WriteToken(token);
+            return new JwtTokenResult
+            {
+                Token = raw,
+                ExpiresAt = expires
+            };
         }
     }
 }
