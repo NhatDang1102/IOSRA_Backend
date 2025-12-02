@@ -32,6 +32,7 @@ namespace Main.Controllers
                 throw new AppException("ValidationFailed", "storyId is required.", 400);
             }
 
+            query.ViewerAccountId = TryGetAccountId();
             var chapters = await _chapterCatalogService.GetChaptersAsync(query, ct);
             return Ok(chapters);
         }

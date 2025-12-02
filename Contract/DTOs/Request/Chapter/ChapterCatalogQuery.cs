@@ -1,5 +1,6 @@
 using System;
 using System.ComponentModel.DataAnnotations;
+using System.Text.Json.Serialization;
 
 namespace Contract.DTOs.Request.Chapter
 {
@@ -13,5 +14,8 @@ namespace Contract.DTOs.Request.Chapter
 
         [Range(1, 200)]
         public int PageSize { get; set; } = 50;
+
+        [JsonIgnore]
+        public Guid? ViewerAccountId { get; set; }
     }
 }

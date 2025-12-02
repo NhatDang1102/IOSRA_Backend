@@ -45,23 +45,46 @@ namespace Service.Services
             }
 
             // Ensure story exists and is visible
-            _ = await _storyRepository.GetPublishedStoryByIdAsync(query.StoryId, ct)
-                ?? throw new AppException("StoryNotFound", "Story was not found or not available.", 404);
+            var story = await _storyRepository.GetPublishedStoryByIdAsync(query.StoryId, ct)
+                        ?? throw new AppException("StoryNotFound", "Story was not found or not available.", 404);
 
             var (chapters, total) = await _chapterRepository.GetPublishedChaptersByStoryAsync(query.StoryId, query.Page, query.PageSize, ct);
 
-            var items = chapters.Select(ch => new ChapterCatalogListItemResponse
+            var viewerAccountId = query.ViewerAccountId;
+            var viewerIsAuthor = viewerAccountId.HasValue && story.author_id == viewerAccountId.Value;
+
+            var purchasedChapterIds = new HashSet<Guid>();
+            if (viewerAccountId.HasValue && !viewerIsAuthor)
             {
-                ChapterId = ch.chapter_id,
-                ChapterNo = (int)ch.chapter_no,
-                Title = ch.title,
-                LanguageCode = ch.language?.lang_code ?? string.Empty,
-                WordCount = ch.word_count,
-                AccessType = ch.access_type,
-                IsLocked = !string.Equals(ch.access_type, "free", StringComparison.OrdinalIgnoreCase),
-                IsOwned = false,
-                PriceDias = (int)ch.dias_price,
-                PublishedAt = ch.published_at
+                var hasLocked = chapters.Any(ch => !string.Equals(ch.access_type, "free", StringComparison.OrdinalIgnoreCase));
+                if (hasLocked)
+                {
+                    var purchased = await _chapterPurchaseRepository.GetPurchasedChaptersAsync(viewerAccountId.Value, query.StoryId, ct);
+                    if (purchased.Count > 0)
+                    {
+                        purchasedChapterIds = purchased.Select(p => p.ChapterId).ToHashSet();
+                    }
+                }
+            }
+
+            var items = chapters.Select(ch =>
+            {
+                var isLocked = !string.Equals(ch.access_type, "free", StringComparison.OrdinalIgnoreCase);
+                var isOwned = viewerIsAuthor || (isLocked && purchasedChapterIds.Contains(ch.chapter_id));
+
+                return new ChapterCatalogListItemResponse
+                {
+                    ChapterId = ch.chapter_id,
+                    ChapterNo = (int)ch.chapter_no,
+                    Title = ch.title,
+                    LanguageCode = ch.language?.lang_code ?? string.Empty,
+                    WordCount = ch.word_count,
+                    AccessType = ch.access_type,
+                    IsLocked = isLocked,
+                    IsOwned = isOwned,
+                    PriceDias = (int)ch.dias_price,
+                    PublishedAt = ch.published_at
+                };
             }).ToList();
 
             return new PagedResult<ChapterCatalogListItemResponse>
