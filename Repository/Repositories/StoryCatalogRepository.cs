@@ -117,19 +117,20 @@ namespace Repository.Repositories
             // base query: chỉ lấy story public
             var q = _db.stories
                 .AsNoTracking()
+                .Include(s => s.author).ThenInclude(a => a.account)
                 .Where(s => PublicStoryStatuses.Contains(s.status));
 
             // text search
             if (!string.IsNullOrWhiteSpace(query))
             {
                 var term = query.Trim();
-                var like = BuildLikePattern(term);
-                const string escapeChar = "\\"; 
+                var likePattern = BuildLikePattern(term);
+                const string escapeChar = "\\";
 
                 q = q.Where(s =>
-                    EF.Functions.Like(s.title, like, escapeChar)
-                    || (s.desc != null && EF.Functions.Like(s.desc, like, escapeChar))
-                    || EF.Functions.Like(s.author.account.username, like, escapeChar)
+                    EF.Functions.Like(s.title, likePattern, escapeChar) ||
+                    (s.desc != null && EF.Functions.Like(s.desc, likePattern, escapeChar)) ||
+                    EF.Functions.Like(s.author.account.username, likePattern, escapeChar)
                 );
             }
 
