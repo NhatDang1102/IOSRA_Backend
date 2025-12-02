@@ -727,7 +727,6 @@ CREATE TABLE IF NOT EXISTS chapter_mood_tracks (
   title           VARCHAR(128) NOT NULL,
   duration_seconds INT NOT NULL DEFAULT 30,
   storage_path    VARCHAR(512) NOT NULL,
-  public_url      VARCHAR(512) NOT NULL,
   created_at      DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at      DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (track_id),

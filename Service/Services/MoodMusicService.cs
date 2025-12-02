@@ -80,7 +80,6 @@ namespace Service.Services
                 title = string.IsNullOrWhiteSpace(request.Title) ? $"{mood.mood_name} ambience" : request.Title.Trim(),
                 duration_seconds = DefaultDurationSeconds,
                 storage_path = key,
-                public_url = _storage.GetPublicUrl(key),
                 created_at = TimezoneConverter.VietnamNow,
                 updated_at = now
             };
@@ -145,7 +144,7 @@ namespace Service.Services
             MoodName = track.mood_codeNavigation?.mood_name ?? track.mood_code,
             Title = track.title,
             DurationSeconds = track.duration_seconds,
-            PublicUrl = string.IsNullOrWhiteSpace(track.storage_path) ? track.public_url : track.storage_path,
+            PublicUrl = track.storage_path,
             CreatedAt = track.created_at
         };
 

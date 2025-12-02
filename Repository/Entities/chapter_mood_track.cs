@@ -23,9 +23,6 @@ public partial class chapter_mood_track
     [StringLength(512)]
     public string storage_path { get; set; } = null!;
 
-    [StringLength(512)]
-    public string public_url { get; set; } = null!;
-
     [Column(TypeName = "datetime")]
     public DateTime created_at { get; set; }
 
