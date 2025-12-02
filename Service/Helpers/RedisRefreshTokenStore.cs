@@ -29,11 +29,16 @@ namespace Service.Helpers
             var tokenId = Guid.NewGuid();
             var token = Encode(accountId, tokenId);
             var key = BuildKey(tokenId);
+
+            var vietnamNow = TimezoneConverter.VietnamNow;
+            var issuedAt = new DateTimeOffset(vietnamNow, TimezoneConverter.VietnamOffset);
+            var expiresAt = issuedAt.Add(_lifetime);
+
             var payload = new RefreshPayload
             {
                 AccountId = accountId,
-                IssuedAt = TimezoneConverter.VietnamNow,
-                ExpiresAt = TimezoneConverter.VietnamNow.Add(_lifetime)
+                IssuedAt = issuedAt,
+                ExpiresAt = expiresAt
             };
 
             await _db.StringSetAsync(key, JsonSerializer.Serialize(payload), _lifetime);
@@ -41,7 +46,7 @@ namespace Service.Helpers
             return new RefreshTokenIssueResult
             {
                 Token = token,
-                ExpiresAt = payload.ExpiresAt
+                ExpiresAt = payload.ExpiresAt.DateTime
             };
         }
 
@@ -83,7 +88,7 @@ namespace Service.Helpers
             {
                 AccountId = payload.AccountId,
                 TokenId = tokenId,
-                ExpiresAt = payload.ExpiresAt
+                ExpiresAt = payload.ExpiresAt.DateTime
             };
         }
 
@@ -136,8 +141,8 @@ namespace Service.Helpers
         private class RefreshPayload
         {
             public Guid AccountId { get; set; }
-            public DateTime IssuedAt { get; set; }
-            public DateTime ExpiresAt { get; set; }
+            public DateTimeOffset IssuedAt { get; set; }
+            public DateTimeOffset ExpiresAt { get; set; }
         }
     }
 }

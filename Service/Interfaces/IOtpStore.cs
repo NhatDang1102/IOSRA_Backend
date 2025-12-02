@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Threading.Tasks;
 
-namespace Service.Helpers
+namespace Service.Interfaces
 {
     public interface IOtpStore
     {

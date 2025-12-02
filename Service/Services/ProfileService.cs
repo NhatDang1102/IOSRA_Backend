@@ -1,4 +1,4 @@
-using Contract.DTOs.Request.Profile;
+﻿using Contract.DTOs.Request.Profile;
 using Contract.DTOs.Response.Subscription;
 using Microsoft.AspNetCore.Http;
 using Repository.Interfaces;
@@ -16,6 +16,7 @@ namespace Service.Implementations
 {
     public class ProfileService : IProfileService
     {
+        //các giá trị đc nhận trong field gender
         private static readonly HashSet<string> AllowedGenderInput = new(StringComparer.OrdinalIgnoreCase)
         { "M", "F", "other", "unspecified" };
 
