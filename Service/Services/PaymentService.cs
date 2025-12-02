@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Contract.DTOs.Request.Payment;
@@ -35,6 +36,14 @@ public class PaymentService : IPaymentService
 
     public Task<CreatePaymentLinkResponse> CreateTopupLinkAsync(Guid accountId, ulong amount, CancellationToken ct = default)
         => CreateDiaTopupLinkAsync(accountId, amount, ct);
+
+    public async Task<IReadOnlyList<DiaTopupPricingResponse>> GetDiaTopupPricingsAsync(CancellationToken ct = default)
+    {
+        var entries = await _billingRepository.GetDiaTopupPricingsAsync(ct);
+        return entries
+            .Select(MapDiaPricing)
+            .ToArray();
+    }
 
     public Task<CreatePaymentLinkResponse> CreateSubscriptionLinkAsync(Guid accountId, CreateSubscriptionPaymentLinkRequest request, CancellationToken ct = default)
         => CreateSubscriptionPaymentLinkAsync(accountId, request, ct);
@@ -288,6 +297,16 @@ public class PaymentService : IPaymentService
 
         return true;
     }
+
+    private static DiaTopupPricingResponse MapDiaPricing(topup_pricing entity)
+        => new DiaTopupPricingResponse
+        {
+            PricingId = entity.pricing_id,
+            AmountVnd = entity.amount_vnd,
+            DiamondGranted = entity.diamond_granted,
+            IsActive = entity.is_active,
+            UpdatedAt = entity.updated_at
+        };
 
     private static PaymentData BuildPaymentData(long orderCode, int amount, string description, ItemData item)
     {

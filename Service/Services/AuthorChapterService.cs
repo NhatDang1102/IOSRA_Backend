@@ -209,6 +209,12 @@ namespace Service.Services
                 throw new AppException("InvalidChapterState", "Only draft chapters can be submitted. Create a new chapter if the previous one was rejected.", 400);
             }
 
+            var hasEarlierDraft = await _chapterRepository.HasDraftChapterBeforeAsync(story.story_id, chapter.created_at, chapter.chapter_id, ct);
+            if (hasEarlierDraft)
+            {
+                throw new AppException("ChapterSubmissionOrder", "Please submit your draft chapters in the order they were created.", 400);
+            }
+
             if (string.IsNullOrWhiteSpace(chapter.content_url))
             {
                 throw new InvalidOperationException("Chapter content is missing.");

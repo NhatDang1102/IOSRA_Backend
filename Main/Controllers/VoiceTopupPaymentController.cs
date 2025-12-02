@@ -19,6 +19,14 @@ namespace Main.Controllers
             _logger = logger;
         }
 
+        [HttpGet("pricing")]
+        [AllowAnonymous]
+        public async Task<IActionResult> GetVoicePricing(CancellationToken ct)
+        {
+            var packages = await _voicePaymentService.GetVoiceTopupPricingsAsync(ct);
+            return Ok(packages);
+        }
+
         [HttpPost("create-link")]
         public async Task<IActionResult> CreateLink([FromBody] CreateVoicePaymentLinkRequest request, CancellationToken ct)
         {

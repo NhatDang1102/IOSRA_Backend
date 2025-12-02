@@ -1,4 +1,6 @@
 using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
@@ -17,6 +19,13 @@ namespace Repository.Repositories
 
         public Task<topup_pricing?> GetDiaTopupPricingAsync(ulong amount, CancellationToken ct = default)
             => _db.topup_pricings.AsNoTracking().FirstOrDefaultAsync(p => p.amount_vnd == amount && p.is_active, ct);
+
+        public Task<List<topup_pricing>> GetDiaTopupPricingsAsync(CancellationToken ct = default)
+            => _db.topup_pricings
+                  .AsNoTracking()
+                  .Where(p => p.is_active)
+                  .OrderBy(p => p.amount_vnd)
+                  .ToListAsync(ct);
 
         public async Task<dia_wallet> GetOrCreateDiaWalletAsync(Guid accountId, CancellationToken ct = default)
         {
@@ -73,6 +82,13 @@ namespace Repository.Repositories
 
         public Task<voice_topup_pricing?> GetVoiceTopupPricingAsync(ulong amount, CancellationToken ct = default)
             => _db.voice_topup_pricings.AsNoTracking().FirstOrDefaultAsync(p => p.amount_vnd == amount && p.is_active, ct);
+
+        public Task<List<voice_topup_pricing>> GetVoiceTopupPricingsAsync(CancellationToken ct = default)
+            => _db.voice_topup_pricings
+                  .AsNoTracking()
+                  .Where(p => p.is_active)
+                  .OrderBy(p => p.amount_vnd)
+                  .ToListAsync(ct);
 
         public async Task<voice_wallet> GetOrCreateVoiceWalletAsync(Guid accountId, CancellationToken ct = default)
         {

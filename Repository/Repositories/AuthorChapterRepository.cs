@@ -91,6 +91,13 @@ namespace Repository.Repositories
             return (max ?? 0) + 1;
         }
 
+        public Task<bool> HasDraftChapterBeforeAsync(Guid storyId, DateTime createdAt, Guid currentChapterId, CancellationToken ct = default)
+            => _db.chapter.AnyAsync(c =>
+                    c.story_id == storyId
+                    && c.chapter_id != currentChapterId
+                    && c.status == "draft"
+                    && c.created_at < createdAt, ct);
+
         public async Task AddContentApproveAsync(content_approve entity, CancellationToken ct = default)
         {
             EnsureId(entity, nameof(content_approve.review_id));

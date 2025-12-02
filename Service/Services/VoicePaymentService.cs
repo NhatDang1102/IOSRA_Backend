@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Contract.DTOs.Response.Payment;
@@ -70,6 +71,14 @@ namespace Service.Services
                 CheckoutUrl = result.checkoutUrl,
                 TransactionId = orderCode.ToString()
             };
+        }
+
+        public async Task<IReadOnlyList<VoiceTopupPricingResponse>> GetVoiceTopupPricingsAsync(CancellationToken ct = default)
+        {
+            var entries = await _billingRepository.GetVoiceTopupPricingsAsync(ct);
+            return entries
+                .Select(MapVoicePricing)
+                .ToArray();
         }
 
         public async Task<bool> HandleWebhookAsync(WebhookType webhookBody, CancellationToken ct = default)
@@ -179,7 +188,16 @@ namespace Service.Services
 
         return true;
     }
-}
+        private static VoiceTopupPricingResponse MapVoicePricing(voice_topup_pricing entity)
+            => new VoiceTopupPricingResponse
+            {
+                PricingId = entity.pricing_id,
+                AmountVnd = entity.amount_vnd,
+                CharsGranted = entity.chars_granted,
+                IsActive = entity.is_active,
+                UpdatedAt = entity.updated_at
+            };
+    }
 }
 
 

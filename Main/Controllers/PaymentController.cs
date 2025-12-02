@@ -46,6 +46,14 @@ public class PaymentController : AppControllerBase
         }
     }
 
+    [HttpGet("pricing")]
+    [AllowAnonymous]
+    public async Task<IActionResult> GetDiaPricing(CancellationToken ct)
+    {
+        var packages = await _paymentService.GetDiaTopupPricingsAsync(ct);
+        return Ok(packages);
+    }
+
     [HttpPost("create-subscription-link")]
     [Authorize]
     public async Task<IActionResult> CreateSubscriptionLink([FromBody] CreateSubscriptionPaymentLinkRequest request, CancellationToken ct = default)

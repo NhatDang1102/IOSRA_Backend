@@ -15,6 +15,7 @@ namespace Repository.Interfaces
         Task<language_list?> GetLanguageByCodeAsync(string code, CancellationToken ct = default);
         Task<bool> StoryHasPendingChapterAsync(Guid storyId, CancellationToken ct = default);
         Task<int> GetNextChapterNumberAsync(Guid storyId, CancellationToken ct = default);
+        Task<bool> HasDraftChapterBeforeAsync(Guid storyId, DateTime createdAt, Guid currentChapterId, CancellationToken ct = default);
 
         Task AddContentApproveAsync(content_approve entity, CancellationToken ct = default);
         Task<IReadOnlyList<content_approve>> GetContentApprovalsForChapterAsync(Guid chapterId, CancellationToken ct = default);

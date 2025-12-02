@@ -30,6 +30,12 @@ namespace Service.Services
         {
             "novel", "short", "super_short"
         };
+        private static readonly Dictionary<string, int> CompletionChapterRequirements = new(StringComparer.OrdinalIgnoreCase)
+        {
+            ["super_short"] = 1,
+            ["short"] = 6,
+            ["novel"] = 21
+        };
 
         public AuthorStoryService(
             IAuthorStoryRepository storyRepository,
@@ -261,9 +267,14 @@ namespace Service.Services
             }
 
             var chapterCount = await _storyRepository.GetChapterCountAsync(story.story_id, ct);
-            if (chapterCount < 1)
+            var plan = story.length_plan ?? "super_short";
+            if (!CompletionChapterRequirements.TryGetValue(plan, out var requiredChapters))
             {
-                throw new AppException("StoryInsufficientChapters", "Story needs at least one chapter before completion.", 400);
+                requiredChapters = 1;
+            }
+            if (chapterCount < requiredChapters)
+            {
+                throw new AppException("StoryInsufficientChapters", $"Stories with length plan '{plan}' require at least {requiredChapters} chapters before completion.", 400);
             }
 
             var publishedAt = story.published_at ?? await _storyRepository.GetStoryPublishedAtAsync(story.story_id, ct);
