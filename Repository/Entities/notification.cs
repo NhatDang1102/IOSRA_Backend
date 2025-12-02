@@ -4,7 +4,7 @@ using System.ComponentModel.DataAnnotations.Schema;
 
 namespace Repository.Entities;
 
-[Table("notifications")]
+[Table("notification")]
 public partial class notification
 {
     [Key]

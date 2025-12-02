@@ -21,7 +21,7 @@ namespace Repository.Repositories
 
         public async Task<notification> AddAsync(notification entity, CancellationToken ct = default)
         {
-            _db.notifications.Add(entity);
+            _db.notification.Add(entity);
             await _db.SaveChangesAsync(ct);
             return entity;
         }
@@ -31,7 +31,7 @@ namespace Repository.Repositories
             if (page <= 0) page = 1;
             if (pageSize <= 0) pageSize = 20;
 
-            var query = _db.notifications
+            var query = _db.notification
                 .AsNoTracking()
                 .Where(n => n.recipient_id == recipientId);
 
@@ -47,7 +47,7 @@ namespace Repository.Repositories
 
         public async Task<int> MarkReadAsync(Guid recipientId, Guid notificationId, CancellationToken ct = default)
         {
-            var entity = await _db.notifications
+            var entity = await _db.notification
                 .FirstOrDefaultAsync(n => n.notification_id == notificationId && n.recipient_id == recipientId, ct);
 
             if (entity == null || entity.is_read)
@@ -56,13 +56,13 @@ namespace Repository.Repositories
             }
 
             entity.is_read = true;
-            _db.notifications.Update(entity);
+            _db.notification.Update(entity);
             return await _db.SaveChangesAsync(ct);
         }
 
         public async Task<int> MarkAllReadAsync(Guid recipientId, CancellationToken ct = default)
         {
-            var query = _db.notifications.Where(n => n.recipient_id == recipientId && !n.is_read);
+            var query = _db.notification.Where(n => n.recipient_id == recipientId && !n.is_read);
             var affected = await query.ExecuteUpdateAsync(setters => setters.SetProperty(n => n.is_read, true), ct);
             return affected;
         }

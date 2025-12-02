@@ -36,7 +36,7 @@ namespace Repository.DBContext
         public virtual DbSet<topup_pricing> topup_pricings { get; set; } = null!;
         public virtual DbSet<favorite_story> favorite_stories { get; set; } = null!;
         public virtual DbSet<follow> follows { get; set; } = null!;
-        public virtual DbSet<notification> notifications { get; set; } = null!;
+        public virtual DbSet<notification> notification { get; set; } = null!;
         public virtual DbSet<chapter_price_rule> chapter_price_rules { get; set; } = null!;
         public virtual DbSet<language_list> language_lists { get; set; } = null!;
         public virtual DbSet<op_request> op_request { get; set; } = null!;
