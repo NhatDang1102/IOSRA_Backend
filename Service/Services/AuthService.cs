@@ -252,13 +252,15 @@ namespace Service.Implementations
 
         private static LoginResponse BuildLoginResponse(account acc, List<string> roles, JwtTokenResult token)
         {
+            var vietnamExpires = DateTime.SpecifyKind(token.ExpiresAt, DateTimeKind.Unspecified);
+
             return new LoginResponse
             {
                 AccountId = acc.account_id,
                 Username = acc.username,
                 Email = acc.email,
                 Token = token.Token,
-                TokenExpiresAt = token.ExpiresAt,
+                TokenExpiresAt = vietnamExpires,
                 Roles = roles
             };
         }
