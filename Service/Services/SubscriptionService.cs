@@ -4,10 +4,9 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Contract.DTOs.Response.Subscription;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
-using Repository.DBContext;
 using Repository.Entities;
+using Repository.Interfaces;
 using Repository.Utils;
 using Service.Exceptions;
 using Service.Interfaces;
@@ -16,20 +15,20 @@ namespace Service.Services
 {
     public class SubscriptionService : ISubscriptionService
     {
-        private readonly AppDbContext _db;
+        private readonly ISubscriptionRepository _repository;
         private readonly ILogger<SubscriptionService> _logger;
 
-        public SubscriptionService(AppDbContext db, ILogger<SubscriptionService> logger)
+        public SubscriptionService(ISubscriptionRepository repository, ILogger<SubscriptionService> logger)
         {
-            _db = db;
+            _repository = repository;
             _logger = logger;
         }
 
         public async Task<IReadOnlyList<SubscriptionPlanResponse>> GetPlansAsync(CancellationToken ct = default)
         {
-            var plans = await _db.subscription_plans
-                .AsNoTracking()
-                .OrderBy(p => p.price_vnd)
+            var plans = await _repository.GetPlansAsync(ct);
+
+            return plans
                 .Select(p => new SubscriptionPlanResponse
                 {
                     PlanCode = p.plan_code,
@@ -38,19 +37,13 @@ namespace Service.Services
                     DurationDays = p.duration_days,
                     DailyDias = p.daily_dias
                 })
-                .ToListAsync(ct);
-
-            return plans;
+                .ToList();
         }
 
         public async Task<SubscriptionStatusResponse> GetStatusAsync(Guid accountId, CancellationToken ct = default)
         {
             var now = TimezoneConverter.VietnamNow;
-            var subscription = await _db.subcription
-                .Include(s => s.plan_codeNavigation)
-                .Where(s => s.user_id == accountId && s.end_at >= now)
-                .OrderByDescending(s => s.end_at)
-                .FirstOrDefaultAsync(ct);
+            var subscription = await _repository.GetLatestActiveAsync(accountId, now, ct);
 
             if (subscription == null)
             {
@@ -82,9 +75,7 @@ namespace Service.Services
         public async Task<SubscriptionClaimResponse> ClaimDailyAsync(Guid accountId, CancellationToken ct = default)
         {
             var now = TimezoneConverter.VietnamNow;
-            var subscription = await _db.subcription
-                .Include(s => s.plan_codeNavigation)
-                .FirstOrDefaultAsync(s => s.user_id == accountId && s.end_at >= now, ct);
+            var subscription = await _repository.GetLatestActiveAsync(accountId, now, ct);
 
             if (subscription == null)
             {
@@ -98,7 +89,7 @@ namespace Service.Services
                 throw new AppException("SubscriptionClaimed", "Bạn đã nhận kc hnay rồi.", 400);
             }
 
-            var wallet = await _db.dia_wallets.FirstOrDefaultAsync(w => w.account_id == accountId, ct);
+            var wallet = await _repository.GetWalletAsync(accountId, ct);
             if (wallet == null)
             {
                 wallet = new dia_wallet
@@ -109,7 +100,7 @@ namespace Service.Services
                     locked_coin = 0,
                     updated_at = now
                 };
-                _db.dia_wallets.Add(wallet);
+                await _repository.AddWalletAsync(wallet, ct);
             }
 
             wallet.balance_coin += plan.daily_dias;
@@ -125,12 +116,12 @@ namespace Service.Services
                 ref_id = subscription.sub_id,
                 created_at = now
             };
-            _db.wallet_payments.Add(walletPayment);
+            _repository.AddWalletPayment(walletPayment);
 
             subscription.last_claim_date = today;
             subscription.claimed_today = true;
 
-            await _db.SaveChangesAsync(ct);
+            await _repository.SaveChangesAsync(ct);
 
             return new SubscriptionClaimResponse
             {
@@ -144,11 +135,11 @@ namespace Service.Services
 
         public async Task ActivateSubscriptionAsync(Guid accountId, string planCode, CancellationToken ct = default)
         {
-            var plan = await _db.subscription_plans.FirstOrDefaultAsync(p => p.plan_code == planCode, ct)
+            var plan = await _repository.GetPlanAsync(planCode, ct)
                        ?? throw new AppException("SubscriptionPlanNotFound", "Gói subscription không tồn tại.", 404);
 
             var now = TimezoneConverter.VietnamNow;
-            var subscription = await _db.subcription.FirstOrDefaultAsync(s => s.user_id == accountId && s.plan_code == planCode, ct);
+            var subscription = await _repository.GetByPlanAsync(accountId, planCode, ct);
 
             if (subscription == null)
             {
@@ -162,7 +153,7 @@ namespace Service.Services
                     last_claim_date = null,
                     claimed_today = false
                 };
-                _db.subcription.Add(subscription);
+                await _repository.AddSubscriptionAsync(subscription, ct);
             }
             else
             {
@@ -180,7 +171,7 @@ namespace Service.Services
                 subscription.claimed_today = false;
             }
 
-            await _db.SaveChangesAsync(ct);
+            await _repository.SaveChangesAsync(ct);
         }
     }
 }

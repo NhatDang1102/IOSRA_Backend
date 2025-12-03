@@ -43,14 +43,14 @@ namespace Service.Implementations
             {
                 return null;
             }
-
+            //convert input trc khi đẩy sang db
             return input.ToLowerInvariant() switch
             {
                 "m" => "male",
                 "f" => "female",
                 "other" => "other",
                 "unspecified" => "unspecified",
-                _ => throw new AppException("ValidationFailed", "Gender must be one of M, F, other, or unspecified.", 400)
+                _ => throw new AppException("ValidationFailed", "Gender phải là M/F/other/unspecified.", 400)
             };
         }
 
@@ -68,14 +68,17 @@ namespace Service.Implementations
 
         public async Task<ProfileResponse> GetAsync(Guid accountId, CancellationToken ct = default)
         {
+            //tìm acc trong db
             var acc = await _profileRepo.GetAccountByIdAsync(accountId, ct)
-                      ?? throw new AppException("AccountNotFound", "Account was not found.", 404);
-
+                      ?? throw new AppException("AccountNotFound", "Không tìm thấy tài khoản.", 404);
+            //tìm acc xong thì tìm profile reader
             var reader = await _profileRepo.GetReaderByIdAsync(accountId, ct)
-                         ?? throw new AppException("ReaderProfileMissing", "Reader profile was not found.", 404);
+                         ?? throw new AppException("ReaderProfileMissing", "Không tìm thấy profile Reader.", 404);
 
+            //check xem acc đó phải author ko
             var author = acc.author;
             AuthorProfileSummary? authorSummary = null;
+            //nếu đúng là author -> response gắn thêm profile bảng author
             if (author is not null)
             {
                 authorSummary = new AuthorProfileSummary
@@ -112,11 +115,14 @@ namespace Service.Implementations
 
         public async Task<ProfileWalletResponse> GetWalletAsync(Guid accountId, CancellationToken ct = default)
         {
+            //tìm acc trong db account
             var account = await _profileRepo.GetAccountByIdAsync(accountId, ct)
-                          ?? throw new AppException("AccountNotFound", "Account was not found.", 404);
+                          ?? throw new AppException("AccountNotFound", "Không tìm thấy tài khoản.", 404);
 
             var diaWallet = account.dia_wallet;
             var voiceWallet = account.voice_wallet;
+
+            //check coi có phải author ko
             var isAuthor = account.author != null;
 
             var subscription = await _subscriptionService.GetStatusAsync(accountId, ct);
@@ -132,11 +138,12 @@ namespace Service.Implementations
 
         public async Task<ProfileResponse> UpdateAsync(Guid accountId, ProfileUpdateRequest req, CancellationToken ct = default)
         {
+            //check validation gender field
             if (req.Gender != null && !AllowedGenderInput.Contains(req.Gender))
             {
-                throw new AppException("ValidationFailed", "Gender must be one of M, F, other, or unspecified.", 400);
+                throw new AppException("ValidationFailed", "Gender phải là M/F/other/unspecified.", 400);
             }
-
+                
             var dbGender = ToDbGender(req.Gender);
             await _profileRepo.UpdateReaderProfileAsync(accountId, req.Bio, dbGender, req.Birthday, ct);
 

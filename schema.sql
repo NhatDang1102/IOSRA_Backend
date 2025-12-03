@@ -7,7 +7,7 @@ CREATE DATABASE IF NOT EXISTS IOSRA_DB
   COLLATE utf8mb4_0900_ai_ci;
 USE IOSRA_DB;
 
--- ===================== Core accounts & roles =====================
+-- ===================== Core accounts & role =====================
 CREATE TABLE account (
   account_id      CHAR(36) NOT NULL,
   username        VARCHAR(50) NOT NULL,
@@ -25,7 +25,7 @@ CREATE TABLE account (
   UNIQUE KEY ux_account_email (email)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
-CREATE TABLE roles (
+CREATE TABLE role (
   role_id     CHAR(36) NOT NULL,
   role_code   VARCHAR(32) NOT NULL,
   role_name   VARCHAR(64) NOT NULL,
@@ -33,7 +33,10 @@ CREATE TABLE roles (
   UNIQUE KEY ux_roles_code (role_code)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
-CREATE TABLE account_roles (
+INSERT INTO `role` VALUES ('a781ee08-b7bf-11f0-9007-e27119d7eafa','reader','Reader'),('a781f21b-b7bf-11f0-9007-e27119d7eafa','author','Author'),('a781f323-b7bf-11f0-9007-e27119d7eafa','cmod','Content Moderator'),('a781f390-b7bf-11f0-9007-e27119d7eafa','omod','Operation Moderator'),('a781f3ef-b7bf-11f0-9007-e27119d7eafa','admin','Administrator');
+
+
+CREATE TABLE account_role (
   account_id  CHAR(36) NOT NULL,
   role_id     CHAR(36) NOT NULL,
   created_at  DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -43,7 +46,7 @@ CREATE TABLE account_roles (
   CONSTRAINT fk_account_roles_account FOREIGN KEY (account_id)
     REFERENCES account(account_id) ON DELETE CASCADE ON UPDATE CASCADE,
   CONSTRAINT fk_account_roles_role FOREIGN KEY (role_id)
-    REFERENCES roles(role_id) ON DELETE RESTRICT ON UPDATE CASCADE
+    REFERENCES role(role_id) ON DELETE RESTRICT ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 -- ===================== Personas =====================
@@ -55,6 +58,9 @@ CREATE TABLE author_rank (
   PRIMARY KEY (rank_id),
   UNIQUE KEY ux_author_rank_name (rank_name)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+INSERT INTO `author_rank` VALUES ('a7814236-b7bf-11f0-9007-e27119d7eafa','Casual',0.00,0),('a7815277-b7bf-11f0-9007-e27119d7eafa','Bronze',50.00,5),('a781563b-b7bf-11f0-9007-e27119d7eafa','Gold',60.00,10),('a7815711-b7bf-11f0-9007-e27119d7eafa','Diamond',70.00,15);
+
 
 CREATE TABLE author (
   account_id        CHAR(36) NOT NULL,
@@ -138,7 +144,7 @@ CREATE TABLE story (
     REFERENCES author(account_id) ON DELETE RESTRICT ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
-CREATE TABLE tags (
+CREATE TABLE tag (
   tag_id    CHAR(36) NOT NULL,
   tag_name  VARCHAR(64) NOT NULL,
   PRIMARY KEY (tag_id),
@@ -166,7 +172,7 @@ CREATE TABLE voice_list (
   UNIQUE KEY ux_voice_code (voice_code)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
-CREATE TABLE chapters (
+CREATE TABLE chapter (
   chapter_id   CHAR(36) NOT NULL,
   story_id     CHAR(36) NOT NULL,
   chapter_no   INT UNSIGNED NOT NULL,
@@ -193,7 +199,7 @@ CREATE TABLE chapters (
     REFERENCES language_list(lang_id) ON DELETE RESTRICT ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
-CREATE TABLE story_tags (
+CREATE TABLE story_tag (
   story_id   CHAR(36) NOT NULL,
   tag_id     CHAR(36) NOT NULL,
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -203,7 +209,7 @@ CREATE TABLE story_tags (
   CONSTRAINT fk_story_tags_story FOREIGN KEY (story_id)
     REFERENCES story(story_id) ON DELETE CASCADE ON UPDATE CASCADE,
   CONSTRAINT fk_story_tags_tag FOREIGN KEY (tag_id)
-    REFERENCES tags(tag_id) ON DELETE RESTRICT ON UPDATE CASCADE
+    REFERENCES tag(tag_id) ON DELETE RESTRICT ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 CREATE TABLE content_approve (
@@ -224,7 +230,7 @@ CREATE TABLE content_approve (
   CONSTRAINT fk_cappr_story FOREIGN KEY (story_id)
     REFERENCES story(story_id) ON DELETE CASCADE ON UPDATE CASCADE,
   CONSTRAINT fk_cappr_chapter FOREIGN KEY (chapter_id)
-    REFERENCES chapters(chapter_id) ON DELETE CASCADE ON UPDATE CASCADE,
+    REFERENCES chapter(chapter_id) ON DELETE CASCADE ON UPDATE CASCADE,
   CONSTRAINT fk_cappr_moderator FOREIGN KEY (moderator_id)
     REFERENCES ContentMod(account_id) ON DELETE SET NULL ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
@@ -248,7 +254,7 @@ CREATE TABLE chapter_comment (
   CONSTRAINT fk_cmt_reader FOREIGN KEY (reader_id)
     REFERENCES reader(account_id) ON DELETE CASCADE ON UPDATE CASCADE,
   CONSTRAINT fk_cmt_chapter FOREIGN KEY (chapter_id)
-    REFERENCES chapters(chapter_id) ON DELETE CASCADE ON UPDATE CASCADE,
+    REFERENCES chapter(chapter_id) ON DELETE CASCADE ON UPDATE CASCADE,
   CONSTRAINT fk_cmt_story FOREIGN KEY (story_id)
     REFERENCES story(story_id) ON DELETE CASCADE ON UPDATE CASCADE,
   CONSTRAINT fk_cmt_parent FOREIGN KEY (parent_comment_id)
@@ -272,6 +278,30 @@ CREATE TABLE chapter_comment_reaction (
     REFERENCES reader(account_id) ON DELETE CASCADE ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
+CREATE TABLE chapter_mood (
+  mood_code varchar(32) NOT NULL,
+  mood_name varchar(64) NOT NULL,
+  description varchar(255) DEFAULT NULL,
+  created_at datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (mood_code)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+CREATE TABLE chapter_mood_track (
+  track_id         CHAR(36) NOT NULL,
+  mood_code        VARCHAR(32) NOT NULL,
+  title            VARCHAR(128) NOT NULL,
+  duration_seconds INT NOT NULL DEFAULT 30,
+  storage_path     VARCHAR(512) NOT NULL,
+  created_at       DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at       DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (track_id),
+  KEY ix_mood_track_mood (mood_code),
+  CONSTRAINT fk_mood_track_mood FOREIGN KEY (mood_code)
+    REFERENCES chapter_mood(mood_code) ON DELETE CASCADE ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+
 CREATE TABLE story_rating (
   story_id   CHAR(36) NOT NULL,
   reader_id  CHAR(36) NOT NULL,
@@ -286,7 +316,7 @@ CREATE TABLE story_rating (
     REFERENCES reader(account_id) ON DELETE CASCADE ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
-  CREATE TABLE chapter_localizations (
+  CREATE TABLE chapter_localization (
     chapter_id CHAR(36) NOT NULL,
     lang_id    CHAR(36) NOT NULL,
     word_count INT UNSIGNED NOT NULL DEFAULT 0,
@@ -294,12 +324,12 @@ CREATE TABLE story_rating (
     PRIMARY KEY (chapter_id, lang_id),
     KEY fk_chloc_lang (lang_id),
     CONSTRAINT fk_chloc_chapter FOREIGN KEY (chapter_id)
-      REFERENCES chapters(chapter_id) ON DELETE CASCADE ON UPDATE CASCADE,
+      REFERENCES chapter(chapter_id) ON DELETE CASCADE ON UPDATE CASCADE,
     CONSTRAINT fk_chloc_lang FOREIGN KEY (lang_id)
       REFERENCES language_list(lang_id) ON DELETE RESTRICT ON UPDATE CASCADE
   ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
-  CREATE TABLE chapter_voices (
+  CREATE TABLE chapter_voice (
       chapter_id   CHAR(36) NOT NULL,
       voice_id     CHAR(36) NOT NULL,
       storage_path VARCHAR(512) NULL,
@@ -312,7 +342,7 @@ CREATE TABLE story_rating (
       PRIMARY KEY (chapter_id, voice_id),
     KEY fk_chvoice_voice (voice_id),
     CONSTRAINT fk_chvoice_chapter FOREIGN KEY (chapter_id)
-      REFERENCES chapters(chapter_id) ON DELETE CASCADE ON UPDATE CASCADE,
+      REFERENCES chapter(chapter_id) ON DELETE CASCADE ON UPDATE CASCADE,
     CONSTRAINT fk_chvoice_voice FOREIGN KEY (voice_id)
       REFERENCES voice_list(voice_id) ON DELETE CASCADE ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
@@ -327,7 +357,7 @@ CREATE TABLE chapter_purchase_log (
   UNIQUE KEY ux_purchase_unique (chapter_id, account_id),
   KEY ix_purchase_account (account_id),
   CONSTRAINT fk_cpl_chapter FOREIGN KEY (chapter_id)
-    REFERENCES chapters(chapter_id) ON DELETE CASCADE ON UPDATE CASCADE,
+    REFERENCES chapter(chapter_id) ON DELETE CASCADE ON UPDATE CASCADE,
   CONSTRAINT fk_cpl_account FOREIGN KEY (account_id)
     REFERENCES account(account_id) ON DELETE CASCADE ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
@@ -359,7 +389,7 @@ CREATE TABLE favorite_story (
     REFERENCES story(story_id) ON DELETE CASCADE ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
-CREATE TABLE notifications (
+CREATE TABLE notification (
   notification_id CHAR(36) NOT NULL,
   recipient_id    CHAR(36) NOT NULL,
   type            ENUM('op_request','story_decision','chapter_decision','new_story','new_chapter','general','new_follower','chapter_comment','story_rating','strike_warning','author_rank_upgrade','subscription_reminder','comment_reply','chapter_purchase','voice_purchase') NOT NULL,
@@ -374,7 +404,7 @@ CREATE TABLE notifications (
     REFERENCES account(account_id) ON DELETE CASCADE ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
-CREATE TABLE story_weekly_views (
+CREATE TABLE story_weekly_view (
   story_weekly_view_id CHAR(36) NOT NULL,
   story_id             CHAR(36) NOT NULL,
   week_start_utc       DATETIME NOT NULL,
@@ -410,6 +440,9 @@ CREATE TABLE topup_pricing (
   UNIQUE KEY ux_topup_amount (amount_vnd)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
+INSERT INTO `topup_pricing` VALUES ('530b368b-c2d6-11f0-831d-be03b0a058d6',2000,550,1,'2025-12-02 08:14:33'),('530b3bc7-c2d6-11f0-831d-be03b0a058d6',3000,1150,1,'2025-12-02 08:14:33'),('530b3fab-c2d6-11f0-831d-be03b0a058d6',4000,2400,1,'2025-12-02 08:14:34');
+
+
 CREATE TABLE voice_wallet (
   wallet_id    CHAR(36) NOT NULL,
   account_id   CHAR(36) NOT NULL,
@@ -431,7 +464,22 @@ CREATE TABLE voice_wallet (
     UNIQUE KEY ux_voice_topup_amount (amount_vnd)
   ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
-  CREATE TABLE voice_price_rule (
+INSERT INTO `voice_topup_pricing` VALUES ('4ff48f2a-c5f2-11f0-a5ae-4ac6068f4a77',5000,10000,1,'2025-12-02 12:44:18'),('4ff4ae7d-c5f2-11f0-a5ae-4ac6068f4a77',6000,21500,1,'2025-12-02 12:44:43');
+
+
+  CREATE TABLE chapter_price_rule (
+  rule_id char(36) NOT NULL,
+  min_word_count int unsigned NOT NULL,
+  max_word_count int unsigned DEFAULT NULL,
+  dias_price int unsigned NOT NULL,
+  created_at datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (rule_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+INSERT INTO `chapter_price_rule` VALUES ('867e4963-be24-11f0-9007-e27119d7eafa',0,3000,5,'2025-11-10 11:00:53'),('867e5120-be24-11f0-9007-e27119d7eafa',3001,4000,6,'2025-11-10 11:00:53'),('867e5246-be24-11f0-9007-e27119d7eafa',4001,5000,7,'2025-11-10 11:00:53'),('867e528a-be24-11f0-9007-e27119d7eafa',5001,6000,8,'2025-11-10 11:00:53'),('867e52b9-be24-11f0-9007-e27119d7eafa',6001,7000,9,'2025-11-10 11:00:53'),('867e52e8-be24-11f0-9007-e27119d7eafa',7001,NULL,10,'2025-11-10 11:00:53');
+
+
+CREATE TABLE voice_price_rule (
     rule_id        CHAR(36) NOT NULL,
     min_char_count INT UNSIGNED NOT NULL,
     max_char_count INT UNSIGNED NULL,
@@ -440,6 +488,9 @@ CREATE TABLE voice_wallet (
     PRIMARY KEY (rule_id),
     KEY ix_voice_price_min (min_char_count)
   ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+INSERT INTO `voice_price_rule` VALUES ('9f3fb829-4d70-4fe2-957b-0d4b6f3be7cc',5001,10000,10,'2025-11-25 11:01:19'),('a3f3e55e-90de-4d63-9ef2-6b1744931fcb',1501,5000,7,'2025-11-25 11:01:19'),('bb65ce30-0bdd-4f33-9f2d-7c28d21a5e3b',0,1500,5,'2025-11-25 11:01:19'),('c4af9db3-1dde-4b14-9b94-0888405c81f0',10001,NULL,15,'2025-11-25 11:01:19');
+
 
 CREATE TABLE voice_payment (
   topup_id        CHAR(36) NOT NULL,
@@ -482,7 +533,7 @@ CREATE TABLE voice_payment (
     KEY ix_voice_purchase_chapter (chapter_id),
     KEY ix_voice_purchase_account (account_id),
     CONSTRAINT fk_voice_purchase_chapter FOREIGN KEY (chapter_id)
-      REFERENCES chapters(chapter_id) ON DELETE CASCADE ON UPDATE CASCADE,
+      REFERENCES chapter(chapter_id) ON DELETE CASCADE ON UPDATE CASCADE,
     CONSTRAINT fk_voice_purchase_account FOREIGN KEY (account_id)
       REFERENCES account(account_id) ON DELETE CASCADE ON UPDATE CASCADE
   ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
@@ -504,7 +555,7 @@ CREATE TABLE voice_payment (
     CONSTRAINT fk_voice_purchase_item_account FOREIGN KEY (account_id)
       REFERENCES account(account_id) ON DELETE CASCADE ON UPDATE CASCADE,
     CONSTRAINT fk_voice_purchase_item_chapter FOREIGN KEY (chapter_id)
-      REFERENCES chapters(chapter_id) ON DELETE CASCADE ON UPDATE CASCADE,
+      REFERENCES chapter(chapter_id) ON DELETE CASCADE ON UPDATE CASCADE,
     CONSTRAINT fk_voice_purchase_item_voice FOREIGN KEY (voice_id)
       REFERENCES voice_list(voice_id) ON DELETE CASCADE ON UPDATE CASCADE
   ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
@@ -593,7 +644,7 @@ ON DUPLICATE KEY UPDATE
     dias_price = VALUES(dias_price);
 
 -- ===================== Requests & moderation =====================
-CREATE TABLE op_requests (
+CREATE TABLE op_request (
   request_id       CHAR(36) NOT NULL,
   requester_id     CHAR(36) NOT NULL,
   request_type     ENUM('withdraw','rank_up','become_author') NOT NULL DEFAULT 'withdraw',
@@ -614,7 +665,7 @@ CREATE TABLE op_requests (
     REFERENCES OperationMod(account_id) ON DELETE SET NULL ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
-CREATE TABLE author_revenue_transactions (
+CREATE TABLE author_revenue_transaction (
   trans_id         CHAR(36) NOT NULL,
   author_id        CHAR(36) NOT NULL,
     type             ENUM('purchase','withdraw_reserve','withdraw_release') NOT NULL,
@@ -634,12 +685,12 @@ CREATE TABLE author_revenue_transactions (
   CONSTRAINT fk_art_purchase FOREIGN KEY (purchase_log_id)
     REFERENCES chapter_purchase_log(chapter_purchase_id) ON DELETE SET NULL ON UPDATE CASCADE,
     CONSTRAINT fk_art_request FOREIGN KEY (request_id)
-      REFERENCES op_requests(request_id) ON DELETE SET NULL ON UPDATE CASCADE,
+      REFERENCES op_request(request_id) ON DELETE SET NULL ON UPDATE CASCADE,
     CONSTRAINT fk_art_voice_purchase FOREIGN KEY (voice_purchase_id)
       REFERENCES voice_purchase_log(voice_purchase_id) ON DELETE SET NULL ON UPDATE CASCADE
   ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
-CREATE TABLE reports (
+CREATE TABLE report (
   report_id    CHAR(36) NOT NULL,
   target_type  ENUM('story','chapter','comment','user') NOT NULL,
   target_id    CHAR(36) NOT NULL,
@@ -671,7 +722,7 @@ CREATE TABLE subscription_plan (
   PRIMARY KEY (plan_code)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
-CREATE TABLE subcriptions (
+CREATE TABLE subcription (
   sub_id        CHAR(36) NOT NULL,
   user_id       CHAR(36) NOT NULL,
   plan_code     VARCHAR(32) NOT NULL,
@@ -716,7 +767,7 @@ INSERT INTO chapter_mood (mood_code, mood_name, description) VALUES
   ('neutral', 'Neutral', 'Balanced or unidentified feeling')
 ON DUPLICATE KEY UPDATE mood_name = VALUES(mood_name), description = VALUES(description);
 
-ALTER TABLE chapters
+ALTER TABLE chapter
   ADD COLUMN mood_code VARCHAR(32) NULL AFTER char_count,
   ADD CONSTRAINT fk_chapter_mood FOREIGN KEY (mood_code)
     REFERENCES chapter_mood(mood_code) ON DELETE SET NULL ON UPDATE CASCADE;
