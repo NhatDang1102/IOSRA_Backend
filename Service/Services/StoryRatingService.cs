@@ -76,6 +76,11 @@ namespace Service.Services
         public async Task<StoryRatingItemResponse> UpsertAsync(Guid readerAccountId, Guid storyId, StoryRatingRequest request, CancellationToken ct = default)
         {
             var story = await RequirePublishedStoryAsync(storyId, ct);
+            if (story.author_id == readerAccountId)
+            {
+                throw new AppException("CannotRateOwnStory", "Bạn không thể tự đánh giá truyện của mình.", 400);
+            }
+
             var reader = await _profileRepository.GetReaderByIdAsync(readerAccountId, ct)
                          ?? throw new AppException("ReaderProfileMissing", "Reader profile is not registered.", 404);
 
