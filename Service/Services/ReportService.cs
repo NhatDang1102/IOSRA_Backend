@@ -45,7 +45,14 @@ namespace Service.Services
         {
             var normalizedTargetType = NormalizeTargetType(request.TargetType);
             var normalizedReason = NormalizeReason(request.Reason);
-            await GetTargetContextAsync(normalizedTargetType, request.TargetId, ct);
+            var targetContext = await GetTargetContextAsync(normalizedTargetType, request.TargetId, ct);
+
+            var ownerAccount = targetContext.TargetAccount
+                               ?? throw new AppException("TargetOwnerNotFound", "Owner of the reported content was not found.", 404);
+            if (ownerAccount.account_id == reporterAccountId)
+            {
+                throw new AppException("CannotReportOwnContent", "Bạn không thể report nội dung của chính mình.", 400);
+            }
 
             var alreadyPending = await _reportRepository.HasPendingReportAsync(reporterAccountId, normalizedTargetType, request.TargetId, ct);
             if (alreadyPending)
