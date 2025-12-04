@@ -124,6 +124,24 @@ namespace Service.Services
             };
         }
 
+        public async Task<PagedResult<AuthorFollowingResponse>> GetFollowingAsync(Guid readerAccountId, int page, int pageSize, CancellationToken ct = default)
+        {
+            await RequireReaderAsync(readerAccountId, ct);
+
+            var normalizedPage = page <= 0 ? 1 : page;
+            var normalizedSize = pageSize <= 0 ? 20 : Math.Min(pageSize, MaxPageSize);
+
+            var (items, total) = await _followRepository.GetFollowingAsync(readerAccountId, normalizedPage, normalizedSize, ct);
+
+            return new PagedResult<AuthorFollowingResponse>
+            {
+                Items = items.Select(MapFollowing).ToArray(),
+                Total = total,
+                Page = normalizedPage,
+                PageSize = normalizedSize
+            };
+        }
+
         private async Task<reader> RequireReaderAsync(Guid accountId, CancellationToken ct)
         {
             var reader = await _profileRepository.GetReaderByIdAsync(accountId, ct);
@@ -163,6 +181,18 @@ namespace Service.Services
             return new AuthorFollowerResponse
             {
                 FollowerId = projection.FollowerId,
+                Username = projection.Username,
+                AvatarUrl = projection.AvatarUrl,
+                NotificationsEnabled = projection.NotificationsEnabled,
+                FollowedAt = projection.FollowedAt
+            };
+        }
+
+        private static AuthorFollowingResponse MapFollowing(AuthorFollowingProjection projection)
+        {
+            return new AuthorFollowingResponse
+            {
+                AuthorId = projection.AuthorId,
                 Username = projection.Username,
                 AvatarUrl = projection.AvatarUrl,
                 NotificationsEnabled = projection.NotificationsEnabled,

@@ -14,6 +14,7 @@ namespace Repository.Interfaces
         Task RemoveAsync(follow entity, CancellationToken ct = default);
         Task<follow> UpdateNotificationAsync(follow entity, bool enableNotifications, CancellationToken ct = default);
         Task<(IReadOnlyList<AuthorFollowerProjection> Items, int Total)> GetFollowersAsync(Guid authorId, int page, int pageSize, CancellationToken ct = default);
+        Task<(IReadOnlyList<AuthorFollowingProjection> Items, int Total)> GetFollowingAsync(Guid readerId, int page, int pageSize, CancellationToken ct = default);
         Task<IReadOnlyList<Guid>> GetFollowerIdsForNotificationsAsync(Guid authorId, CancellationToken ct = default);
     }
 }

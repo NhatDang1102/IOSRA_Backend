@@ -2,6 +2,8 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 using Contract.DTOs.Request.Follow;
+using Contract.DTOs.Response.Common;
+using Contract.DTOs.Response.Follow;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Service.Interfaces;
@@ -40,6 +42,14 @@ namespace Main.Controllers
         public async Task<IActionResult> UpdateNotification(Guid authorId, [FromBody] AuthorFollowNotificationRequest request, CancellationToken ct)
         {
             var result = await _followService.UpdateNotificationAsync(AccountId, authorId, request.EnableNotifications, ct);
+            return Ok(result);
+        }
+
+        [HttpGet("mine")]
+        [Authorize]
+        public async Task<ActionResult<PagedResult<AuthorFollowingResponse>>> GetFollowing([FromQuery] int page = 1, [FromQuery] int pageSize = 20, CancellationToken ct = default)
+        {
+            var result = await _followService.GetFollowingAsync(AccountId, page, pageSize, ct);
             return Ok(result);
         }
 

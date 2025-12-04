@@ -84,6 +84,33 @@ namespace Repository.Repositories
             return (items, total);
         }
 
+        public async Task<(IReadOnlyList<AuthorFollowingProjection> Items, int Total)> GetFollowingAsync(Guid readerId, int page, int pageSize, CancellationToken ct = default)
+        {
+            if (page <= 0) page = 1;
+            if (pageSize <= 0) pageSize = 20;
+
+            var query = _db.follows
+                .AsNoTracking()
+                .Where(f => f.follower_id == readerId)
+                .Select(f => new AuthorFollowingProjection
+                {
+                    AuthorId = f.followee_id,
+                    Username = f.followee.account.username,
+                    AvatarUrl = f.followee.account.avatar_url,
+                    NotificationsEnabled = f.noti_new_story ?? true,
+                    FollowedAt = f.created_at
+                });
+
+            var total = await query.CountAsync(ct);
+            var items = await query
+                .OrderByDescending(f => f.FollowedAt)
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
+                .ToListAsync(ct);
+
+            return (items, total);
+        }
+
         public async Task<IReadOnlyList<Guid>> GetFollowerIdsForNotificationsAsync(Guid authorId, CancellationToken ct = default)
         {
             return await _db.follows
