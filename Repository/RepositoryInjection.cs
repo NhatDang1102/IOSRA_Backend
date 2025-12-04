@@ -9,7 +9,6 @@ namespace Repository
         public static IServiceCollection AddRepositoryServices(this IServiceCollection services)
         {
             services.AddScoped<IAuthRepository, AuthRepository>();
-            services.AddScoped<IAdminRepository, AdminRepository>();
             services.AddScoped<IProfileRepository, ProfileRepository>();
             services.AddScoped<IPublicProfileRepository, PublicProfileRepository>();
             services.AddScoped<IOpRequestRepository, OpRequestRepository>();
@@ -40,6 +39,7 @@ namespace Repository
             services.AddScoped<IAIChatRepository, AIChatRepository>();
             services.AddScoped<IMoodMusicRepository, MoodMusicRepository>();
             services.AddScoped<ISubscriptionRepository, SubscriptionRepository>();
+            services.AddScoped<IAdminRepository, AdminRepository>();
 
             return services;
         }

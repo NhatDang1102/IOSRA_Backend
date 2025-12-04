@@ -1,93 +1,225 @@
-﻿using Contract.DTOs.Request.Admin;
-using Microsoft.EntityFrameworkCore;
-using Repository.DBContext;
-using Repository.Entities;
-using Repository.Interfaces;
-using Repository.Utils;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.EntityFrameworkCore;
+using Repository.Base;
+using Repository.DataModels;
+using Repository.DBContext;
+using Repository.Entities;
+using Repository.Interfaces;
+using Repository.Utils;
 
 namespace Repository.Repositories
 {
-    /// <summary>
-    /// Repository dedicated to admin operations that need full DB access.
-    /// </summary>
-    public sealed class AdminRepository : IAdminRepository
+    public class AdminRepository : BaseRepository, IAdminRepository
     {
-        private readonly AppDbContext _db;
+        private static readonly string[] PrimaryRoleCodes = { "reader", "cmod", "omod", "admin" };
 
-        public AdminRepository(AppDbContext db) => _db = db;
-
-        public async Task<(IReadOnlyList<account> items, int total)> QueryAccountsAsync(AccountQuery q, CancellationToken ct)
+        public AdminRepository(AppDbContext db) : base(db)
         {
-            IQueryable<account> query = _db.accounts.AsQueryable();
+        }
 
-            if (!string.IsNullOrWhiteSpace(q.Search))
+        public async Task<(IReadOnlyList<AdminAccountProjection> Items, int Total)> GetAccountsAsync(
+            string? status,
+            string? role,
+            int page,
+            int pageSize,
+            CancellationToken ct = default)
+        {
+            var normalizedStatus = status?.Trim().ToLowerInvariant();
+            var normalizedRole = role?.Trim().ToLowerInvariant();
+
+            var query = _db.accounts.AsNoTracking();
+
+            if (!string.IsNullOrWhiteSpace(normalizedStatus))
             {
-                var s = q.Search.Trim();
-                query = query.Where(a => a.username.Contains(s) || a.email.Contains(s));
+                query = query.Where(a => a.status == normalizedStatus);
             }
 
-            if (!string.IsNullOrWhiteSpace(q.Status))
+            if (!string.IsNullOrWhiteSpace(normalizedRole))
             {
-                var st = q.Status.Trim();
-                query = query.Where(a => a.status == st);
+                query = query.Where(a => a.account_roles.Any(ar => ar.role.role_code == normalizedRole));
             }
 
             var total = await query.CountAsync(ct);
-
-            var skip = (q.Page - 1) * q.PageSize;
-            if (skip < 0) skip = 0;
-
             var items = await query
                 .OrderByDescending(a => a.created_at)
-                .Skip(skip).Take(q.PageSize)
-                .AsNoTracking()
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
+                .Select(a => new AdminAccountProjection
+                {
+                    AccountId = a.account_id,
+                    Username = a.username,
+                    Email = a.email,
+                    Status = a.status,
+                    Strike = a.strike,
+                    StrikeStatus = a.strike_status ?? string.Empty,
+                    StrikeRestrictedUntil = a.strike_restricted_until,
+                    CreatedAt = a.created_at,
+                    UpdatedAt = a.updated_at,
+                    Roles = a.account_roles
+                        .Select(ar => ar.role.role_code)
+                        .ToList()
+                })
                 .ToListAsync(ct);
 
             return (items, total);
         }
 
-        public Task<account?> GetAccountAsync(Guid accountId, CancellationToken ct) =>
-            _db.accounts.FirstOrDefaultAsync(a => a.account_id == accountId, ct)!;
-
-        public async Task SetStatusAsync(Guid accountId, string status, CancellationToken ct)
-        {
-            var acc = await _db.accounts.FirstOrDefaultAsync(a => a.account_id == accountId, ct);
-            if (acc is null) return;
-            acc.status = status;
-            acc.updated_at = TimezoneConverter.VietnamNow;
-            await _db.SaveChangesAsync(ct);
-        }
-
-        public async Task<List<string>> GetRoleCodesAsync(Guid accountId, CancellationToken ct)
-        {
-            return await _db.account_role
-                .Where(ar => ar.account_id == accountId)
-                .Select(ar => ar.role.role_code)
-                .ToListAsync(ct);
-        }
-
-        public async Task ReplaceRolesAsync(Guid accountId, IEnumerable<Guid> roleIds, CancellationToken ct)
-        {
-            var olds = _db.account_role.Where(r => r.account_id == accountId);
-            _db.account_role.RemoveRange(olds);
-
-            var now = TimezoneConverter.VietnamNow;
-            foreach (var rid in roleIds.Distinct())
-            {
-                _db.account_role.Add(new account_role
+        public Task<AdminAccountProjection?> GetAccountAsync(Guid accountId, CancellationToken ct = default)
+            => _db.accounts
+                .AsNoTracking()
+                .Where(a => a.account_id == accountId)
+                .Select(a => new AdminAccountProjection
                 {
-                    account_id = accountId,
-                    role_id = rid,
-                    created_at = now,
-                    updated_at = now
-                });
+                    AccountId = a.account_id,
+                    Username = a.username,
+                    Email = a.email,
+                    Status = a.status,
+                    Strike = a.strike,
+                    StrikeStatus = a.strike_status ?? string.Empty,
+                    StrikeRestrictedUntil = a.strike_restricted_until,
+                    CreatedAt = a.created_at,
+                    UpdatedAt = a.updated_at,
+                    Roles = a.account_roles
+                        .Select(ar => ar.role.role_code)
+                        .ToList()
+                })
+                .FirstOrDefaultAsync(ct);
+
+        public Task<bool> HasAuthorProfileAsync(Guid accountId, CancellationToken ct = default)
+            => _db.authors.AnyAsync(a => a.account_id == accountId, ct);
+
+        public async Task RemovePrimaryProfilesAsync(Guid accountId, CancellationToken ct = default)
+        {
+            var readerProfile = await _db.readers.FirstOrDefaultAsync(r => r.account_id == accountId, ct);
+            if (readerProfile != null)
+            {
+                _db.readers.Remove(readerProfile);
             }
-            await _db.SaveChangesAsync(ct);
+
+            var cmodProfile = await _db.ContentMods.FirstOrDefaultAsync(c => c.account_id == accountId, ct);
+            if (cmodProfile != null)
+            {
+                _db.ContentMods.Remove(cmodProfile);
+            }
+
+            var omodProfile = await _db.OperationMods.FirstOrDefaultAsync(o => o.account_id == accountId, ct);
+            if (omodProfile != null)
+            {
+                _db.OperationMods.Remove(omodProfile);
+            }
+
+            var adminProfile = await _db.admins.FirstOrDefaultAsync(a => a.account_id == accountId, ct);
+            if (adminProfile != null)
+            {
+                _db.admins.Remove(adminProfile);
+            }
         }
+
+        public Task EnsureReaderProfileAsync(Guid accountId, CancellationToken ct = default)
+        {
+            var entity = new reader
+            {
+                account_id = accountId,
+                gender = "unspecified",
+                bio = null,
+                birthdate = null
+            };
+            _db.readers.Add(entity);
+            return Task.CompletedTask;
+        }
+
+        public Task AddContentModProfileAsync(Guid accountId, CancellationToken ct = default)
+        {
+            var entity = new ContentMod
+            {
+                account_id = accountId,
+                assigned_date = TimezoneConverter.VietnamNow,
+                phone = null,
+                total_approved_chapters = 0,
+                total_rejected_chapters = 0,
+                total_approved_stories = 0,
+                total_rejected_stories = 0,
+                total_reported_handled = 0
+            };
+            _db.ContentMods.Add(entity);
+            return Task.CompletedTask;
+        }
+
+        public Task AddOperationModProfileAsync(Guid accountId, CancellationToken ct = default)
+        {
+            var entity = new OperationMod
+            {
+                account_id = accountId,
+                assigned_date = TimezoneConverter.VietnamNow,
+                reports_generated = 0
+            };
+            _db.OperationMods.Add(entity);
+            return Task.CompletedTask;
+        }
+
+        public Task AddAdminProfileAsync(Guid accountId, CancellationToken ct = default)
+        {
+            var entity = new admin
+            {
+                account_id = accountId,
+                department = null,
+                notes = null
+            };
+            _db.admins.Add(entity);
+            return Task.CompletedTask;
+        }
+
+        public async Task RemovePrimaryRolesAsync(Guid accountId, CancellationToken ct = default)
+        {
+            var roleIds = await _db.role
+                .Where(r => PrimaryRoleCodes.Contains(r.role_code))
+                .Select(r => r.role_id)
+                .ToListAsync(ct);
+
+            if (roleIds.Count == 0)
+            {
+                return;
+            }
+
+            var toRemove = await _db.account_role
+                .Where(ar => ar.account_id == accountId && roleIds.Contains(ar.role_id))
+                .ToListAsync(ct);
+
+            if (toRemove.Count > 0)
+            {
+                _db.account_role.RemoveRange(toRemove);
+            }
+        }
+
+        public async Task AddRoleAsync(Guid accountId, string roleCode, CancellationToken ct = default)
+        {
+            var role = await _db.role.FirstOrDefaultAsync(r => r.role_code == roleCode, ct)
+                       ?? throw new InvalidOperationException($"Role '{roleCode}' not found.");
+
+            var entity = new account_role
+            {
+                account_id = accountId,
+                role_id = role.role_id,
+                created_at = TimezoneConverter.VietnamNow,
+                updated_at = TimezoneConverter.VietnamNow
+            };
+            _db.account_role.Add(entity);
+        }
+
+        public async Task SetAccountStatusAsync(Guid accountId, string status, CancellationToken ct = default)
+        {
+            var account = await _db.accounts.FirstOrDefaultAsync(a => a.account_id == accountId, ct)
+                          ?? throw new InvalidOperationException("Account not found.");
+
+            account.status = status;
+            account.updated_at = TimezoneConverter.VietnamNow;
+        }
+
+        public Task SaveChangesAsync(CancellationToken ct = default)
+            => _db.SaveChangesAsync(ct);
     }
 }

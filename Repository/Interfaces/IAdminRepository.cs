@@ -1,19 +1,30 @@
-﻿using Contract.DTOs.Request.Admin;
-using Repository.Entities;
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
+using Repository.DataModels;
 
 namespace Repository.Interfaces
 {
     public interface IAdminRepository
     {
-        Task<(IReadOnlyList<account> items, int total)> QueryAccountsAsync(AccountQuery q, CancellationToken ct);
-        Task<account?> GetAccountAsync(Guid accountId, CancellationToken ct);
-        Task SetStatusAsync(Guid accountId, string status, CancellationToken ct);
-        Task<List<string>> GetRoleCodesAsync(Guid accountId, CancellationToken ct);
-        Task ReplaceRolesAsync(Guid accountId, IEnumerable<Guid> roleIds, CancellationToken ct);
+        Task<(IReadOnlyList<AdminAccountProjection> Items, int Total)> GetAccountsAsync(
+            string? status,
+            string? role,
+            int page,
+            int pageSize,
+            CancellationToken ct = default);
+
+        Task<AdminAccountProjection?> GetAccountAsync(Guid accountId, CancellationToken ct = default);
+        Task<bool> HasAuthorProfileAsync(Guid accountId, CancellationToken ct = default);
+        Task RemovePrimaryProfilesAsync(Guid accountId, CancellationToken ct = default);
+        Task EnsureReaderProfileAsync(Guid accountId, CancellationToken ct = default);
+        Task AddContentModProfileAsync(Guid accountId, CancellationToken ct = default);
+        Task AddOperationModProfileAsync(Guid accountId, CancellationToken ct = default);
+        Task AddAdminProfileAsync(Guid accountId, CancellationToken ct = default);
+        Task RemovePrimaryRolesAsync(Guid accountId, CancellationToken ct = default);
+        Task AddRoleAsync(Guid accountId, string roleCode, CancellationToken ct = default);
+        Task SetAccountStatusAsync(Guid accountId, string status, CancellationToken ct = default);
+        Task SaveChangesAsync(CancellationToken ct = default);
     }
 }

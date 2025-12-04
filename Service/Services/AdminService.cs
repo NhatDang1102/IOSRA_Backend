@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
@@ -6,139 +6,206 @@ using System.Threading.Tasks;
 using Contract.DTOs.Request.Admin;
 using Contract.DTOs.Response.Admin;
 using Contract.DTOs.Response.Common;
+using Repository.DataModels;
 using Repository.Interfaces;
 using Service.Exceptions;
 using Service.Interfaces;
 
 namespace Service.Services
 {
-    /// <summary>
-    /// Application services for admin account management.
-    /// </summary>
-    public sealed class AdminService : IAdminService
+    public class AdminService : IAdminService
     {
-        private readonly IAdminRepository _adminRepo;
-        private readonly IAuthRepository _authRepo;
+        private static readonly string[] AssignableRoles = { "reader", "cmod", "omod", "admin" };
+        private static readonly string[] FilterableRoles = { "reader", "author", "cmod", "omod", "admin" };
+        private static readonly string[] AllowedStatuses = { "banned", "unbanned" };
 
-        public AdminService(IAdminRepository adminRepo, IAuthRepository authRepo)
+        private readonly IAdminRepository _repository;
+
+        public AdminService(IAdminRepository repository)
         {
-            _adminRepo = adminRepo;
-            _authRepo = authRepo;
+            _repository = repository;
         }
 
-        public async Task<PagedResult<AccountAdminResponse>> QueryAccountsAsync(AccountQuery q, CancellationToken ct)
+        public async Task<PagedResult<AdminAccountResponse>> GetAccountsAsync(string? status, string? role, int page, int pageSize, CancellationToken ct = default)
         {
-            if (q.Page < 1 || q.PageSize < 1)
-            {
-                throw new AppException("ValidationFailed", "Page and pageSize must be positive integers.", 400);
-            }
+            var normalizedPage = page <= 0 ? 1 : page;
+            var normalizedPageSize = pageSize <= 0 ? 20 : Math.Min(pageSize, 100);
+            var normalizedStatus = NormalizeStatusFilter(status);
+            var normalizedRole = NormalizeRoleFilter(role);
 
-            var (items, total) = await _adminRepo.QueryAccountsAsync(q, ct);
-            var results = new List<AccountAdminResponse>(items.Count);
+            var (items, total) = await _repository.GetAccountsAsync(normalizedStatus, normalizedRole, normalizedPage, normalizedPageSize, ct);
+            var responses = items.Select(Map).ToArray();
 
-            foreach (var account in items)
+            return new PagedResult<AdminAccountResponse>
             {
-                var roles = await _authRepo.GetRoleCodesOfAccountAsync(account.account_id, ct);
-                results.Add(new AccountAdminResponse
-                {
-                    AccountId = account.account_id,
-                    Username = account.username,
-                    Email = account.email,
-                    Status = account.status,
-                    Strike = account.strike,
-                    CreatedAt = account.created_at,
-                    UpdatedAt = account.updated_at,
-                    Roles = roles
-                });
-            }
-
-            return new PagedResult<AccountAdminResponse>
-            {
-                Items = results,
+                Items = responses,
                 Total = total,
-                Page = q.Page,
-                PageSize = q.PageSize
+                Page = normalizedPage,
+                PageSize = normalizedPageSize
             };
         }
 
-        public async Task SetRolesAsync(Guid accountId, List<string> roleCodes, CancellationToken ct)
+        public async Task<AdminAccountResponse> AssignRoleAsync(Guid accountId, AssignAdminRoleRequest request, CancellationToken ct = default)
         {
-            if (roleCodes == null || roleCodes.Count == 0)
+            if (request == null)
             {
-                throw new AppException("ValidationFailed", "At least one role code is required.", 400);
+                throw new AppException("ValidationFailed", "Request body is required.", 400);
             }
 
-            var account = await _adminRepo.GetAccountAsync(accountId, ct)
-                          ?? throw new AppException("NotFound", "Account was not found.", 404);
+            var normalizedRole = NormalizeRole(request.Role);
 
-            var resolvedRoleIds = new List<Guid>();
-            foreach (var code in roleCodes.Distinct(StringComparer.OrdinalIgnoreCase))
+            var account = await _repository.GetAccountAsync(accountId, ct)
+                          ?? throw new AppException("AccountNotFound", "Account was not found.", 404);
+
+            var hasConflictingRole = account.Roles.Any(r => AssignableRoles.Contains(r, StringComparer.OrdinalIgnoreCase) && !string.Equals(r, normalizedRole, StringComparison.OrdinalIgnoreCase));
+            var alreadyHasRole = account.Roles.Any(r => string.Equals(r, normalizedRole, StringComparison.OrdinalIgnoreCase));
+
+            if (alreadyHasRole && !hasConflictingRole)
             {
-                var roleId = await _authRepo.GetRoleIdByCodeAsync(code, ct);
-                if (roleId == Guid.Empty)
+                return Map(account);
+            }
+
+            if (!string.Equals(normalizedRole, "reader", StringComparison.OrdinalIgnoreCase))
+            {
+                var isAuthor = await _repository.HasAuthorProfileAsync(accountId, ct);
+                if (isAuthor)
                 {
-                    throw new AppException("RoleNotFound", $"Role code '{code}' does not exist.", 404);
+                    throw new AppException("CannotPromoteAuthor", "Author accounts cannot be promoted to moderator/admin roles.", 409);
                 }
-                resolvedRoleIds.Add(roleId);
             }
 
-            await _adminRepo.ReplaceRolesAsync(accountId, resolvedRoleIds, ct);
+            await _repository.RemovePrimaryProfilesAsync(accountId, ct);
+            await _repository.RemovePrimaryRolesAsync(accountId, ct);
+
+            switch (normalizedRole)
+            {
+                case "reader":
+                    await _repository.EnsureReaderProfileAsync(accountId, ct);
+                    break;
+                case "cmod":
+                    await _repository.AddContentModProfileAsync(accountId, ct);
+                    break;
+                case "omod":
+                    await _repository.AddOperationModProfileAsync(accountId, ct);
+                    break;
+                case "admin":
+                    await _repository.AddAdminProfileAsync(accountId, ct);
+                    break;
+            }
+
+            await _repository.AddRoleAsync(accountId, normalizedRole, ct);
+            await _repository.SaveChangesAsync(ct);
+
+            var updated = await _repository.GetAccountAsync(accountId, ct)
+                          ?? throw new AppException("AccountNotFound", "Account was not found.", 404);
+
+            return Map(updated);
         }
 
-        public async Task BanAsync(Guid accountId, string? reason, CancellationToken ct)
+        public async Task<AdminAccountResponse> UpdateStatusAsync(Guid accountId, UpdateAccountStatusRequest request, CancellationToken ct = default)
         {
-            var account = await _adminRepo.GetAccountAsync(accountId, ct)
-                           ?? throw new AppException("NotFound", "Account was not found.", 404);
-
-            if (account.status == "banned")
+            if (request == null)
             {
-                return;
+                throw new AppException("ValidationFailed", "Request body is required.", 400);
             }
 
-            var roles = await _authRepo.GetRoleCodesOfAccountAsync(accountId, ct);
-            if (roles.Contains("ADMIN", StringComparer.OrdinalIgnoreCase))
+            var normalizedStatus = NormalizeStatus(request.Status);
+
+            var account = await _repository.GetAccountAsync(accountId, ct)
+                          ?? throw new AppException("AccountNotFound", "Account was not found.", 404);
+
+            if (string.Equals(account.Status, normalizedStatus, StringComparison.OrdinalIgnoreCase))
             {
-                throw new AppException("Forbidden", "Cannot ban an ADMIN account.", 403, new { reason });
+                return Map(account);
             }
 
-            await _adminRepo.SetStatusAsync(accountId, "banned", ct);
+            await _repository.SetAccountStatusAsync(accountId, normalizedStatus, ct);
+            await _repository.SaveChangesAsync(ct);
+
+            var updated = await _repository.GetAccountAsync(accountId, ct)
+                          ?? throw new AppException("AccountNotFound", "Account was not found.", 404);
+
+            return Map(updated);
         }
 
-        public async Task UnbanAsync(Guid accountId, string? reason, CancellationToken ct)
+        private static string? NormalizeStatusFilter(string? value)
         {
-            var account = await _adminRepo.GetAccountAsync(accountId, ct)
-                           ?? throw new AppException("NotFound", "Account was not found.", 404);
-
-            if (account.status == "unbanned")
+            if (string.IsNullOrWhiteSpace(value))
             {
-                return;
+                return null;
             }
 
-            await _adminRepo.SetStatusAsync(accountId, "unbanned", ct);
+            var normalized = value.Trim().ToLowerInvariant();
+            if (!AllowedStatuses.Contains(normalized))
+            {
+                throw new AppException("InvalidStatus", $"Unsupported status '{value}'.", 400);
+            }
+
+            return normalized;
         }
 
-        public async Task<AccountAdminResponse> GetAccountByIdentifierAsync(string identifier, CancellationToken ct = default)
+        private static string NormalizeStatus(string? value)
         {
-            if (string.IsNullOrWhiteSpace(identifier))
+            if (string.IsNullOrWhiteSpace(value))
             {
-                throw new AppException("BadRequest", "Identifier is required.", 400, new { identifier });
+                throw new AppException("InvalidStatus", "Status is required.", 400);
             }
 
-            var account = await _authRepo.FindAccountByIdentifierAsync(identifier, ct)
-                          ?? throw new AppException("AccountNotFound", "Account was not found.", 404, new { identifier });
-
-            var roles = await _authRepo.GetRoleCodesOfAccountAsync(account.account_id, ct);
-
-            return new AccountAdminResponse
+            var normalized = value.Trim().ToLowerInvariant();
+            if (!AllowedStatuses.Contains(normalized))
             {
-                AccountId = account.account_id,
-                Username = account.username,
-                Email = account.email,
-                Status = account.status,
-                Strike = account.strike,
-                CreatedAt = account.created_at,
-                UpdatedAt = account.updated_at,
-                Roles = roles
+                throw new AppException("InvalidStatus", $"Unsupported status '{value}'.", 400);
+            }
+
+            return normalized;
+        }
+
+        private static string? NormalizeRoleFilter(string? value)
+        {
+            if (string.IsNullOrWhiteSpace(value))
+            {
+                return null;
+            }
+
+            var normalized = value.Trim().ToLowerInvariant();
+            if (!FilterableRoles.Contains(normalized))
+            {
+                throw new AppException("InvalidRole", $"Unsupported role '{value}'.", 400);
+            }
+
+            return normalized;
+        }
+
+        private static string NormalizeRole(string? value)
+        {
+            if (string.IsNullOrWhiteSpace(value))
+            {
+                throw new AppException("InvalidRole", "Role is required.", 400);
+            }
+
+            var normalized = value.Trim().ToLowerInvariant();
+            if (!FilterableRoles.Contains(normalized))
+            {
+                throw new AppException("InvalidRole", $"Unsupported role '{value}'.", 400);
+            }
+
+            return normalized;
+        }
+
+        private static AdminAccountResponse Map(AdminAccountProjection projection)
+        {
+            return new AdminAccountResponse
+            {
+                AccountId = projection.AccountId,
+                Username = projection.Username,
+                Email = projection.Email,
+                Status = projection.Status,
+                Strike = projection.Strike,
+                StrikeStatus = projection.StrikeStatus,
+                StrikeRestrictedUntil = projection.StrikeRestrictedUntil,
+                CreatedAt = projection.CreatedAt,
+                UpdatedAt = projection.UpdatedAt,
+                Roles = projection.Roles.ToArray()
             };
         }
     }

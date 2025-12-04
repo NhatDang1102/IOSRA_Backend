@@ -153,7 +153,7 @@ namespace Service.Implementations
         public async Task<string> UpdateAvatarAsync(Guid accountId, IFormFile file, CancellationToken ct = default)
         {
             _ = await _profileRepo.GetAccountByIdAsync(accountId, ct)
-                ?? throw new AppException("AccountNotFound", "Account was not found.", 404);
+                ?? throw new AppException("AccountNotFound", "Không tìm thấy tài khoản.", 404);
 
             var url = await _uploader.UploadAvatarAsync(file, $"avatar_{accountId}", ct);
             await _profileRepo.UpdateAvatarUrlAsync(accountId, url, ct);

@@ -40,6 +40,7 @@ namespace Service.Services
 
         public async Task<IReadOnlyList<StoryModerationQueueItem>> ListAsync(string? status, CancellationToken ct = default)
         {
+            //ép response status thành chữ thường để so sánh
             var statuses = NormalizeStatuses(status);
             var stories = await _storyRepository.GetStoriesForModerationAsync(statuses, ct);
             var response = new List<StoryModerationQueueItem>(stories.Count);
@@ -170,11 +171,13 @@ namespace Service.Services
 
         private static IReadOnlyList<string> NormalizeStatuses(string? status)
         {
+            //check coi status hợp lệ ko
             if (string.IsNullOrWhiteSpace(status))
             {
                 return AllowedStatuses;
             }
 
+            //trim status lại
             var normalized = status.Trim();
             if (!AllowedStatuses.Contains(normalized, StringComparer.OrdinalIgnoreCase))
             {

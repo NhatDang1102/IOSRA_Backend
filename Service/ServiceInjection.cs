@@ -64,7 +64,6 @@ namespace Service
 
             services.AddScoped<IJwtTokenFactory, JwtTokenFactory>();
             services.AddScoped<IAuthService, AuthService>();
-            services.AddScoped<IAdminService, Service.Services.AdminService>();
             services.AddScoped<IAuthorUpgradeService, AuthorUpgradeService>();
             services.AddScoped<IOperationModService, OperationModService>();
             services.AddScoped<IProfileService, ProfileService>();
@@ -84,6 +83,7 @@ namespace Service
             services.AddScoped<IFavoriteStoryService, FavoriteStoryService>();
             services.AddScoped<IAuthorRevenueService, AuthorRevenueService>();
             services.AddScoped<INotificationService, NotificationService>();
+            services.AddScoped<IAdminService, AdminService>();
             services.AddScoped<IFollowerNotificationService, FollowerNotificationService>();
             services.AddScoped<IChapterPricingService, ChapterPricingService>();
             services.AddScoped<IChapterTranslationService, ChapterTranslationService>();
