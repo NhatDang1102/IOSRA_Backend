@@ -86,32 +86,53 @@ namespace IOSRA.Tests.Controllers
         public async Task Filter_Should_Call_Advanced_Service_And_Return_PagedResult()
         {
             // Arrange
-            var query = new StoryCatalogQuery
-            {
-                Page = 1,
-                PageSize = 20,
-                Query = "romance",
-                IsPremium = true,
-                MinAvgRating = 4.5,
-                SortBy = StorySortBy.TopRated,
-                SortDir = SortDir.Desc
-            };
+            int page = 1;
+            int pageSize = 20;
+            string? queryText = "romance";
+            Guid? tagId = Guid.NewGuid();
+            Guid? authorId = Guid.NewGuid();
+            bool? isPremium = true;
+            double? minAvgRating = 4.5;
+            string? sortBy = "TopRated";
+            string? sortDir = "Desc";
 
             var expected = new PagedResult<StoryCatalogListItemResponse>
             {
-                Page = query.Page,
-                PageSize = query.PageSize,
+                Page = page,
+                PageSize = pageSize,
                 Total = 0,
                 Items = new List<StoryCatalogListItemResponse>()
             };
 
             _storyCatalogService
-                .Setup(s => s.GetStoriesAdvancedAsync(query, It.IsAny<CancellationToken>()))
+                .Setup(s => s.GetStoriesAdvancedAsync(
+                    It.Is<StoryCatalogQuery>(q =>
+                        q.Page == page &&
+                        q.PageSize == pageSize &&
+                        q.Query == queryText &&
+                        q.TagId == tagId &&
+                        q.AuthorId == authorId &&
+                        q.IsPremium == isPremium &&
+                        q.MinAvgRating == minAvgRating &&
+                        q.SortBy == StorySortBy.TopRated &&
+                        q.SortDir == SortDir.Desc
+                    ),
+                    It.IsAny<CancellationToken>()))
                 .ReturnsAsync(expected)
                 .Verifiable();
 
             // Act
-            var result = await _controller.Filter(query, CancellationToken.None);
+            var result = await _controller.Filter(
+                page,
+                pageSize,
+                queryText,
+                tagId,
+                authorId,
+                isPremium,
+                minAvgRating,
+                sortBy,
+                sortDir,
+                CancellationToken.None);
 
             // Assert
             var ok = result.Result as OkObjectResult;

@@ -22,6 +22,7 @@ public class ChapterModerationServiceTests
     private readonly Mock<IMailSender> _mail;
     private readonly Mock<INotificationService> _noti;
     private readonly Mock<IFollowerNotificationService> _followers;
+    private readonly Mock<IContentModRepository> _contentModRepo;
     private readonly ChapterModerationService _svc;
 
     public ChapterModerationServiceTests()
@@ -30,12 +31,15 @@ public class ChapterModerationServiceTests
         _mail = new Mock<IMailSender>(MockBehavior.Strict);
         _noti = new Mock<INotificationService>(MockBehavior.Strict);
         _followers = new Mock<IFollowerNotificationService>(MockBehavior.Strict);
+        _contentModRepo = new Mock<IContentModRepository>(MockBehavior.Strict);
 
         _svc = new ChapterModerationService(
             _repo.Object,
             _mail.Object,
             _noti.Object,
-            _followers.Object);
+            _followers.Object,
+            _contentModRepo.Object
+            );
     }
 
     #region Helpers
