@@ -19,13 +19,15 @@ namespace IOSRA.Tests.Controllers
     {
         private readonly Mock<IAuthService> _auth;
         private readonly Mock<IJwtBlacklistService> _blacklist;
+        private readonly Mock<IRefreshTokenStore> _refreshTokenStore;
         private readonly AuthController _controller;
 
         public AuthControllerTests()
         {
             _auth = new Mock<IAuthService>(MockBehavior.Strict);
             _blacklist = new Mock<IJwtBlacklistService>(MockBehavior.Strict);
-            _controller = new AuthController(_auth.Object, _blacklist.Object);
+            _refreshTokenStore = new Mock<IRefreshTokenStore>(MockBehavior.Strict);
+            _controller = new AuthController(_auth.Object, _blacklist.Object, _refreshTokenStore.Object);
         }
 
         private void SetUser(params Claim[] claims)

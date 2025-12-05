@@ -9,6 +9,7 @@ using Microsoft.Extensions.Configuration;
 using Repository.Entities;
 using Service.Implementations; // JwtTokenFactory
 using Service.Interfaces;      // IJwtTokenFactory
+using Service.Models;          // JwtTokenResult
 using Xunit;
 
 public class JwtTokenFactoryTests
@@ -52,13 +53,14 @@ public class JwtTokenFactoryTests
         var roles = new[] { "reader", "author" };
 
         // Act
-        var tokenString = _factory.CreateToken(acc, roles);
+        var tokenResult = _factory.CreateToken(acc, roles);
 
-        // Assert cơ bản: token không rỗng và parse được
-        tokenString.Should().NotBeNullOrWhiteSpace();
+        // Assert cơ bản: token không rỗng
+        tokenResult.Token.Should().NotBeNullOrWhiteSpace();
+        tokenResult.ExpiresAt.Should().BeAfter(DateTime.UtcNow);
 
         var handler = new JwtSecurityTokenHandler();
-        var jwt = handler.ReadJwtToken(tokenString);
+        var jwt = handler.ReadJwtToken(tokenResult.Token);
 
         // Issuer / Audience từ config
         jwt.Issuer.Should().Be("iosra-test-issuer");
@@ -81,10 +83,12 @@ public class JwtTokenFactoryTests
               ?.Value.Should().NotBeNullOrWhiteSpace();
 
         // Roles
-        var roleClaims = claims.Where(c => c.Type == ClaimTypes.Role).Select(c => c.Value).ToList();
+        var roleClaims = claims.Where(c => c.Type == ClaimTypes.Role)
+                               .Select(c => c.Value)
+                               .ToList();
         roleClaims.Should().BeEquivalentTo(roles);
 
-        // Hạn token nằm trong tương lai (không check chính xác 120 phút để tránh phụ thuộc clock)
+        // Hạn token nằm trong tương lai
         jwt.ValidTo.Should().BeAfter(DateTime.UtcNow);
     }
 
@@ -94,12 +98,12 @@ public class JwtTokenFactoryTests
     {
         var acc = MakeAccount(Guid.NewGuid());
 
-        var tokenString = _factory.CreateToken(acc, roles: null);
+        var tokenResult = _factory.CreateToken(acc, roles: null);
 
-        tokenString.Should().NotBeNullOrWhiteSpace();
+        tokenResult.Token.Should().NotBeNullOrWhiteSpace();
 
         var handler = new JwtSecurityTokenHandler();
-        var jwt = handler.ReadJwtToken(tokenString);
+        var jwt = handler.ReadJwtToken(tokenResult.Token);
 
         jwt.Claims.Where(c => c.Type == ClaimTypes.Role).Should().BeEmpty();
     }

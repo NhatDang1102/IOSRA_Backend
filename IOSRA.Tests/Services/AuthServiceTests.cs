@@ -13,6 +13,7 @@ using Service.Exceptions;
 using Service.Helpers;
 using Service.Implementations;
 using Service.Interfaces;
+using Service.Models;
 using Xunit;
 
 public class AuthServiceTests
@@ -205,9 +206,13 @@ public class AuthServiceTests
         _mail.Setup(m => m.SendWelcomeEmailAsync(req.Email, username))
              .Returns(Task.CompletedTask);
 
-        _jwt.Setup(j => j.CreateToken(It.Is<account>(a => a.account_id == newId),
-                                      It.Is<IEnumerable<string>>(r => r.Contains("reader"))))
-            .Returns("jwt-token");
+        _jwt.Setup(j => j.CreateToken(It.Is<account>(a => a.account_id == newId), It.Is<IEnumerable<string>>(r => r.Contains("reader"))))
+            .Returns(new JwtTokenResult
+            {
+                Token = "jwt-token",
+                ExpiresAt = DateTime.UtcNow.AddHours(1)
+            });
+
 
         var res = await _svc.VerifyRegisterAsync(req, CancellationToken.None);
 
@@ -294,7 +299,12 @@ public class AuthServiceTests
         _repo.Setup(r => r.GetRoleCodesOfAccountAsync(acc.account_id, It.IsAny<CancellationToken>()))
              .ReturnsAsync(roles);
 
-        _jwt.Setup(j => j.CreateToken(acc, roles)).Returns("jwt-login");
+        _jwt.Setup(j => j.CreateToken(acc, roles))
+            .Returns(new JwtTokenResult
+            {
+                Token = "jwt-login",
+                ExpiresAt = DateTime.UtcNow.AddHours(1)
+            });
 
         var res = await _svc.LoginAsync(req, CancellationToken.None);
 
@@ -391,7 +401,12 @@ public class AuthServiceTests
         _repo.Setup(r => r.GetRoleCodesOfAccountAsync(acc.account_id, It.IsAny<CancellationToken>()))
              .ReturnsAsync(roles);
 
-        _jwt.Setup(j => j.CreateToken(acc, roles)).Returns("jwt-google");
+        _jwt.Setup(j => j.CreateToken(acc, roles))
+            .Returns(new JwtTokenResult
+            {
+                Token = "jwt-google",
+                ExpiresAt = DateTime.UtcNow.AddHours(1)
+            });
 
         var res = await _svc.LoginWithGoogleAsync(req, CancellationToken.None);
 
@@ -481,7 +496,11 @@ public class AuthServiceTests
 
         _jwt.Setup(j => j.CreateToken(It.Is<account>(a => a.account_id == newId),
                                       It.Is<IEnumerable<string>>(r => r.Contains("reader"))))
-            .Returns("jwt-complete");
+            .Returns(new JwtTokenResult
+            {
+                Token = "jwt-complete",
+                ExpiresAt = DateTime.UtcNow.AddHours(1)
+            });
 
         var res = await _svc.CompleteGoogleRegisterAsync(req, CancellationToken.None);
 
