@@ -8,12 +8,12 @@ namespace Repository.Interfaces
 {
     public interface IAuthorChapterRepository
     {
-        Task<chapter> AddAsync(chapter entity, CancellationToken ct = default);
+        Task<chapter> CreateAsync(chapter entity, CancellationToken ct = default);
         Task<chapter?> GetByIdAsync(Guid chapterId, CancellationToken ct = default);
-        Task<chapter?> GetForAuthorAsync(Guid storyId, Guid chapterId, Guid authorId, CancellationToken ct = default);
-        Task<IReadOnlyList<chapter>> GetByStoryAsync(Guid storyId, IEnumerable<string>? statuses = null, CancellationToken ct = default);
+        Task<chapter?> GetByIdForAuthorAsync(Guid storyId, Guid chapterId, Guid authorId, CancellationToken ct = default);
+        Task<IReadOnlyList<chapter>> GetAllByStoryAsync(Guid storyId, IEnumerable<string>? statuses = null, CancellationToken ct = default);
         Task<language_list?> GetLanguageByCodeAsync(string code, CancellationToken ct = default);
-        Task<bool> StoryHasPendingChapterAsync(Guid storyId, CancellationToken ct = default);
+        Task<bool> HasPendingChapterAsync(Guid storyId, CancellationToken ct = default);
         Task<int> GetNextChapterNumberAsync(Guid storyId, CancellationToken ct = default);
         Task<bool> HasDraftChapterBeforeAsync(Guid storyId, DateTime createdAt, Guid currentChapterId, CancellationToken ct = default);
 

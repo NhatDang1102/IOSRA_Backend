@@ -18,7 +18,7 @@ namespace Repository.Repositories
         {
         }
 
-        public async Task<chapter> AddAsync(chapter entity, CancellationToken ct = default)
+        public async Task<chapter> CreateAsync(chapter entity, CancellationToken ct = default)
         {
             EnsureId(entity, nameof(chapter.chapter_id));
             _db.chapter.Add(entity);
@@ -34,7 +34,7 @@ namespace Repository.Repositories
                   .Include(c => c.chapter_voices).ThenInclude(cv => cv.voice)
                   .FirstOrDefaultAsync(c => c.chapter_id == chapterId, ct);
 
-        public Task<chapter?> GetForAuthorAsync(Guid storyId, Guid chapterId, Guid authorId, CancellationToken ct = default)
+        public Task<chapter?> GetByIdForAuthorAsync(Guid storyId, Guid chapterId, Guid authorId, CancellationToken ct = default)
             => _db.chapter
                   .Include(c => c.story).ThenInclude(s => s.author).ThenInclude(a => a.account)
                   .Include(c => c.language)
@@ -42,7 +42,7 @@ namespace Repository.Repositories
                   .Include(c => c.chapter_voices).ThenInclude(cv => cv.voice)
                   .FirstOrDefaultAsync(c => c.chapter_id == chapterId && c.story_id == storyId && c.story.author_id == authorId, ct);
 
-        public async Task<IReadOnlyList<chapter>> GetByStoryAsync(Guid storyId, IEnumerable<string>? statuses = null, CancellationToken ct = default)
+        public async Task<IReadOnlyList<chapter>> GetAllByStoryAsync(Guid storyId, IEnumerable<string>? statuses = null, CancellationToken ct = default)
         {
             var query = _db.chapter.Where(c => c.story_id == storyId);
 
@@ -80,7 +80,7 @@ namespace Repository.Repositories
             return _db.language_lists.FirstOrDefaultAsync(l => l.lang_code == normalized, ct);
         }
 
-        public Task<bool> StoryHasPendingChapterAsync(Guid storyId, CancellationToken ct = default)
+        public Task<bool> HasPendingChapterAsync(Guid storyId, CancellationToken ct = default)
             => _db.chapter.AnyAsync(c => c.story_id == storyId && c.status == "pending", ct);
 
         public async Task<int> GetNextChapterNumberAsync(Guid storyId, CancellationToken ct = default)

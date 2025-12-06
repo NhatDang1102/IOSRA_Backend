@@ -68,7 +68,7 @@ namespace IOSRA.Tests.Controllers
             };
 
             _authorStoryService
-                .Setup(s => s.ListAsync(_accountId, status, It.IsAny<CancellationToken>()))
+                .Setup(s => s.GetAllAsync(_accountId, status, It.IsAny<CancellationToken>()))
                 .ReturnsAsync(expected)
                 .Verifiable();
 
@@ -92,7 +92,7 @@ namespace IOSRA.Tests.Controllers
             var expected = (IReadOnlyList<StoryListItemResponse>)new List<StoryListItemResponse>();
 
             _authorStoryService
-                .Setup(s => s.ListAsync(_accountId, status, It.IsAny<CancellationToken>()))
+                .Setup(s => s.GetAllAsync(_accountId, status, It.IsAny<CancellationToken>()))
                 .ReturnsAsync(expected)
                 .Verifiable();
 
@@ -126,7 +126,7 @@ namespace IOSRA.Tests.Controllers
             };
 
             _authorStoryService
-                .Setup(s => s.GetAsync(_accountId, storyId, It.IsAny<CancellationToken>()))
+                .Setup(s => s.GetByIdAsync(_accountId, storyId, It.IsAny<CancellationToken>()))
                 .ReturnsAsync(expected)
                 .Verifiable();
 

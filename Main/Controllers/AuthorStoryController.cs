@@ -20,16 +20,16 @@ namespace Main.Controllers
         }
 
         [HttpGet]
-        public async Task<IActionResult> List([FromQuery] string? status, CancellationToken ct)
+        public async Task<IActionResult> GetAll([FromQuery] string? status, CancellationToken ct)
         {
-            var stories = await _authorStoryService.ListAsync(AccountId, status, ct);
+            var stories = await _authorStoryService.GetAllAsync(AccountId, status, ct);
             return Ok(stories);
         }
 
         [HttpGet("{storyId:guid}")]
-        public async Task<IActionResult> Get([FromRoute] Guid storyId, CancellationToken ct)
+        public async Task<IActionResult> GetById([FromRoute] Guid storyId, CancellationToken ct)
         {
-            var story = await _authorStoryService.GetAsync(AccountId, storyId, ct);
+            var story = await _authorStoryService.GetByIdAsync(AccountId, storyId, ct);
             return Ok(story);
         }
 
@@ -43,21 +43,21 @@ namespace Main.Controllers
 
         [HttpPut("{storyId:guid}")]
         [RequestSizeLimit(10 * 1024 * 1024)]
-        public async Task<IActionResult> Update([FromRoute] Guid storyId, [FromForm] StoryUpdateRequest request, CancellationToken ct)
+        public async Task<IActionResult> UpdateDraft([FromRoute] Guid storyId, [FromForm] StoryUpdateRequest request, CancellationToken ct)
         {
             var story = await _authorStoryService.UpdateDraftAsync(AccountId, storyId, request, ct);
             return Ok(story);
         }
 
         [HttpPost("{storyId:guid}/submit")]
-        public async Task<IActionResult> Submit([FromRoute] Guid storyId, [FromBody] StorySubmitRequest request, CancellationToken ct)
+        public async Task<IActionResult> SubmitForReview([FromRoute] Guid storyId, [FromBody] StorySubmitRequest request, CancellationToken ct)
         {
             var story = await _authorStoryService.SubmitForReviewAsync(AccountId, storyId, request, ct);
             return Ok(story);
         }
 
         [HttpPost("{storyId:guid}/complete")]
-        public async Task<IActionResult> Complete([FromRoute] Guid storyId, CancellationToken ct)
+        public async Task<IActionResult> CompleteStory([FromRoute] Guid storyId, CancellationToken ct)
         {
             var story = await _authorStoryService.CompleteAsync(AccountId, storyId, ct);
             return Ok(story);

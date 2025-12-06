@@ -10,11 +10,11 @@ namespace Repository.Interfaces
     {
         Task<author?> GetAuthorAsync(Guid accountId, CancellationToken ct = default);
         Task<List<tag>> GetTagsByIdsAsync(IEnumerable<Guid> tagIds, CancellationToken ct = default);
-        Task<story> AddStoryAsync(story entity, IEnumerable<Guid> tagIds, CancellationToken ct = default);
-        Task<List<story>> GetStoriesByAuthorAsync(Guid authorId, IEnumerable<string>? statuses = null, CancellationToken ct = default);
+        Task<story> CreateAsync(story entity, IEnumerable<Guid> tagIds, CancellationToken ct = default);
+        Task<List<story>> GetAllByAuthorAsync(Guid authorId, IEnumerable<string>? statuses = null, CancellationToken ct = default);
         Task<story?> GetStoryWithDetailsAsync(Guid storyId, CancellationToken ct = default);
-        Task<story?> GetStoryForAuthorAsync(Guid storyId, Guid authorId, CancellationToken ct = default);
-        Task UpdateStoryAsync(story entity, CancellationToken ct = default);
+        Task<story?> GetByIdForAuthorAsync(Guid storyId, Guid authorId, CancellationToken ct = default);
+        Task UpdateAsync(story entity, CancellationToken ct = default);
         Task ReplaceStoryTagsAsync(Guid storyId, IEnumerable<Guid> tagIds, CancellationToken ct = default);
 
         Task AddContentApproveAsync(content_approve entity, CancellationToken ct = default);

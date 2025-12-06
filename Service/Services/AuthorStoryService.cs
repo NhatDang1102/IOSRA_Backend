@@ -116,9 +116,9 @@ namespace Service.Services
                 is_premium = false
             };
 
-            await _storyRepository.AddStoryAsync(story, tagIds, ct);
+            await _storyRepository.CreateAsync(story, tagIds, ct);
 
-            var saved = await _storyRepository.GetStoryForAuthorAsync(story.story_id, author.account_id, ct)
+            var saved = await _storyRepository.GetByIdForAuthorAsync(story.story_id, author.account_id, ct)
                         ?? throw new InvalidOperationException("Failed to load story after creation.");
             var approvals = await _storyRepository.GetContentApprovalsForStoryAsync(saved.story_id, ct);
 
@@ -133,7 +133,7 @@ namespace Service.Services
                 throw new AppException("AuthorRestricted", "Your author account is restricted.", 403);
             }
 
-            var story = await _storyRepository.GetStoryForAuthorAsync(storyId, author.account_id, ct)
+            var story = await _storyRepository.GetByIdForAuthorAsync(storyId, author.account_id, ct)
                         ?? throw new AppException("StoryNotFound", "Story was not found.", 404);
 
             if (story.status == "pending")
@@ -174,7 +174,7 @@ namespace Service.Services
             {
                 story.status = "rejected";
                 story.published_at = null;
-                await _storyRepository.UpdateStoryAsync(story, ct);
+                await _storyRepository.UpdateAsync(story, ct);
 
                 var rejectionApproval = await UpsertStoryApprovalAsync(story.story_id, "rejected", aiScore, aiNote, ct);
 
@@ -203,7 +203,7 @@ namespace Service.Services
                 {
                     author.total_story += 1;
                 }
-                await _storyRepository.UpdateStoryAsync(story, ct);
+                await _storyRepository.UpdateAsync(story, ct);
 
                 await UpsertStoryApprovalAsync(story.story_id, "approved", aiScore, aiNote, ct);
                 notifyFollowers = !string.Equals(initialStatus, "published", StringComparison.OrdinalIgnoreCase);
@@ -212,12 +212,12 @@ namespace Service.Services
             {
                 story.status = "pending";
                 story.published_at = null;
-                await _storyRepository.UpdateStoryAsync(story, ct);
+                await _storyRepository.UpdateAsync(story, ct);
 
                 await UpsertStoryApprovalAsync(story.story_id, "pending", aiScore, aiNote, ct);
             }
 
-            var saved = await _storyRepository.GetStoryForAuthorAsync(story.story_id, author.account_id, ct)
+            var saved = await _storyRepository.GetByIdForAuthorAsync(story.story_id, author.account_id, ct)
                         ?? throw new InvalidOperationException("Failed to load story after submission.");
             var approvals = await _storyRepository.GetContentApprovalsForStoryAsync(saved.story_id, ct);
 
@@ -230,11 +230,11 @@ namespace Service.Services
             return MapStory(saved, approvals);
         }
 
-        public async Task<IReadOnlyList<StoryListItemResponse>> ListAsync(Guid authorAccountId, string? status, CancellationToken ct = default)
+        public async Task<IReadOnlyList<StoryListItemResponse>> GetAllAsync(Guid authorAccountId, string? status, CancellationToken ct = default)
         {
             var author = await RequireAuthorAsync(authorAccountId, ct);
             var filterStatuses = NormalizeAuthorStatuses(status);
-            var stories = await _storyRepository.GetStoriesByAuthorAsync(author.account_id, filterStatuses, ct);
+            var stories = await _storyRepository.GetAllByAuthorAsync(author.account_id, filterStatuses, ct);
 
             var responses = new List<StoryListItemResponse>(stories.Count);
             foreach (var story in stories)
@@ -245,10 +245,10 @@ namespace Service.Services
             return responses;
         }
 
-        public async Task<StoryResponse> GetAsync(Guid authorAccountId, Guid storyId, CancellationToken ct = default)
+        public async Task<StoryResponse> GetByIdAsync(Guid authorAccountId, Guid storyId, CancellationToken ct = default)
         {
             var author = await RequireAuthorAsync(authorAccountId, ct);
-            var story = await _storyRepository.GetStoryForAuthorAsync(storyId, author.account_id, ct)
+            var story = await _storyRepository.GetByIdForAuthorAsync(storyId, author.account_id, ct)
                         ?? throw new AppException("StoryNotFound", "Story was not found.", 404);
 
             var approvals = await _storyRepository.GetContentApprovalsForStoryAsync(story.story_id, ct);
@@ -258,7 +258,7 @@ namespace Service.Services
         public async Task<StoryResponse> CompleteAsync(Guid authorAccountId, Guid storyId, CancellationToken ct = default)
         {
             var author = await RequireAuthorAsync(authorAccountId, ct);
-            var story = await _storyRepository.GetStoryForAuthorAsync(storyId, author.account_id, ct)
+            var story = await _storyRepository.GetByIdForAuthorAsync(storyId, author.account_id, ct)
                         ?? throw new AppException("StoryNotFound", "Story was not found.", 404);
 
             if (story.status != "published")
@@ -296,7 +296,7 @@ namespace Service.Services
             story.status = "completed";
             story.updated_at = TimezoneConverter.VietnamNow;
 
-            await _storyRepository.UpdateStoryAsync(story, ct);
+            await _storyRepository.UpdateAsync(story, ct);
 
             var approvals = await _storyRepository.GetContentApprovalsForStoryAsync(story.story_id, ct);
             return MapStory(story, approvals);
@@ -310,7 +310,7 @@ namespace Service.Services
                 throw new AppException("AuthorRestricted", "Your author account is restricted.", 403);
             }
 
-            var story = await _storyRepository.GetStoryForAuthorAsync(storyId, author.account_id, ct)
+            var story = await _storyRepository.GetByIdForAuthorAsync(storyId, author.account_id, ct)
                         ?? throw new AppException("StoryNotFound", "Story was not found.", 404);
 
             if (!string.Equals(story.status, "draft", StringComparison.OrdinalIgnoreCase))
@@ -381,9 +381,9 @@ namespace Service.Services
             }
 
             story.updated_at = TimezoneConverter.VietnamNow;
-            await _storyRepository.UpdateStoryAsync(story, ct);
+            await _storyRepository.UpdateAsync(story, ct);
 
-            var refreshed = await _storyRepository.GetStoryForAuthorAsync(story.story_id, author.account_id, ct) ?? story;
+            var refreshed = await _storyRepository.GetByIdForAuthorAsync(story.story_id, author.account_id, ct) ?? story;
             var approvals = await _storyRepository.GetContentApprovalsForStoryAsync(story.story_id, ct);
             return MapStory(refreshed, approvals);
         }

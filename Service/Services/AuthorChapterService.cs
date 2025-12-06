@@ -55,7 +55,7 @@ namespace Service.Services
 
             await AccountRestrictionHelper.EnsureCanPublishAsync(author.account, _profileRepository, ct);
 
-            var story = await _storyRepository.GetStoryForAuthorAsync(storyId, author.account_id, ct)
+            var story = await _storyRepository.GetByIdForAuthorAsync(storyId, author.account_id, ct)
                         ?? throw new AppException("StoryNotFound", "Story was not found.", 404);
 
             if (!string.Equals(story.status, "published", StringComparison.OrdinalIgnoreCase) &&
@@ -73,7 +73,7 @@ namespace Service.Services
             //    });
             //}
 
-            //if (await _chapterRepository.StoryHasPendingChapterAsync(story.story_id, ct))
+            //if (await _chapterRepository.HasPendingChapterAsync(story.story_id, ct))
             //{
             //    throw new AppException("ChapterPendingExists", "A chapter is already awaiting moderation for this story.", 400);
             //}
@@ -139,7 +139,7 @@ namespace Service.Services
             {
                 contentKey = await _contentStorage.UploadAsync(story.story_id, chapter.chapter_id, content, ct);
                 chapter.content_url = contentKey;
-                await _chapterRepository.AddAsync(chapter, ct);
+                await _chapterRepository.CreateAsync(chapter, ct);
             }
             catch
             {
@@ -154,25 +154,25 @@ namespace Service.Services
             return MapChapter(chapter, approvals);
         }
 
-        public async Task<IReadOnlyList<ChapterListItemResponse>> ListAsync(Guid authorAccountId, Guid storyId, string? status, CancellationToken ct = default)
+        public async Task<IReadOnlyList<ChapterListItemResponse>> GetAllAsync(Guid authorAccountId, Guid storyId, string? status, CancellationToken ct = default)
         {
             var author = await _storyRepository.GetAuthorAsync(authorAccountId, ct)
                          ?? throw new AppException("AuthorNotFound", "Author profile is not registered.", 404);
 
-            var story = await _storyRepository.GetStoryForAuthorAsync(storyId, author.account_id, ct)
+            var story = await _storyRepository.GetByIdForAuthorAsync(storyId, author.account_id, ct)
                         ?? throw new AppException("StoryNotFound", "Story was not found.", 404);
 
             var filterStatuses = NormalizeChapterStatuses(status);
-            var chapters = await _chapterRepository.GetByStoryAsync(story.story_id, filterStatuses, ct);
+            var chapters = await _chapterRepository.GetAllByStoryAsync(story.story_id, filterStatuses, ct);
             return chapters.Select(MapChapterListItem).ToArray();
         }
 
-        public async Task<ChapterResponse> GetAsync(Guid authorAccountId, Guid storyId, Guid chapterId, CancellationToken ct = default)
+        public async Task<ChapterResponse> GetByIdAsync(Guid authorAccountId, Guid storyId, Guid chapterId, CancellationToken ct = default)
         {
             var author = await _storyRepository.GetAuthorAsync(authorAccountId, ct)
                          ?? throw new AppException("AuthorNotFound", "Author profile is not registered.", 404);
 
-            var chapter = await _chapterRepository.GetForAuthorAsync(storyId, chapterId, author.account_id, ct)
+            var chapter = await _chapterRepository.GetByIdForAuthorAsync(storyId, chapterId, author.account_id, ct)
                           ?? throw new AppException("ChapterNotFound", "Chapter was not found.", 404);
 
             var approvals = await _chapterRepository.GetContentApprovalsForChapterAsync(chapter.chapter_id, ct);
@@ -198,7 +198,7 @@ namespace Service.Services
                 throw new AppException("StoryHidden", "Story is hidden. Please restore it before submitting chapters.", 400);
             }
 
-            if (await _chapterRepository.StoryHasPendingChapterAsync(story.story_id, ct) &&
+            if (await _chapterRepository.HasPendingChapterAsync(story.story_id, ct) &&
                 !string.Equals(chapter.status, "pending", StringComparison.OrdinalIgnoreCase))
             {
                 throw new AppException("ChapterPendingExists", "Another chapter is already awaiting moderation.", 400);
@@ -294,7 +294,7 @@ namespace Service.Services
             var chapter = await _chapterRepository.GetByIdAsync(chapterId, ct)
                           ?? throw new AppException("ChapterNotFound", "Chapter was not found.", 404);
 
-            _ = await _storyRepository.GetStoryForAuthorAsync(chapter.story_id, author.account_id, ct)
+            _ = await _storyRepository.GetByIdForAuthorAsync(chapter.story_id, author.account_id, ct)
                 ?? throw new AppException("StoryNotFound", "Story was not found.", 404);
 
             if (!string.Equals(chapter.status, "rejected", StringComparison.OrdinalIgnoreCase))
@@ -317,10 +317,10 @@ namespace Service.Services
             var author = await _storyRepository.GetAuthorAsync(authorAccountId, ct)
                          ?? throw new AppException("AuthorNotFound", "Author profile is not registered.", 404);
 
-            var story = await _storyRepository.GetStoryForAuthorAsync(storyId, author.account_id, ct)
+            var story = await _storyRepository.GetByIdForAuthorAsync(storyId, author.account_id, ct)
                         ?? throw new AppException("StoryNotFound", "Story was not found.", 404);
 
-            var chapter = await _chapterRepository.GetForAuthorAsync(story.story_id, chapterId, author.account_id, ct)
+            var chapter = await _chapterRepository.GetByIdForAuthorAsync(story.story_id, chapterId, author.account_id, ct)
                          ?? throw new AppException("ChapterNotFound", "Chapter was not found.", 404);
 
             if (!string.Equals(chapter.status, "draft", StringComparison.OrdinalIgnoreCase))

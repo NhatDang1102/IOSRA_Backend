@@ -30,7 +30,7 @@ namespace Repository.Repositories
             return _db.tag.Where(t => ids.Contains(t.tag_id)).ToListAsync(ct);
         }
 
-        public async Task<story> AddStoryAsync(story entity, IEnumerable<Guid> tagIds, CancellationToken ct = default)
+        public async Task<story> CreateAsync(story entity, IEnumerable<Guid> tagIds, CancellationToken ct = default)
         {
             EnsureId(entity, nameof(story.story_id));
             _db.stories.Add(entity);
@@ -52,7 +52,7 @@ namespace Repository.Repositories
             return entity;
         }
 
-        public Task<List<story>> GetStoriesByAuthorAsync(Guid authorId, IEnumerable<string>? statuses = null, CancellationToken ct = default)
+        public Task<List<story>> GetAllByAuthorAsync(Guid authorId, IEnumerable<string>? statuses = null, CancellationToken ct = default)
         {
             var query = _db.stories
                 .Include(s => s.story_tags).ThenInclude(st => st.tag)
@@ -89,12 +89,12 @@ namespace Repository.Repositories
                   .Include(s => s.story_tags).ThenInclude(st => st.tag)
                   .FirstOrDefaultAsync(s => s.story_id == storyId, ct);
 
-        public Task<story?> GetStoryForAuthorAsync(Guid storyId, Guid authorId, CancellationToken ct = default)
+        public Task<story?> GetByIdForAuthorAsync(Guid storyId, Guid authorId, CancellationToken ct = default)
             => _db.stories
                   .Include(s => s.story_tags).ThenInclude(st => st.tag)
                   .FirstOrDefaultAsync(s => s.story_id == storyId && s.author_id == authorId, ct);
 
-        public async Task UpdateStoryAsync(story entity, CancellationToken ct = default)
+        public async Task UpdateAsync(story entity, CancellationToken ct = default)
         {
             _db.stories.Update(entity);
             await _db.SaveChangesAsync(ct);

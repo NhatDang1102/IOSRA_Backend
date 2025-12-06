@@ -10,8 +10,8 @@ namespace Service.Interfaces
     public interface IAuthorChapterService
     {
         Task<ChapterResponse> CreateAsync(Guid authorAccountId, Guid storyId, ChapterCreateRequest request, CancellationToken ct = default);
-        Task<IReadOnlyList<ChapterListItemResponse>> ListAsync(Guid authorAccountId, Guid storyId, string? status = null, CancellationToken ct = default);
-        Task<ChapterResponse> GetAsync(Guid authorAccountId, Guid storyId, Guid chapterId, CancellationToken ct = default);
+        Task<IReadOnlyList<ChapterListItemResponse>> GetAllAsync(Guid authorAccountId, Guid storyId, string? status = null, CancellationToken ct = default);
+        Task<ChapterResponse> GetByIdAsync(Guid authorAccountId, Guid storyId, Guid chapterId, CancellationToken ct = default);
         Task<ChapterResponse> UpdateDraftAsync(Guid authorAccountId, Guid storyId, Guid chapterId, ChapterUpdateRequest request, CancellationToken ct = default);
         Task<ChapterResponse> SubmitAsync(Guid authorAccountId, Guid chapterId, ChapterSubmitRequest request, CancellationToken ct = default);
         Task<ChapterResponse> WithdrawAsync(Guid authorAccountId, Guid chapterId, CancellationToken ct = default);
