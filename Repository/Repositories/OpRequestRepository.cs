@@ -45,6 +45,7 @@ namespace Repository.Repositories
             var query = _db.op_request
                             .Include(r => r.requester)
                             .AsNoTracking()
+                            .Where(r => r.request_type == "become_author")
                             .AsQueryable();
             if (!string.IsNullOrWhiteSpace(status))
             {
