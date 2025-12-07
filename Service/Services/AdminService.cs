@@ -1,12 +1,13 @@
 using System;
-using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Bc = BCrypt.Net.BCrypt;
 using Contract.DTOs.Request.Admin;
 using Contract.DTOs.Response.Admin;
 using Contract.DTOs.Response.Common;
 using Repository.DataModels;
+using Repository.Entities;
 using Repository.Interfaces;
 using Service.Exceptions;
 using Service.Interfaces;
@@ -15,7 +16,6 @@ namespace Service.Services
 {
     public class AdminService : IAdminService
     {
-        private static readonly string[] AssignableRoles = { "reader", "cmod", "omod", "admin" };
         private static readonly string[] FilterableRoles = { "reader", "author", "cmod", "omod", "admin" };
         private static readonly string[] AllowedStatuses = { "banned", "unbanned" };
 
@@ -45,62 +45,11 @@ namespace Service.Services
             };
         }
 
-        public async Task<AdminAccountResponse> AssignRoleAsync(Guid accountId, AssignAdminRoleRequest request, CancellationToken ct = default)
-        {
-            if (request == null)
-            {
-                throw new AppException("ValidationFailed", "Request body is required.", 400);
-            }
+        public Task<AdminAccountResponse> CreateContentModAsync(CreateModeratorRequest request, CancellationToken ct = default)
+            => CreateModeratorAsync(request, "cmod", _repository.AddContentModProfileAsync, ct);
 
-            var normalizedRole = NormalizeRole(request.Role);
-
-            var account = await _repository.GetAccountAsync(accountId, ct)
-                          ?? throw new AppException("AccountNotFound", "Account was not found.", 404);
-
-            var hasConflictingRole = account.Roles.Any(r => AssignableRoles.Contains(r, StringComparer.OrdinalIgnoreCase) && !string.Equals(r, normalizedRole, StringComparison.OrdinalIgnoreCase));
-            var alreadyHasRole = account.Roles.Any(r => string.Equals(r, normalizedRole, StringComparison.OrdinalIgnoreCase));
-
-            if (alreadyHasRole && !hasConflictingRole)
-            {
-                return Map(account);
-            }
-
-            if (!string.Equals(normalizedRole, "reader", StringComparison.OrdinalIgnoreCase))
-            {
-                var isAuthor = await _repository.HasAuthorProfileAsync(accountId, ct);
-                if (isAuthor)
-                {
-                    throw new AppException("CannotPromoteAuthor", "Author accounts cannot be promoted to moderator/admin roles.", 409);
-                }
-            }
-
-            await _repository.RemovePrimaryProfilesAsync(accountId, ct);
-            await _repository.RemovePrimaryRolesAsync(accountId, ct);
-
-            switch (normalizedRole)
-            {
-                case "reader":
-                    await _repository.EnsureReaderProfileAsync(accountId, ct);
-                    break;
-                case "cmod":
-                    await _repository.AddContentModProfileAsync(accountId, ct);
-                    break;
-                case "omod":
-                    await _repository.AddOperationModProfileAsync(accountId, ct);
-                    break;
-                case "admin":
-                    await _repository.AddAdminProfileAsync(accountId, ct);
-                    break;
-            }
-
-            await _repository.AddRoleAsync(accountId, normalizedRole, ct);
-            await _repository.SaveChangesAsync(ct);
-
-            var updated = await _repository.GetAccountAsync(accountId, ct)
-                          ?? throw new AppException("AccountNotFound", "Account was not found.", 404);
-
-            return Map(updated);
-        }
+        public Task<AdminAccountResponse> CreateOperationModAsync(CreateModeratorRequest request, CancellationToken ct = default)
+            => CreateModeratorAsync(request, "omod", _repository.AddOperationModProfileAsync, ct);
 
         public async Task<AdminAccountResponse> UpdateStatusAsync(Guid accountId, UpdateAccountStatusRequest request, CancellationToken ct = default)
         {
@@ -126,6 +75,56 @@ namespace Service.Services
                           ?? throw new AppException("AccountNotFound", "Account was not found.", 404);
 
             return Map(updated);
+        }
+
+        private async Task<AdminAccountResponse> CreateModeratorAsync(
+            CreateModeratorRequest? request,
+            string roleCode,
+            Func<Guid, string?, CancellationToken, Task> profileFactory,
+            CancellationToken ct)
+        {
+            if (request == null)
+            {
+                throw new AppException("ValidationFailed", "Request body is required.", 400);
+            }
+
+            var (email, username, password, phone) = NormalizeModeratorRequest(request);
+
+            if (await _repository.EmailExistsAsync(email, ct))
+            {
+                throw new AppException("EmailExists", "Email is already in use.", 409);
+            }
+
+            if (await _repository.UsernameExistsAsync(username, ct))
+            {
+                throw new AppException("UsernameExists", "Username is already in use.", 409);
+            }
+
+            var now = Repository.Utils.TimezoneConverter.VietnamNow;
+            var accountId = Guid.NewGuid();
+            var accountEntity = new account
+            {
+                account_id = accountId,
+                username = username,
+                email = email,
+                password_hash = Bc.HashPassword(password),
+                status = "unbanned",
+                strike_status = "none",
+                strike = 0,
+                strike_restricted_until = null,
+                avatar_url = null,
+                created_at = now,
+                updated_at = now
+            };
+
+            await _repository.AddAccountAsync(accountEntity, ct);
+            await profileFactory(accountId, phone, ct);
+            await _repository.AddRoleAsync(accountId, roleCode, ct);
+            await _repository.SaveChangesAsync(ct);
+
+            var projection = await _repository.GetAccountAsync(accountId, ct)
+                              ?? throw new AppException("AccountNotFound", "Account was not found after creation.", 404);
+            return Map(projection);
         }
 
         private static string? NormalizeStatusFilter(string? value)
@@ -176,20 +175,29 @@ namespace Service.Services
             return normalized;
         }
 
-        private static string NormalizeRole(string? value)
+        private static (string Email, string Username, string Password, string? Phone) NormalizeModeratorRequest(CreateModeratorRequest request)
         {
-            if (string.IsNullOrWhiteSpace(value))
+            var email = request.Email?.Trim();
+            var username = request.Username?.Trim();
+            var password = request.Password?.Trim();
+            var phone = string.IsNullOrWhiteSpace(request.Phone) ? null : request.Phone!.Trim();
+
+            if (string.IsNullOrWhiteSpace(email))
             {
-                throw new AppException("InvalidRole", "Role is required.", 400);
+                throw new AppException("InvalidEmail", "Email is required.", 400);
             }
 
-            var normalized = value.Trim().ToLowerInvariant();
-            if (!FilterableRoles.Contains(normalized))
+            if (string.IsNullOrWhiteSpace(username))
             {
-                throw new AppException("InvalidRole", $"Unsupported role '{value}'.", 400);
+                throw new AppException("InvalidUsername", "Username is required.", 400);
             }
 
-            return normalized;
+            if (string.IsNullOrWhiteSpace(password))
+            {
+                throw new AppException("InvalidPassword", "Password is required.", 400);
+            }
+
+            return (email, username, password, phone);
         }
 
         private static AdminAccountResponse Map(AdminAccountProjection projection)

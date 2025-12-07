@@ -16,5 +16,8 @@ namespace Contract.DTOs.Response.Report
         public string Status { get; set; } = null!;
         public DateTime CreatedAt { get; set; }
         public DateTime? ReviewedAt { get; set; }
+        public ReportStoryDetailResponse? Story { get; set; }
+        public ReportChapterDetailResponse? Chapter { get; set; }
+        public ReportCommentDetailResponse? Comment { get; set; }
     }
 }

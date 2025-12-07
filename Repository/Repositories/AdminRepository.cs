@@ -89,6 +89,18 @@ namespace Repository.Repositories
                 })
                 .FirstOrDefaultAsync(ct);
 
+        public Task<bool> EmailExistsAsync(string email, CancellationToken ct = default)
+            => _db.accounts.AnyAsync(a => a.email == email, ct);
+
+        public Task<bool> UsernameExistsAsync(string username, CancellationToken ct = default)
+            => _db.accounts.AnyAsync(a => a.username == username, ct);
+
+        public Task AddAccountAsync(account entity, CancellationToken ct = default)
+        {
+            _db.accounts.Add(entity);
+            return Task.CompletedTask;
+        }
+
         public Task<bool> HasAuthorProfileAsync(Guid accountId, CancellationToken ct = default)
             => _db.authors.AnyAsync(a => a.account_id == accountId, ct);
 
@@ -132,13 +144,13 @@ namespace Repository.Repositories
             return Task.CompletedTask;
         }
 
-        public Task AddContentModProfileAsync(Guid accountId, CancellationToken ct = default)
+        public Task AddContentModProfileAsync(Guid accountId, string? phone, CancellationToken ct = default)
         {
             var entity = new ContentMod
             {
                 account_id = accountId,
                 assigned_date = TimezoneConverter.VietnamNow,
-                phone = null,
+                phone = string.IsNullOrWhiteSpace(phone) ? null : phone.Trim(),
                 total_approved_chapters = 0,
                 total_rejected_chapters = 0,
                 total_approved_stories = 0,
@@ -149,12 +161,13 @@ namespace Repository.Repositories
             return Task.CompletedTask;
         }
 
-        public Task AddOperationModProfileAsync(Guid accountId, CancellationToken ct = default)
+        public Task AddOperationModProfileAsync(Guid accountId, string? phone, CancellationToken ct = default)
         {
             var entity = new OperationMod
             {
                 account_id = accountId,
                 assigned_date = TimezoneConverter.VietnamNow,
+                phone = string.IsNullOrWhiteSpace(phone) ? null : phone.Trim(),
                 reports_generated = 0
             };
             _db.OperationMods.Add(entity);

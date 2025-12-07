@@ -16,6 +16,9 @@ public partial class OperationMod
     [Column(TypeName = "datetime")]
     public DateTime assigned_date { get; set; }
 
+    [StringLength(32)]
+    public string? phone { get; set; }
+
     public uint reports_generated { get; set; }
 
     [ForeignKey("account_id")]

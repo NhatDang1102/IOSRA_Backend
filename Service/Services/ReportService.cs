@@ -90,9 +90,15 @@ namespace Service.Services
             var normalizedTargetId = NormalizeGuidFilter(targetId);
 
             var (items, total) = await _reportRepository.GetPagedAsync(normalizedStatus, normalizedTargetType, normalizedTargetId, normalizedPage, normalizedSize, ct);
+            var responses = items.Select(Map).ToArray();
+            foreach (var response in responses)
+            {
+                await AttachTargetDetailsAsync(response, response.TargetType, response.TargetId, ct);
+            }
+
             return new PagedResult<ReportResponse>
             {
-                Items = items.Select(Map).ToArray(),
+                Items = responses,
                 Total = total,
                 Page = normalizedPage,
                 PageSize = normalizedSize
@@ -103,7 +109,9 @@ namespace Service.Services
         {
             var entity = await _reportRepository.GetByIdAsync(reportId, ct)
                          ?? throw new AppException("ReportNotFound", "Report was not found.", 404);
-            return Map(entity);
+            var response = Map(entity);
+            await AttachTargetDetailsAsync(response, entity.target_type, entity.target_id, ct);
+            return response;
         }
 
         public async Task<ReportResponse> UpdateStatusAsync(Guid moderatorAccountId, Guid reportId, ReportModerationUpdateRequest request, CancellationToken ct = default)
@@ -135,7 +143,9 @@ namespace Service.Services
                 await _contentModRepository.IncrementReportHandledAsync(moderatorAccountId, ct);
             }
 
-            return Map(saved);
+            var response = Map(saved);
+            await AttachTargetDetailsAsync(response, saved.target_type, saved.target_id, ct);
+            return response;
         }
 
         public async Task<PagedResult<ReportResponse>> GetMyReportsAsync(Guid reporterAccountId, int page, int pageSize, CancellationToken ct = default)
@@ -143,10 +153,15 @@ namespace Service.Services
             var normalizedPage = NormalizePage(page);
             var normalizedSize = NormalizePageSize(pageSize);
             var (items, total) = await _reportRepository.GetByReporterAsync(reporterAccountId, normalizedPage, normalizedSize, ct);
+            var responses = items.Select(Map).ToArray();
+            foreach (var response in responses)
+            {
+                await AttachTargetDetailsAsync(response, response.TargetType, response.TargetId, ct);
+            }
 
             return new PagedResult<ReportResponse>
             {
-                Items = items.Select(Map).ToArray(),
+                Items = responses,
                 Total = total,
                 Page = normalizedPage,
                 PageSize = normalizedSize
@@ -163,7 +178,9 @@ namespace Service.Services
                 throw new AppException("ReportNotFound", "Report was not found.", 404);
             }
 
-            return Map(entity);
+            var response = Map(entity);
+            await AttachTargetDetailsAsync(response, entity.target_type, entity.target_id, ct);
+            return response;
         }
 
 
@@ -304,6 +321,72 @@ namespace Service.Services
                 CreatedAt = entity.created_at,
                 ReviewedAt = entity.reviewed_at
             };
+        }
+
+        private async Task AttachTargetDetailsAsync(ReportResponse response, string targetType, Guid targetId, CancellationToken ct)
+        {
+            switch (targetType)
+            {
+                case ReportTargetTypes.Story:
+                    {
+                        var story = await _moderationRepository.GetStoryAsync(targetId, ct);
+                        if (story != null)
+                        {
+                            response.Story = new ReportStoryDetailResponse
+                            {
+                                StoryId = story.story_id,
+                                Title = story.title,
+                                Description = story.desc,
+                                Status = story.status,
+                                CoverUrl = story.cover_url,
+                                LengthPlan = story.length_plan,
+                                AuthorId = story.author_id,
+                                AuthorUsername = story.author?.account?.username ?? string.Empty
+                            };
+                        }
+                        break;
+                    }
+                case ReportTargetTypes.Chapter:
+                    {
+                        var chapter = await _moderationRepository.GetChapterAsync(targetId, ct);
+                        if (chapter != null)
+                        {
+                            response.Chapter = new ReportChapterDetailResponse
+                            {
+                                ChapterId = chapter.chapter_id,
+                                StoryId = chapter.story_id,
+                                Title = chapter.title,
+                                ChapterNo = (int)chapter.chapter_no,
+                                Status = chapter.status ?? string.Empty,
+                                AccessType = chapter.access_type ?? string.Empty,
+                                PriceDias = chapter.dias_price,
+                                ContentPath = chapter.content_url,
+                                LanguageCode = chapter.language?.lang_code,
+                                LanguageName = chapter.language?.lang_name
+                            };
+                        }
+                        break;
+                    }
+                case ReportTargetTypes.Comment:
+                    {
+                        var comment = await _moderationRepository.GetCommentAsync(targetId, ct);
+                        if (comment != null)
+                        {
+                            response.Comment = new ReportCommentDetailResponse
+                            {
+                                CommentId = comment.comment_id,
+                                ChapterId = comment.chapter_id,
+                                StoryId = comment.chapter?.story_id,
+                                Content = comment.content,
+                                Status = comment.status ?? string.Empty,
+                                ReaderId = comment.reader_id,
+                                ReaderUsername = comment.reader?.account?.username ?? string.Empty,
+                                CreatedAt = comment.created_at
+                            };
+                        }
+                        break;
+                    }
+            }
         }
 
         private static string NormalizeTargetType(string? value)

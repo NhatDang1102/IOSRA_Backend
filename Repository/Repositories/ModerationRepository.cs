@@ -29,6 +29,7 @@ namespace Repository.Repositories
         public Task<chapter?> GetChapterAsync(Guid chapterId, CancellationToken ct = default)
             => _db.chapter
                   .Include(c => c.story).ThenInclude(s => s.author).ThenInclude(a => a.account)
+                  .Include(c => c.language)
                   .FirstOrDefaultAsync(c => c.chapter_id == chapterId, ct);
 
         public async Task UpdateChapterAsync(chapter entity, CancellationToken ct = default)
@@ -40,7 +41,7 @@ namespace Repository.Repositories
         public Task<chapter_comment?> GetCommentAsync(Guid commentId, CancellationToken ct = default)
             => _db.chapter_comments
                   .Include(c => c.reader).ThenInclude(r => r.account)
-                  .Include(c => c.chapter)
+                  .Include(c => c.chapter).ThenInclude(ch => ch.story)
                   .FirstOrDefaultAsync(c => c.comment_id == commentId, ct);
 
         public async Task UpdateCommentAsync(chapter_comment entity, CancellationToken ct = default)

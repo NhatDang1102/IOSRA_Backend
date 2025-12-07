@@ -33,10 +33,17 @@ namespace Main.Controllers
             return Ok(result);
         }
 
-        [HttpPost("accounts/{accountId:guid}/roles")]
-        public async Task<ActionResult<AdminAccountResponse>> AssignRole(Guid accountId, [FromBody] AssignAdminRoleRequest request, CancellationToken ct)
+        [HttpPost("content-mods")]
+        public async Task<ActionResult<AdminAccountResponse>> CreateContentMod([FromBody] CreateModeratorRequest request, CancellationToken ct)
         {
-            var result = await _adminService.AssignRoleAsync(accountId, request, ct);
+            var result = await _adminService.CreateContentModAsync(request, ct);
+            return Ok(result);
+        }
+
+        [HttpPost("operation-mods")]
+        public async Task<ActionResult<AdminAccountResponse>> CreateOperationMod([FromBody] CreateModeratorRequest request, CancellationToken ct)
+        {
+            var result = await _adminService.CreateOperationModAsync(request, ct);
             return Ok(result);
         }
 
