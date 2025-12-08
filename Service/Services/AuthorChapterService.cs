@@ -17,7 +17,7 @@ using Contract.DTOs.Response.Chapter;
 namespace Service.Services
 {
     public class AuthorChapterService : IAuthorChapterService
-    {
+    { //số chữ min khi up chap 
         private const int MinContentLength = 50;
         private readonly IAuthorChapterRepository _chapterRepository;
         private readonly IAuthorStoryRepository _storyRepository;
@@ -26,7 +26,7 @@ namespace Service.Services
         private readonly IFollowerNotificationService _followerNotificationService;
         private readonly IChapterPricingService _chapterPricingService;
         private readonly IProfileRepository? _profileRepository;
-
+        //định ra các status cho phép
         private static readonly string[] AuthorChapterAllowedStatuses = { "draft", "pending", "rejected", "published", "hidden", "removed" };
         private static readonly string[] ChapterAccessTypes = { "free", "dias" };
 
@@ -50,9 +50,12 @@ namespace Service.Services
 
         public async Task<ChapterResponse> CreateAsync(Guid authorAccountId, Guid storyId, ChapterCreateRequest request, CancellationToken ct = default)
         {
+            //check author profile 
             var author = await _storyRepository.GetAuthorAsync(authorAccountId, ct)
                          ?? throw new AppException("AuthorNotFound", "Author profile is not registered.", 404);
 
+
+            //restricted thi ko đc upload chapter mới 
             await AccountRestrictionHelper.EnsureCanPublishAsync(author.account, _profileRepository, ct);
 
             var story = await _storyRepository.GetByIdForAuthorAsync(storyId, author.account_id, ct)
@@ -89,7 +92,7 @@ namespace Service.Services
             {
                 throw new AppException("LanguageCodeRequired", "Language code must not be empty.", 400);
             }
-
+            //gọi repo lấy language líst để đảm bảo language cho phép phải có trong db và đúng code 
             var language = await _chapterRepository.GetLanguageByCodeAsync(languageCode, ct)
                           ?? throw new AppException("LanguageNotSupported", $"Language '{languageCode}' is not supported.", 400);
             var content = (request.Content ?? string.Empty).Trim();
@@ -97,21 +100,24 @@ namespace Service.Services
             {
                 throw new AppException("ChapterContentTooShort", $"Chapter content must contain at least {MinContentLength} characters.", 400);
             }
-
+            //đếm số TỪ (số từ ko phải số kí tự) 
             var wordCount = CountWords(content);
             if (wordCount <= 0)
             {
                 throw new AppException("ChapterContentEmpty", "Chapter content must include words.", 400);
             }
-
+            //đếm số KÍ TỰ
             var charCount = content.Length;
+            //định giá 
             var price = await _chapterPricingService.GetPriceAsync(wordCount, ct);
+            //định no. của chapter 
             var chapterNumber = await _chapterRepository.GetNextChapterNumberAsync(story.story_id, ct);
             var chapterId = Guid.NewGuid();
             var requestedAccessType = NormalizeOptionalChapterAccessType(request.AccessType);
+            //check coi rank causal hay 3 rank sponsored
             var canLockChapters = CanAuthorLockChapters(author, story);
             var accessType = ResolveAccessTypeForCreate(requestedAccessType, canLockChapters, story.is_premium);
-
+            //mood mặc định là neutral (lúc submit mới coi mood)
             var chapter = new chapter
             {
                 chapter_id = chapterId,
@@ -137,12 +143,15 @@ namespace Service.Services
             string contentKey;
             try
             {
+                //đẩy story id với chapter id để up lên bucket cloud 
                 contentKey = await _contentStorage.UploadAsync(story.story_id, chapter.chapter_id, content, ct);
                 chapter.content_url = contentKey;
                 await _chapterRepository.CreateAsync(chapter, ct);
+
             }
             catch
             {
+                //nếu k lưu db đc thì delete khỏi cloud để tránh file rác 
                 if (!string.IsNullOrWhiteSpace(chapter.content_url))
                 {
                     await _contentStorage.DeleteAsync(chapter.content_url, ct);
@@ -187,17 +196,19 @@ namespace Service.Services
             var chapter = await _chapterRepository.GetByIdAsync(chapterId, ct)
                           ?? throw new AppException("ChapterNotFound", "Chapter was not found.", 404);
 
+            //báo lỗi nếu k lấy info story 
             var story = chapter.story ?? throw new InvalidOperationException("Chapter story navigation was not loaded.");
             if (story.author_id != author.account_id)
             {
                 throw new AppException("ChapterNotFound", "Chapter was not found.", 404);
             }
 
+            //nghiệp vụ hiện tại: hidden cho đăng draft mới NHƯNG không submit được 
             if (string.Equals(story.status, "hidden", StringComparison.OrdinalIgnoreCase))
             {
                 throw new AppException("StoryHidden", "Story is hidden. Please restore it before submitting chapters.", 400);
             }
-
+            //chỉ đc 1 truyện pending cùng 1 lúc 
             if (await _chapterRepository.HasPendingChapterAsync(story.story_id, ct) &&
                 !string.Equals(chapter.status, "pending", StringComparison.OrdinalIgnoreCase))
             {
@@ -208,7 +219,7 @@ namespace Service.Services
             {
                 throw new AppException("InvalidChapterState", "Only draft chapters can be submitted. Create a new chapter if the previous one was rejected.", 400);
             }
-
+            //phải submit theo đúng thứ tự draft 
             var hasEarlierDraft = await _chapterRepository.HasDraftChapterBeforeAsync(story.story_id, chapter.created_at, chapter.chapter_id, ct);
             if (hasEarlierDraft)
             {
@@ -220,8 +231,11 @@ namespace Service.Services
                 throw new InvalidOperationException("Chapter content is missing.");
             }
 
+            //lấy content trên cloud xuống rồi đổi lại sang string 
             var content = await _contentStorage.DownloadAsync(chapter.content_url, ct);
+            //lúc submit mới gọi luôn openAI chấm cảm xúc (default là neutral)
             chapter.mood_code = await DetectMoodAsync(content, ct);
+            //gọi openAI kiểm duyệt 
             var moderation = await _openAiModerationService.ModerateChapterAsync(chapter.title, content, ct);
             var aiScoreDecimal = (decimal)Math.Round(moderation.Score, 2, MidpointRounding.AwayFromZero);
             var timestamp = TimezoneConverter.VietnamNow;
@@ -271,7 +285,7 @@ namespace Service.Services
 
             if (notifyFollowers)
             {
-                var authorName = story.author?.account.username ?? "TÃƒÆ’Ã‚Â¡c giÃƒÂ¡Ã‚ÂºÃ‚Â£";
+                var authorName = story.author?.account.username ?? "Tác giả ";
                 await _followerNotificationService.NotifyChapterPublishedAsync(
                     story.author_id,
                     authorName,
@@ -288,6 +302,7 @@ namespace Service.Services
 
         public async Task<ChapterResponse> WithdrawAsync(Guid authorAccountId, Guid chapterId, CancellationToken ct = default)
         {
+            
             var author = await _storyRepository.GetAuthorAsync(authorAccountId, ct)
                          ?? throw new AppException("AuthorNotFound", "Author profile is not registered.", 404);
 

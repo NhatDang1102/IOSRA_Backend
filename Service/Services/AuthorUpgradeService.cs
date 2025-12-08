@@ -1,4 +1,4 @@
-using Contract.DTOs.Request.Author;
+﻿using Contract.DTOs.Request.Author;
 using Contract.DTOs.Response.Author;
 using Contract.DTOs.Response.OperationMod;
 using Repository.Interfaces;
@@ -42,7 +42,7 @@ namespace Service.Implementations
             {
                 throw new AppException("AlreadyPending", "You already have a pending upgrade request.", 409);
             }
-
+            //check cooldown, 7 ngày mới đc submit 1 lần từ lúc bị reject để chống spam liên tục 
             var lastRejectedAt = await _opRepo.GetLastRejectedAtAsync(accountId, ct);
             if (lastRejectedAt.HasValue)
             {
@@ -58,6 +58,7 @@ namespace Service.Implementations
                 }
             }
 
+            //vượt qua đc các validation trên thì khởi tạo vô bảng op_request
             var created = await _opRepo.CreateUpgradeRequestAsync(accountId, req.Commitment, ct);
 
             return new AuthorUpgradeResponse
@@ -94,6 +95,7 @@ namespace Service.Implementations
 
         public async Task<AuthorRankStatusResponse> GetRankStatusAsync(Guid accountId, CancellationToken ct = default)
         {
+            //check author profile lấy rank hiện tại 
             _ = await _profileRepo.GetAccountByIdAsync(accountId, ct)
                 ?? throw new AppException("AccountNotFound", "Account was not found.", 404);
 
@@ -105,8 +107,9 @@ namespace Service.Implementations
             {
                 throw new AppException("RankSeedMissing", "Author ranks have not been configured.", 500);
             }
-
+            //get tất cả bậc rank sort từ dưới lên theo min follower
             var ordered = ranks.OrderBy(r => r.min_followers).ToList();
+            //lấy rank hiện tại của tác giả
             var currentRank = author.rank_id.HasValue
                 ? ordered.FirstOrDefault(r => r.rank_id == author.rank_id.Value)
                 : ordered.FirstOrDefault();

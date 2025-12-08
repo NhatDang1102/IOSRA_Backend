@@ -58,31 +58,38 @@ namespace Service.Implementations
 
         public async Task ApproveAsync(Guid requestId, Guid omodAccountId, CancellationToken ct = default)
         {
+            //bóc request ra từ db 
             var request = await _opRepo.GetRequestAsync(requestId, ct)
                           ?? throw new AppException("RequestNotFound", "Upgrade request was not found.", 404);
 
+            //chỉ approve đc pending request 
             if (!string.Equals(request.status, "pending", StringComparison.OrdinalIgnoreCase))
             {
                 throw new AppException("InvalidState", "Only pending requests can be approved.", 400);
             }
 
+            //bóc rank id trong bảng author_rank ra 
             var casualRankId = await _opRepo.GetRankIdByNameAsync("Casual", ct);
             if (casualRankId is null || casualRankId == Guid.Empty)
             {
                 throw new AppException("SeedMissing", "Author rank 'Casual' has not been seeded.", 500);
             }
 
+            //bước nghiệp vụ qtr nhất của method này: update từ reader sang author, gán bảng author rank Casual
             await _opRepo.EnsureAuthorUpgradedAsync(request.requester_id, casualRankId.Value, ct);
 
+            //xong author rank thì bóc role author trong bảng role ra 
             var authorRoleId = await _opRepo.GetRoleIdByCodeAsync("author", ct);
             if (authorRoleId is null || authorRoleId == Guid.Empty)
             {
                 throw new AppException("SeedMissing", "Role 'author' has not been seeded.", 500);
             }
 
+            //thêm vô acocunt_role
             await _opRepo.AddAccountRoleIfNotExistsAsync(request.requester_id, authorRoleId.Value, ct);
+            //approved status
             await _opRepo.SetRequestApprovedAsync(request.request_id, omodAccountId, ct);
-
+            //bắn noti qua cho author
             await _notificationService.CreateAsync(new NotificationCreateModel(
                 request.requester_id,
                 NotificationTypes.OperationRequest,
@@ -104,9 +111,9 @@ namespace Service.Implementations
             {
                 throw new AppException("InvalidState", "Only pending requests can be rejected.", 400);
             }
-
+            //rejected
             await _opRepo.SetRequestRejectedAsync(requestId, omodAccountId, req.Reason, ct);
-
+            //bắn noti qua
             await _notificationService.CreateAsync(new NotificationCreateModel(
                 entity.requester_id,
                 NotificationTypes.OperationRequest,
@@ -122,6 +129,7 @@ namespace Service.Implementations
                 }), ct);
         }
 
+       
         public async Task<IReadOnlyList<AuthorWithdrawRequestResponse>> ListWithdrawRequestsAsync(string? status, CancellationToken ct = default)
         {
             var data = await _opRepo.ListWithdrawRequestsAsync(null, status, ct);
@@ -146,14 +154,18 @@ namespace Service.Implementations
             var author = await _authorRevenueRepository.GetAuthorAsync(entity.requester_id, ct)
                          ?? throw new AppException("AuthorProfileMissing", "Author profile was not found.", 404);
 
+            
             var amount = (long)entity.withdraw_amount.Value;
             var note = string.IsNullOrWhiteSpace(request?.Note) ? null : request!.Note!.Trim();
             var transactionCode = string.IsNullOrWhiteSpace(request?.TransactionCode) ? null : request!.TransactionCode!.Trim();
             var metadata = entity.request_content;
             var now = TimezoneConverter.VietnamNow;
 
-            await using var transaction = await _authorRevenueRepository.BeginTransactionAsync(ct);
 
+            //gọi transaction: đảm bảo status và cập nhật số dư phải đều thành công, ko thì rollback hết 
+            await using var transaction = await _authorRevenueRepository.BeginTransactionAsync(ct);
+            
+            //tính toán lại revenue cho author
             author.revenue_pending_vnd -= amount;
             author.revenue_withdrawn_vnd += amount;
 
@@ -162,12 +174,13 @@ namespace Service.Implementations
             entity.reviewed_at = now;
             entity.omod_note = note;
             entity.withdraw_code = transactionCode;
-
+            //update db
             await _opRepo.UpdateOpRequestAsync(entity, ct);
 
             await _authorRevenueRepository.SaveChangesAsync(ct);
+            //xong hết thì mới commit hết lên DB (cái ở trên là up op_request, cái này là commit transaction và revenue)
             await transaction.CommitAsync(ct);
-
+            //bắn notification
             await _notificationService.CreateAsync(new NotificationCreateModel(
                 entity.requester_id,
                 NotificationTypes.OperationRequest,

@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using Amazon.S3;
 using Amazon.S3.Model;
 using Contract.DTOs.Settings;
@@ -22,15 +22,16 @@ namespace Service.Helpers
             _settings = options.Value;
         }
 
+        //gắn story id chapter id để tạo url rồi mới đẩy sang method upload 
         public Task<string> UploadAsync(Guid storyId, Guid chapterId, string content, CancellationToken ct = default)
             => UploadInternalAsync(BuildObjectKey(storyId, chapterId), content, ct);
-
+        //như trên nhưng cho ngôn ngữ khác 
         public Task<string> UploadLocalizationAsync(Guid storyId, Guid chapterId, string languageCode, string content, CancellationToken ct = default)
         {
             var key = BuildLocalizationKey(storyId, chapterId, languageCode);
             return UploadInternalAsync(key, content, ct);
         }
-
+        //ngược lại, lấy object từ cloud rồi chuyển ngược lại string để mấy service khác xử lí 
         public async Task<string> DownloadAsync(string key, CancellationToken ct = default)
         {
             var request = new GetObjectRequest
@@ -44,6 +45,7 @@ namespace Service.Helpers
             return await reader.ReadToEndAsync();
         }
 
+        //xóa luôn khỏi cloud 
         public Task DeleteAsync(string key, CancellationToken ct = default)
         {
             var request = new DeleteObjectRequest
@@ -54,6 +56,7 @@ namespace Service.Helpers
             return _s3Client.DeleteObjectAsync(request, ct);
         }
 
+        //tạo public url 
         public string GetContentUrl(string key)
         {
             if (!string.IsNullOrWhiteSpace(_settings.PublicBaseUrl))
@@ -66,12 +69,15 @@ namespace Service.Helpers
 
         private async Task<string> UploadInternalAsync(string key, string content, CancellationToken ct)
         {
+            //chuyển từ string ->> bytes 
             var bytes = Encoding.UTF8.GetBytes(content);
+            //bọc trong memory stream (tại api s3 với r2 chỉ chấp nhận stream)
             using var stream = new MemoryStream(bytes, writable: false);
             stream.Position = 0;
-
+            //khởi tạo request 
             var request = new PutObjectRequest
             {
+                //tên bucket, key (location), format utf-8
                 BucketName = _settings.Bucket,
                 Key = key,
                 InputStream = stream,
@@ -81,13 +87,14 @@ namespace Service.Helpers
             };
             request.Headers.ContentLength = stream.Length;
 
+            //gọi api upload lên xong return lại key 
             await _s3Client.PutObjectAsync(request, ct);
             return key;
         }
-
+        //định nghĩa location và cấu trúc lưu content chapter trên cloud 
         private static string BuildObjectKey(Guid storyId, Guid chapterId)
             => $"stories/{storyId}/chapters/{chapterId}.txt";
-
+        //giống ở trên nhưng cho language khác 
         private static string BuildLocalizationKey(Guid storyId, Guid chapterId, string languageCode)
             => $"stories/{storyId}/chapters/{chapterId}/locales/{languageCode.ToLowerInvariant()}.txt";
     }

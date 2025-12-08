@@ -1,4 +1,4 @@
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using Repository.Base;
 using Repository.DBContext;
 using Repository.Entities;
@@ -18,6 +18,7 @@ namespace Repository.Repositories
         {
         }
 
+        //khởi tạo đơn author upgrade
         public async Task<op_request> CreateUpgradeRequestAsync(Guid accountId, string? content, CancellationToken ct = default)
         {
             var req = new op_request
@@ -39,7 +40,7 @@ namespace Repository.Repositories
             await _db.SaveChangesAsync(ct);
             return req;
         }
-
+        //lấy hết request hiện tại
         public async Task<List<op_request>> ListRequestsAsync(string? status, CancellationToken ct = default)
         {
             var query = _db.op_request
@@ -54,7 +55,7 @@ namespace Repository.Repositories
             }
             return await query.OrderByDescending(r => r.created_at).ToListAsync(ct);
         }
-
+        //lấy request của 1 requester cụ thể 
         public Task<List<op_request>> ListRequestsOfRequesterAsync(Guid accountId, CancellationToken ct = default)
             => _db.op_request
                   .Include(r => r.requester)
@@ -64,7 +65,7 @@ namespace Repository.Repositories
 
         public Task<op_request?> GetRequestAsync(Guid requestId, CancellationToken ct = default)
             => _db.op_request.FirstOrDefaultAsync(r => r.request_id == requestId, ct);
-
+        //update status sang approve và gán omod id + thời điểm duyệt vào 
         public async Task SetRequestApprovedAsync(Guid requestId, Guid omodId, CancellationToken ct = default)
         {
             var req = await _db.op_request.FirstOrDefaultAsync(r => r.request_id == requestId, ct);
@@ -76,7 +77,7 @@ namespace Repository.Repositories
             req.omod_note = null;
             await _db.SaveChangesAsync(ct);
         }
-
+        //như trên nhưng rejected
         public async Task SetRequestRejectedAsync(Guid requestId, Guid omodId, string? reason, CancellationToken ct = default)
         {
             var req = await _db.op_request.FirstOrDefaultAsync(r => r.request_id == requestId, ct);
@@ -93,6 +94,7 @@ namespace Repository.Repositories
         public Task<bool> AuthorIsUnrestrictedAsync(Guid accountId, CancellationToken ct = default)
             => _db.authors.AnyAsync(a => a.account_id == accountId && !a.restricted, ct);
 
+        //vừa là insert vừa upsert: nếu chưa có thì add author mới, nếu đã có thì update 
         public async Task EnsureAuthorUpgradedAsync(Guid accountId, Guid rankId, CancellationToken ct = default)
         {
             var author = await _db.authors.FirstOrDefaultAsync(x => x.account_id == accountId, ct);

@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
@@ -25,10 +25,11 @@ namespace Repository.Repositories
 
         public async Task<(List<author_revenue_transaction> Items, int Total)> GetTransactionsAsync(Guid authorAccountId, int page, int pageSize, string? type, DateTime? from, DateTime? to, CancellationToken ct = default)
         {
+            //đọc transaction trong db
             IQueryable<author_revenue_transaction> query = _db.author_revenue_transaction
                 .AsNoTracking()
                 .Where(t => t.author_id == authorAccountId);
-
+            //các filter 
             if (!string.IsNullOrWhiteSpace(type))
             {
                 query = query.Where(t => t.type == type);
@@ -43,7 +44,7 @@ namespace Repository.Repositories
             {
                 query = query.Where(t => t.created_at <= to.Value);
             }
-
+            //trả cả lịch sử ua voice, mua chapter trong transation này luôn, map sang chapter liên quan luôn
             query = query
                 .Include(t => t.purchase_log)
                     .ThenInclude(pl => pl!.chapter);
@@ -75,6 +76,7 @@ namespace Repository.Repositories
             return Task.CompletedTask;
         }
 
+        //transaction chỉ thành công khi tất cả thao tác đều thành công, 1 cái fail thì rollback hết 
         public Task<IDbContextTransaction> BeginTransactionAsync(CancellationToken ct = default)
             => _db.Database.BeginTransactionAsync(ct);
 

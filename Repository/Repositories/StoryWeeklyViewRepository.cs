@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
@@ -25,17 +25,20 @@ namespace Repository.Repositories
             {
                 return;
             }
-
+            //chuẩn hóa tg bắt đầu tuần
             var normalizedWeekStart = weekStartUtc.TrimToMinute();
-            var storyIds = items.Select(i => i.StoryId).ToArray();
 
+            //tạo 1 mảng tất cả story có lượt view mới mà background bóc ra
+            var storyIds = items.Select(i => i.StoryId).ToArray();
+            //bóc hết story id của tuần hiện tại trong db ra để coi cái nào cần update lượt view
             var existing = await _db.story_weekly_view
                 .Where(x => x.week_start_utc == normalizedWeekStart && storyIds.Contains(x.story_id))
                 .ToListAsync(ct);
-
+            //chuyển existing ở trên thành dictonary để dò cho lẹ (O(1) thay vì O(N) dò hết list mỗi lần upsert
             var existingLookup = existing.ToDictionary(x => x.story_id, x => x);
             var now = TimezoneConverter.VietnamNow;
 
+            //key nào tìm đc trong dictionary thì mới update, néu ko thì insert mới vô 
             foreach (var item in items)
             {
                 if (existingLookup.TryGetValue(item.StoryId, out var entity))

@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
@@ -24,6 +24,7 @@ namespace Service.Services
             _cache = cache;
         }
 
+        //lấy giá trong db (để ko hard code)
         public async Task<int> GetPriceAsync(int wordCount, CancellationToken ct = default)
         {
             if (wordCount <= 0)
@@ -32,13 +33,14 @@ namespace Service.Services
             }
 
             var rules = await GetRulesAsync(ct);
+            //tìm tier gá phù hợp từ min và max word count 
             var rule = rules
                 .FirstOrDefault(r =>
                     wordCount >= r.min_word_count &&
                     (!r.max_word_count.HasValue || wordCount <= r.max_word_count.Value));
 
             if (rule == null)
-            {
+            { //ko có cái nào thỏa mãn yêu cầu thì lấy cái cao nhất 
                 // fallback to highest tier
                 rule = rules.OrderByDescending(r => r.min_word_count).FirstOrDefault();
             }
@@ -53,6 +55,7 @@ namespace Service.Services
 
         private async Task<IReadOnlyList<chapter_price_rule>> GetRulesAsync(CancellationToken ct)
         {
+            //check imemorycache coi có pricing trong đó ko để khỏi truy ván lại cho nhẹ 
             if (_cache.TryGetValue(CacheKey, out IReadOnlyList<chapter_price_rule>? cached) && cached != null && cached.Count > 0)
             {
                 return cached;
@@ -61,6 +64,7 @@ namespace Service.Services
             var rules = await _repository.GetRulesAsync(ct);
             if (rules.Count > 0)
             {
+                //lưu vô cache 
                 _cache.Set(CacheKey, rules, CacheDuration);
             }
 
