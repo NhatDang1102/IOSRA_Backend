@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
@@ -26,6 +26,7 @@ namespace Repository.Repositories
             return entity;
         }
 
+        //tất cả hàm get đều bao gồm: story nào, author nào, language gốc, mood của chapter, các voice trong chapter này
         public Task<chapter?> GetByIdAsync(Guid chapterId, CancellationToken ct = default)
             => _db.chapter
                   .Include(c => c.story).ThenInclude(s => s.author).ThenInclude(a => a.account)
@@ -74,15 +75,17 @@ namespace Repository.Repositories
                 .ToListAsync(ct);
         }
 
+        //get ngôn ngữ trong language_list
         public Task<language_list?> GetLanguageByCodeAsync(string code, CancellationToken ct = default)
         {
             var normalized = (code ?? string.Empty).Trim();
             return _db.language_lists.FirstOrDefaultAsync(l => l.lang_code == normalized, ct);
         }
-
+        
+        //check coi có chapter đang pending ko 
         public Task<bool> HasPendingChapterAsync(Guid storyId, CancellationToken ct = default)
             => _db.chapter.AnyAsync(c => c.story_id == storyId && c.status == "pending", ct);
-
+        //đảm bảo chapter no phải liên tiếp 
         public async Task<int> GetNextChapterNumberAsync(Guid storyId, CancellationToken ct = default)
         {
             var max = await _db.chapter
@@ -91,6 +94,7 @@ namespace Repository.Repositories
             return (max ?? 0) + 1;
         }
 
+        //check coi có chapter nào draft ko 
         public Task<bool> HasDraftChapterBeforeAsync(Guid storyId, DateTime createdAt, Guid currentChapterId, CancellationToken ct = default)
             => _db.chapter.AnyAsync(c =>
                     c.story_id == storyId
@@ -105,7 +109,7 @@ namespace Repository.Repositories
             _db.content_approves.Add(entity);
             await _db.SaveChangesAsync(ct);
         }
-
+        //này giống bên story, hàm trên lấy hết content approve hàm dưới lấy cái mới nhất 
         public async Task<IReadOnlyList<content_approve>> GetContentApprovalsForChapterAsync(Guid chapterId, CancellationToken ct = default)
         {
             return await _db.content_approves
@@ -126,6 +130,7 @@ namespace Repository.Repositories
             await _db.SaveChangesAsync(ct);
         }
 
+        //lấy lần cuối bị rejected để cooldown 
         public Task<DateTime?> GetLastRejectedAtAsync(Guid chapterId, CancellationToken ct = default)
             => _db.content_approves
                   .Where(c => c.chapter_id == chapterId && c.approve_type == "chapter" && c.status == "rejected")

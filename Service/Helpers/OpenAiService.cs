@@ -20,9 +20,13 @@ namespace Service.Helpers
 {
     public class OpenAiService : IOpenAiModerationService, IOpenAiImageService, IOpenAiTranslationService, IOpenAiChatService
     {
+
+        //define các ngưỡng điểm chấm AI 
         private const double AutoApproveThreshold = 7.0;
         private const double ManualReviewThreshold = 5.0;
 
+
+        //define phạm vi kiểm duyệt để lọc 
         private static readonly string[] PolicyStatements =
         {
             "Detect explicit/pornographic sexual content (especially involving minors or coercion).",
@@ -36,6 +40,7 @@ namespace Service.Helpers
             "Detect low-quality/irrelevant filler or advertising masquerading as a chapter."
         };
 
+        //từ những phạm vi trên, định ra mức trừ điểm (Ở MỨC TƯƠNG ĐỐI vì AI mỗi lần response khác nhau)
         private static readonly object[] DeductionTable =
         {
             new
@@ -103,8 +108,11 @@ namespace Service.Helpers
             }
         };
 
+        //define các mood để tạo nhạc
         private static readonly string[] MoodCodes = { "calm", "sad", "mysterious", "excited", "romantic", "neutral" };
 
+
+        //define các label nặng nhất (để reject luôn)
         private static readonly HashSet<string> ForceRejectLabels = new(
             new[]
             {
@@ -121,6 +129,8 @@ namespace Service.Helpers
         private readonly OpenAiSettings _settings;
         private readonly JsonSerializerOptions _jsonOptions;
 
+
+        //định ra những field bị kiểm duyệt (story thì kiểm title và description, chapter thì title và content)
         private static readonly ModerationProfile StoryProfile = new(
             ContentType: "story",
             PrimaryLabel: "Title",
@@ -149,8 +159,12 @@ namespace Service.Helpers
         public Task<OpenAiModerationResult> ModerateChapterAsync(string title, string content, CancellationToken ct = default)
             => ModerateContentAsync(title, content, ChapterProfile, ct);
 
+
+        //hàm quét AI kiểm duyệt 
         private async Task<OpenAiModerationResult> ModerateContentAsync(string primary, string? secondary, ModerationProfile profile, CancellationToken ct)
         {
+
+            //gắn hết content vô 1 chuỗi để request cho openai 
             var combined = ComposeContent(primary, secondary);
             var ai = await RequestModerationAsync(profile, combined, ct);
 
@@ -215,8 +229,10 @@ namespace Service.Helpers
                 explanation);
         }
 
+        //hàm request gửi cho OpenAI để chấm điểm trc 
         private async Task<ModerationAiResponse?> RequestModerationAsync(ModerationProfile profile, string content, CancellationToken ct)
         {
+            //define system openAI 
             var moderationInstructions = @"Return JSON only with shape { ""score"": number, ""decision"": ""auto_approved|pending_manual_review|rejected"", ""violations"": [{ ""label"": string, ""evidence"": [string] }], ""explanation"": { ""english"": string, ""vietnamese"": string } }.
 Start from base score = 10.00 and subtract penalties exactly as defined in ""deductions"". Every time you subtract points you MUST add a violation entry (label must match the table) and quote the offending snippet inside ""evidence"".
 Rules that must always be enforced:
@@ -231,6 +247,7 @@ Explanation requirements:
 - Paraphrase slurs rather than repeating them verbatim.
 If no policy issue exists, state clearly that no deductions were applied.";
 
+            //gom hết phạm vi luật, ngưỡng điểm, instruction vào 1 payload 
             var userPayload = new
             {
                 contentType = profile.ContentType,
@@ -245,6 +262,8 @@ If no policy issue exists, state clearly that no deductions were applied.";
                 content
             };
 
+
+            //từ payload trên gửi cho AI chấm điểm (gọi api ở bước này)
             var payload = new ChatCompletionsRequest
             {
                 Model = _settings.ChatModel,
@@ -271,21 +290,26 @@ If no policy issue exists, state clearly that no deductions were applied.";
                 request.Content = new StringContent(JsonSerializer.Serialize(payload, _jsonOptions), Encoding.UTF8, "application/json");
                 using var response = await _httpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, ct);
 
+                //throw lỗi nếu api openAI failed 
                 if (!response.IsSuccessStatusCode)
                 {
                     var failureBody = await response.Content.ReadAsStringAsync(ct);
                     throw new InvalidOperationException($"OpenAI moderation request failed with status {(int)response.StatusCode}: {failureBody}");
                 }
 
+
+                //check json response
                 var envelope = await response.Content.ReadFromJsonAsync<ChatCompletionsResponse>(_jsonOptions, ct)
                               ?? throw new InvalidOperationException("OpenAI moderation response was empty.");
 
+                
                 var contentResponse = envelope.Choices?
                     .Select(c => c.Message?.Content)
                     .FirstOrDefault(c => !string.IsNullOrWhiteSpace(c));
 
                 if (!string.IsNullOrWhiteSpace(contentResponse))
                 {
+                    //chuyển sang C# object để service access đc 
                     return JsonSerializer.Deserialize<ModerationAiResponse>(contentResponse, _jsonOptions);
                 }
             }
@@ -297,20 +321,24 @@ If no policy issue exists, state clearly that no deductions were applied.";
             return null;
         }
 
+        //dựng response từ AI 
         private static string? BuildExplanationFromAi(ModerationProfile profile, double score, string? decision, ModerationAiExplanation? explanation)
         {
             var english = explanation?.English;
             var vietnamese = explanation?.Vietnamese;
+
+            //chỉ sử dụng explanation AI nếu đủ cả english và vn trong response 
             if (!string.IsNullOrWhiteSpace(english) && !string.IsNullOrWhiteSpace(vietnamese))
             {
                 return $"English:\n{english.Trim()}\n\nTiếng việt:\n{vietnamese.Trim()}";
             }
 
+            //check trong decision của AI có rejected hay là auto approved để build explanation cuối 
             var shouldReject = string.Equals(decision, "rejected", StringComparison.OrdinalIgnoreCase);
             var autoApproved = string.Equals(decision, "auto_approved", StringComparison.OrdinalIgnoreCase);
             return BuildDecisionExplanation(profile, score, shouldReject, autoApproved);
         }
-
+        //cái này để hard response khi AI failed hoặc response sai format 
         private static string BuildDecisionExplanation(ModerationProfile profile, double score, bool shouldReject, bool autoApproved)
         {
             var english = shouldReject
@@ -328,8 +356,10 @@ If no policy issue exists, state clearly that no deductions were applied.";
             return $"English:\n{english}\n\nTiếng việt:\n{vietnamese}";
         }
 
+        //tạo hình AI cover 
         public async Task<OpenAiImageResult> GenerateCoverAsync(string prompt, CancellationToken ct = default)
         {
+            //lấy model trong appsettings, lấy prompt từ request của author với size mặc định (ko set nhỏ hơn đc, tối thiểu 1024x1024)
             var payload = new ImageRequest
             {
                 Model = _settings.ImageModel,
@@ -337,16 +367,18 @@ If no policy issue exists, state clearly that no deductions were applied.";
                 Size = "1024x1024"
             };
 
+            //gọi api tạo hình 
             using var response = await _httpClient.PostAsJsonAsync("images/generations", payload, cancellationToken: ct);
             if (!response.IsSuccessStatusCode)
             {
                 var body = await response.Content.ReadAsStringAsync(ct);
                 throw new InvalidOperationException($"OpenAI image generation failed with status {(int)response.StatusCode}: {body}");
             }
-
+            //check result có ra đc hình ko hay null 
             var result = await response.Content.ReadFromJsonAsync<ImageResponse>(cancellationToken: ct)
                          ?? throw new InvalidOperationException("OpenAI image generation returned an empty response.");
 
+            //ví dụ nó ra nhiều ảnh thì lấy ảnh đầu (ko xảy ra, để cái này dự phòng thôi) 
             var image = result.Data?.FirstOrDefault()
                         ?? throw new InvalidOperationException("OpenAI image generation did not return any images.");
 
@@ -354,6 +386,9 @@ If no policy issue exists, state clearly that no deductions were applied.";
             string fileName;
             string contentType;
 
+            //bắt đầu chekc các trường hợp response: 
+
+            //th1: trả về base64 
             if (!string.IsNullOrWhiteSpace(image.Base64Data))
             {
                 var bytes = Convert.FromBase64String(image.Base64Data);
@@ -361,6 +396,7 @@ If no policy issue exists, state clearly that no deductions were applied.";
                 fileName = $"story_cover_{Guid.NewGuid():N}.png";
                 contentType = "image/png";
             }
+            //th2: trả url
             else if (!string.IsNullOrWhiteSpace(image.Url))
             {
                 using var downloadResponse = await _httpClient.GetAsync(image.Url, ct);

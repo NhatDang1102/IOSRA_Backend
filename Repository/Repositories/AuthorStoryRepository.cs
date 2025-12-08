@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
@@ -18,12 +18,16 @@ namespace Repository.Repositories
         {
         }
 
+
+        //lấy profile của tác giả có kèm rank 
         public Task<author?> GetAuthorAsync(Guid accountId, CancellationToken ct = default)
             => _db.authors
                   .Include(a => a.rank)
                   .Include(a => a.account)
                   .FirstOrDefaultAsync(a => a.account_id == accountId, ct);
 
+
+        //get list tag từ id (distinct để tách biệt trong list)
         public Task<List<tag>> GetTagsByIdsAsync(IEnumerable<Guid> tagIds, CancellationToken ct = default)
         {
             var ids = tagIds.Distinct().ToArray();
@@ -32,10 +36,17 @@ namespace Repository.Repositories
 
         public async Task<story> CreateAsync(story entity, IEnumerable<Guid> tagIds, CancellationToken ct = default)
         {
+
+            //check trong entity đã đc gán story_id chưa trc khi đẩy vô db (tránh db tự tạo)
             EnsureId(entity, nameof(story.story_id));
+
+            //đẩy entity vào context 
             _db.stories.Add(entity);
 
+            //distinct để tách hết tag id nào bị trùng trong array
             var tags = tagIds.Distinct().ToArray();
+
+            //gán story_tag
             if (tags.Length > 0)
             {
                 foreach (var tagId in tags)
@@ -47,18 +58,20 @@ namespace Repository.Repositories
                     });
                 }
             }
-
+            //chạy insert vô db 
             await _db.SaveChangesAsync(ct);
             return entity;
         }
 
         public Task<List<story>> GetAllByAuthorAsync(Guid authorId, IEnumerable<string>? statuses = null, CancellationToken ct = default)
         {
+            //bóc ra líst stor của author kèm luôn tag và trạng thái kiểm duyệt từng story 
             var query = _db.stories
                 .Include(s => s.story_tags).ThenInclude(st => st.tag)
                 .Include(s => s.content_approves)
                 .Where(s => s.author_id == authorId);
 
+            //check request có kèm status (pending/published/draft....) để filter 
             if (statuses is not null)
             {
                 var statusList = statuses
@@ -121,7 +134,7 @@ namespace Repository.Repositories
 
             await _db.SaveChangesAsync(ct);
         }
-
+        //add vô bảng content_approve
         public async Task AddContentApproveAsync(content_approve entity, CancellationToken ct = default)
         {
             EnsureId(entity, nameof(content_approve.review_id));
@@ -130,18 +143,23 @@ namespace Repository.Repositories
             await _db.SaveChangesAsync(ct);
         }
 
+        //lấy bảng ghi kiểm duyệt mới nhất
         public Task<content_approve?> GetContentApprovalForStoryAsync(Guid storyId, CancellationToken ct = default)
             => _db.content_approves
                   .Where(c => c.story_id == storyId && c.approve_type == "story")
                   .OrderByDescending(c => c.created_at)
                   .FirstOrDefaultAsync(ct);
 
+
+        //lấy hết (thật ra cũng ko xài vì override)
         public Task<List<content_approve>> GetContentApprovalsForStoryAsync(Guid storyId, CancellationToken ct = default)
             => _db.content_approves
                   .Where(c => c.story_id == storyId && c.approve_type == "story")
                   .OrderByDescending(c => c.created_at)
                   .ToListAsync(ct);
 
+
+        //check coi author có story nào đang pending ko (để validate 1 author chỉ dc 1 truyện đang pending cùng lúc)
         public Task<bool> AuthorHasPendingStoryAsync(Guid authorId, Guid? excludeStoryId = null, CancellationToken ct = default)
         {
             var query = _db.stories.Where(s => s.author_id == authorId && s.status == "pending");
@@ -151,10 +169,11 @@ namespace Repository.Repositories
             }
             return query.AnyAsync(ct);
         }
-
+        //giống cái ở trên nhưng cho published
         public Task<bool> AuthorHasUncompletedPublishedStoryAsync(Guid authorId, CancellationToken ct = default)
             => _db.stories.AnyAsync(s => s.author_id == authorId && s.status == "published", ct);
 
+        //check cooldown bị rejected chống spam cho 1 story cụ thể (nhưng tạm thời đang cmt lại bên service) 
         public Task<DateTime?> GetLastStoryRejectedAtAsync(Guid storyId, CancellationToken ct = default)
             => _db.content_approves
                   .Where(c => c.story_id == storyId && c.approve_type == "story" && c.status == "rejected")
@@ -162,6 +181,7 @@ namespace Repository.Repositories
                   .Select(c => (DateTime?)c.created_at)
                   .FirstOrDefaultAsync(ct);
 
+        //check bảng story (cái trên check content_approve) 
         public Task<DateTime?> GetLastAuthorStoryRejectedAtAsync(Guid authorId, CancellationToken ct = default)
             => _db.stories
                   .Where(s => s.author_id == authorId && s.status == "rejected")
@@ -169,6 +189,7 @@ namespace Repository.Repositories
                   .Select(s => (DateTime?)s.updated_at)
                   .FirstOrDefaultAsync(ct);
 
+        //đếm số chap 
         public Task<int> GetChapterCountAsync(Guid storyId, CancellationToken ct = default)
             => _db.chapter.CountAsync(c => c.story_id == storyId, ct);
 
