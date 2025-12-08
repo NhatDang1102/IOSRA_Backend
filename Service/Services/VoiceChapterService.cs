@@ -6,12 +6,12 @@ using System.Threading.Tasks;
 using Contract.DTOs.Request.Voice;
 using Contract.DTOs.Response.Voice;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Logging;
 using Repository.DBContext;
 using Repository.Entities;
 using Repository.Utils;
 using Service.Exceptions;
 using Service.Interfaces;
+using Service.Models;
 
 namespace Service.Services
 {
@@ -19,25 +19,19 @@ namespace Service.Services
     {
         private readonly AppDbContext _db;
         private readonly IChapterContentStorage _contentStorage;
-        private readonly IVoiceAudioStorage _voiceStorage;
-        private readonly IElevenLabsClient _elevenLabsClient;
-        private readonly ILogger<VoiceChapterService> _logger;
         private readonly IVoicePricingService _voicePricingService;
+        private readonly IVoiceSynthesisQueue _voiceQueue;
 
         public VoiceChapterService(
             AppDbContext db,
             IChapterContentStorage contentStorage,
-            IVoiceAudioStorage voiceStorage,
-            IElevenLabsClient elevenLabsClient,
             IVoicePricingService voicePricingService,
-            ILogger<VoiceChapterService> logger)
+            IVoiceSynthesisQueue voiceQueue)
         {
             _db = db;
             _contentStorage = contentStorage;
-            _voiceStorage = voiceStorage;
-            _elevenLabsClient = elevenLabsClient;
             _voicePricingService = voicePricingService;
-            _logger = logger;
+            _voiceQueue = voiceQueue;
         }
 
         public async Task<VoiceChapterStatusResponse> GetAsync(Guid requesterAccountId, Guid chapterId, CancellationToken ct = default)
@@ -176,6 +170,7 @@ namespace Service.Services
                 chapter.chapter_voices.Add(entity);
                 chapterVoiceRows.Add(entity);
             }
+            var voiceJobIds = chapterVoiceRows.Select(v => v.voice_id).ToArray();
 
             wallet.balance_chars -= totalCharsNeeded;
             wallet.updated_at = now;
@@ -197,10 +192,9 @@ namespace Service.Services
             await _db.SaveChangesAsync(ct);
             await transaction.CommitAsync(ct);
 
-            foreach (var preset in newPresets)
+            foreach (var voiceId in voiceJobIds)
             {
-                var row = chapterVoiceRows.First(r => r.voice_id == preset.voice_id);
-                await GenerateVoiceAsync(chapter, row, preset, content, ct);
+                await _voiceQueue.EnqueueAsync(new VoiceSynthesisJob(chapter.chapter_id, voiceId), ct);
             }
 
             return new VoiceChapterOrderResponse
@@ -285,34 +279,5 @@ namespace Service.Services
             };
         }
 
-        private async Task GenerateVoiceAsync(chapter chapter, chapter_voice row, voice_list preset, string content, CancellationToken ct)
-        {
-            try
-            {
-                row.voice ??= preset;
-                row.status = "processing";
-                row.error_message = null;
-                row.completed_at = null;
-                await _db.SaveChangesAsync(ct);
-
-                var audioBytes = await _elevenLabsClient.SynthesizeAsync(preset.provider_voice_id, content, ct);
-                var storageKey = await _voiceStorage.UploadAsync(chapter.story_id, chapter.chapter_id, preset.voice_id, audioBytes, ct);
-
-                row.storage_path = storageKey;
-                row.status = "ready";
-                row.completed_at = TimezoneConverter.VietnamNow;
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Voice synthesis failed for chapter {ChapterId} voice preset {VoiceId}", chapter.chapter_id, preset.voice_id);
-                row.status = "failed";
-                row.error_message = ex.Message;
-                row.completed_at = TimezoneConverter.VietnamNow;
-            }
-            finally
-            {
-                await _db.SaveChangesAsync(ct);
-            }
-        }
     }
 }
