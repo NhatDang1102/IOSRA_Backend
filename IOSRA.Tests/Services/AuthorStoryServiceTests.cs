@@ -412,7 +412,7 @@ public class AuthorStoryServiceTests
                  .ReturnsAsync("https://cdn/cover-uploaded.jpg");
 
         // Giả lập DB sinh ID
-        _repo.Setup(r => r.AddStoryAsync(
+        _repo.Setup(r => r.CreateAsync(
                         It.IsAny<story>(),
                         It.IsAny<IEnumerable<Guid>>(),
                         It.IsAny<CancellationToken>()))
@@ -426,7 +426,7 @@ public class AuthorStoryServiceTests
              });
 
         // Sau khi tạo xong, service gọi lại GetStoryForAuthorAsync để load đầy đủ
-        _repo.Setup(r => r.GetStoryForAuthorAsync(
+        _repo.Setup(r => r.GetByIdForAuthorAsync(
                         It.IsAny<Guid>(),
                         author.account_id,
                         It.IsAny<CancellationToken>()))
@@ -509,7 +509,7 @@ public class AuthorStoryServiceTests
                             It.IsAny<CancellationToken>()))
                  .ReturnsAsync("https://cdn/ai-cover.jpg");
 
-        _repo.Setup(r => r.AddStoryAsync(
+        _repo.Setup(r => r.CreateAsync(
                         It.IsAny<story>(),
                         It.IsAny<IEnumerable<Guid>>(),
                         It.IsAny<CancellationToken>()))
@@ -522,7 +522,7 @@ public class AuthorStoryServiceTests
                  return s;
              });
 
-        _repo.Setup(r => r.GetStoryForAuthorAsync(
+        _repo.Setup(r => r.GetByIdForAuthorAsync(
                         It.IsAny<Guid>(),
                         author.account_id,
                         It.IsAny<CancellationToken>()))
@@ -565,7 +565,7 @@ public class AuthorStoryServiceTests
         _repo.Setup(r => r.GetAuthorAsync(accId, It.IsAny<CancellationToken>()))
              .ReturnsAsync(author);
 
-        var act = () => _svc.ListAsync(accId, "UNKNOWN_STATUS", CancellationToken.None);
+        var act = () => _svc.GetAllAsync(accId, "UNKNOWN_STATUS", CancellationToken.None);
 
         await act.Should().ThrowAsync<AppException>()
                  .WithMessage("*Unsupported status*");
@@ -586,10 +586,10 @@ public class AuthorStoryServiceTests
 
         _repo.Setup(r => r.GetAuthorAsync(accId, It.IsAny<CancellationToken>()))
              .ReturnsAsync(author);
-        _repo.Setup(r => r.GetStoriesByAuthorAsync(author.account_id, null, It.IsAny<CancellationToken>()))
+        _repo.Setup(r => r.GetAllByAuthorAsync(author.account_id, null, It.IsAny<CancellationToken>()))
              .ReturnsAsync(new List<story> { s1 });
 
-        var res = await _svc.ListAsync(accId, null, CancellationToken.None);
+        var res = await _svc.GetAllAsync(accId, null, CancellationToken.None);
 
         res.Should().HaveCount(1);
         res[0].StoryId.Should().Be(s1.story_id);
@@ -610,13 +610,13 @@ public class AuthorStoryServiceTests
 
         _repo.Setup(r => r.GetAuthorAsync(accId, It.IsAny<CancellationToken>()))
              .ReturnsAsync(author);
-        _repo.Setup(r => r.GetStoriesByAuthorAsync(
+        _repo.Setup(r => r.GetAllByAuthorAsync(
                         author.account_id,
                         It.Is<IEnumerable<string>>(st => st.Single() == "published"),
                         It.IsAny<CancellationToken>()))
              .ReturnsAsync(new List<story> { s1 });
 
-        var res = await _svc.ListAsync(accId, "published", CancellationToken.None);
+        var res = await _svc.GetAllAsync(accId, "published", CancellationToken.None);
 
         res.Should().HaveCount(1);
         res[0].Status.Should().Be("published");
@@ -638,10 +638,10 @@ public class AuthorStoryServiceTests
 
         _repo.Setup(r => r.GetAuthorAsync(accId, It.IsAny<CancellationToken>()))
              .ReturnsAsync(author);
-        _repo.Setup(r => r.GetStoryForAuthorAsync(storyId, author.account_id, It.IsAny<CancellationToken>()))
+        _repo.Setup(r => r.GetByIdForAuthorAsync(storyId, author.account_id, It.IsAny<CancellationToken>()))
              .ReturnsAsync((story?)null);
 
-        var act = () => _svc.GetAsync(accId, storyId, CancellationToken.None);
+        var act = () => _svc.GetByIdAsync(accId, storyId, CancellationToken.None);
 
         await act.Should().ThrowAsync<AppException>()
                  .WithMessage("*Story was not found*");
@@ -660,12 +660,12 @@ public class AuthorStoryServiceTests
 
         _repo.Setup(r => r.GetAuthorAsync(accId, It.IsAny<CancellationToken>()))
              .ReturnsAsync(author);
-        _repo.Setup(r => r.GetStoryForAuthorAsync(story.story_id, author.account_id, It.IsAny<CancellationToken>()))
+        _repo.Setup(r => r.GetByIdForAuthorAsync(story.story_id, author.account_id, It.IsAny<CancellationToken>()))
              .ReturnsAsync(story);
         _repo.Setup(r => r.GetContentApprovalsForStoryAsync(story.story_id, It.IsAny<CancellationToken>()))
              .ReturnsAsync(new List<content_approve>());
 
-        var res = await _svc.GetAsync(accId, story.story_id, CancellationToken.None);
+        var res = await _svc.GetByIdAsync(accId, story.story_id, CancellationToken.None);
 
         res.StoryId.Should().Be(story.story_id);
         res.Title.Should().Be("Story title");
@@ -689,7 +689,7 @@ public class AuthorStoryServiceTests
 
         _repo.Setup(r => r.GetAuthorAsync(accId, It.IsAny<CancellationToken>()))
              .ReturnsAsync(author);
-        _repo.Setup(r => r.GetStoryForAuthorAsync(story.story_id, author.account_id, It.IsAny<CancellationToken>()))
+        _repo.Setup(r => r.GetByIdForAuthorAsync(story.story_id, author.account_id, It.IsAny<CancellationToken>()))
              .ReturnsAsync(story);
 
         var req = new StoryUpdateRequest
@@ -717,7 +717,7 @@ public class AuthorStoryServiceTests
 
         _repo.Setup(r => r.GetAuthorAsync(accId, It.IsAny<CancellationToken>()))
              .ReturnsAsync(author);
-        _repo.Setup(r => r.GetStoryForAuthorAsync(story.story_id, author.account_id, It.IsAny<CancellationToken>()))
+        _repo.Setup(r => r.GetByIdForAuthorAsync(story.story_id, author.account_id, It.IsAny<CancellationToken>()))
              .ReturnsAsync(story);
 
         var req = new StoryUpdateRequest(); // tất cả null
@@ -763,7 +763,7 @@ public class AuthorStoryServiceTests
 
         _repo.Setup(r => r.GetAuthorAsync(accId, It.IsAny<CancellationToken>()))
              .ReturnsAsync(author);
-        _repo.Setup(r => r.GetStoryForAuthorAsync(story.story_id, author.account_id, It.IsAny<CancellationToken>()))
+        _repo.Setup(r => r.GetByIdForAuthorAsync(story.story_id, author.account_id, It.IsAny<CancellationToken>()))
              .ReturnsAsync(story);
 
         var req = new StoryUpdateRequest
@@ -791,7 +791,7 @@ public class AuthorStoryServiceTests
 
         _repo.Setup(r => r.GetAuthorAsync(accId, It.IsAny<CancellationToken>()))
              .ReturnsAsync(author);
-        _repo.Setup(r => r.GetStoryForAuthorAsync(story.story_id, author.account_id, It.IsAny<CancellationToken>()))
+        _repo.Setup(r => r.GetByIdForAuthorAsync(story.story_id, author.account_id, It.IsAny<CancellationToken>()))
              .ReturnsAsync(story);
 
         var req = new StoryUpdateRequest
@@ -834,7 +834,7 @@ public class AuthorStoryServiceTests
 
         // Lần 1: load story để validate
         // Lần 2: load lại sau update để map response
-        _repo.SetupSequence(r => r.GetStoryForAuthorAsync(storyId, author.account_id, It.IsAny<CancellationToken>()))
+        _repo.SetupSequence(r => r.GetByIdForAuthorAsync(storyId, author.account_id, It.IsAny<CancellationToken>()))
              .ReturnsAsync(story)
              .ReturnsAsync(updatedStory);
 
@@ -852,7 +852,7 @@ public class AuthorStoryServiceTests
                             It.IsAny<CancellationToken>()))
                  .ReturnsAsync("https://cdn/new-cover.jpg");
 
-        _repo.Setup(r => r.UpdateStoryAsync(story, It.IsAny<CancellationToken>()))
+        _repo.Setup(r => r.UpdateAsync(story, It.IsAny<CancellationToken>()))
              .Returns(Task.CompletedTask);
 
         _repo.Setup(r => r.GetContentApprovalsForStoryAsync(storyId, It.IsAny<CancellationToken>()))
@@ -898,7 +898,7 @@ public class AuthorStoryServiceTests
         _repo.Setup(r => r.GetAuthorAsync(accId, It.IsAny<CancellationToken>()))
              .ReturnsAsync(author);
 
-        _repo.Setup(r => r.GetStoryForAuthorAsync(storyId, author.account_id, It.IsAny<CancellationToken>()))
+        _repo.Setup(r => r.GetByIdForAuthorAsync(storyId, author.account_id, It.IsAny<CancellationToken>()))
              .ReturnsAsync((story?)null);
 
         var req = new StorySubmitRequest();
@@ -927,7 +927,7 @@ public class AuthorStoryServiceTests
         _repo.Setup(r => r.GetAuthorAsync(accId, It.IsAny<CancellationToken>()))
              .ReturnsAsync(author);
 
-        _repo.Setup(r => r.GetStoryForAuthorAsync(storyId, author.account_id, It.IsAny<CancellationToken>()))
+        _repo.Setup(r => r.GetByIdForAuthorAsync(storyId, author.account_id, It.IsAny<CancellationToken>()))
              .ReturnsAsync(s);
 
         _repo.Setup(r => r.AuthorHasPendingStoryAsync(author.account_id, s.story_id, It.IsAny<CancellationToken>()))
@@ -952,7 +952,7 @@ public class AuthorStoryServiceTests
         _modAi.Setup(m => m.ModerateStoryAsync(s.title, s.desc, It.IsAny<CancellationToken>()))
               .ReturnsAsync(aiResult);
 
-        _repo.Setup(r => r.UpdateStoryAsync(s, It.IsAny<CancellationToken>()))
+        _repo.Setup(r => r.UpdateAsync(s, It.IsAny<CancellationToken>()))
              .Returns(Task.CompletedTask);
 
         _repo.Setup(r => r.GetContentApprovalForStoryAsync(s.story_id, It.IsAny<CancellationToken>()))
@@ -971,7 +971,7 @@ public class AuthorStoryServiceTests
         s.status.Should().Be("rejected");
         s.published_at.Should().BeNull();
 
-        _repo.Verify(r => r.UpdateStoryAsync(s, It.IsAny<CancellationToken>()), Times.Once);
+        _repo.Verify(r => r.UpdateAsync(s, It.IsAny<CancellationToken>()), Times.Once);
         _repo.Verify(r => r.AddContentApproveAsync(It.IsAny<content_approve>(), It.IsAny<CancellationToken>()), Times.Once);
         _followers.VerifyNoOtherCalls();
     }
@@ -993,7 +993,7 @@ public class AuthorStoryServiceTests
              .ReturnsAsync(author);
 
         // Lần 1: lấy story để xử lý; Lần 2: load lại sau khi update
-        _repo.SetupSequence(r => r.GetStoryForAuthorAsync(storyId, author.account_id, It.IsAny<CancellationToken>()))
+        _repo.SetupSequence(r => r.GetByIdForAuthorAsync(storyId, author.account_id, It.IsAny<CancellationToken>()))
              .ReturnsAsync(baseStory)
              .ReturnsAsync(() =>
              {
@@ -1020,7 +1020,7 @@ public class AuthorStoryServiceTests
         _modAi.Setup(m => m.ModerateStoryAsync(baseStory.title, baseStory.desc, It.IsAny<CancellationToken>()))
               .ReturnsAsync(aiResult);
 
-        _repo.Setup(r => r.UpdateStoryAsync(baseStory, It.IsAny<CancellationToken>()))
+        _repo.Setup(r => r.UpdateAsync(baseStory, It.IsAny<CancellationToken>()))
              .Returns(Task.CompletedTask);
 
         _repo.Setup(r => r.GetContentApprovalForStoryAsync(baseStory.story_id, It.IsAny<CancellationToken>()))
@@ -1045,7 +1045,7 @@ public class AuthorStoryServiceTests
         res.Status.Should().Be("published");
         res.IsPremium.Should().BeTrue();
 
-        _repo.Verify(r => r.UpdateStoryAsync(baseStory, It.IsAny<CancellationToken>()), Times.Once);
+        _repo.Verify(r => r.UpdateAsync(baseStory, It.IsAny<CancellationToken>()), Times.Once);
         _followers.Verify(f => f.NotifyStoryPublishedAsync(
                               author.account_id,
                               author.account.username,
@@ -1072,7 +1072,7 @@ public class AuthorStoryServiceTests
         _repo.Setup(r => r.GetAuthorAsync(accId, It.IsAny<CancellationToken>()))
              .ReturnsAsync(author);
 
-        _repo.SetupSequence(r => r.GetStoryForAuthorAsync(storyId, author.account_id, It.IsAny<CancellationToken>()))
+        _repo.SetupSequence(r => r.GetByIdForAuthorAsync(storyId, author.account_id, It.IsAny<CancellationToken>()))
              .ReturnsAsync(baseStory)
              .ReturnsAsync(() =>
              {
@@ -1098,7 +1098,7 @@ public class AuthorStoryServiceTests
         _modAi.Setup(m => m.ModerateStoryAsync(baseStory.title, baseStory.desc, It.IsAny<CancellationToken>()))
               .ReturnsAsync(aiResult);
 
-        _repo.Setup(r => r.UpdateStoryAsync(baseStory, It.IsAny<CancellationToken>()))
+        _repo.Setup(r => r.UpdateAsync(baseStory, It.IsAny<CancellationToken>()))
              .Returns(Task.CompletedTask);
 
         _repo.Setup(r => r.GetContentApprovalForStoryAsync(baseStory.story_id, It.IsAny<CancellationToken>()))
@@ -1117,7 +1117,7 @@ public class AuthorStoryServiceTests
 
         _followers.VerifyNoOtherCalls();
         _modAi.VerifyAll();
-        _repo.Verify(r => r.UpdateStoryAsync(baseStory, It.IsAny<CancellationToken>()), Times.Once);
+        _repo.Verify(r => r.UpdateAsync(baseStory, It.IsAny<CancellationToken>()), Times.Once);
     }
 
     // ====================== COMPLETE ======================
@@ -1134,7 +1134,7 @@ public class AuthorStoryServiceTests
         _repo.Setup(r => r.GetAuthorAsync(accId, It.IsAny<CancellationToken>()))
              .ReturnsAsync(author);
 
-        _repo.Setup(r => r.GetStoryForAuthorAsync(s.story_id, author.account_id, It.IsAny<CancellationToken>()))
+        _repo.Setup(r => r.GetByIdForAuthorAsync(s.story_id, author.account_id, It.IsAny<CancellationToken>()))
              .ReturnsAsync(s);
 
         var act = () => _svc.CompleteAsync(accId, s.story_id, CancellationToken.None);
@@ -1157,7 +1157,7 @@ public class AuthorStoryServiceTests
         _repo.Setup(r => r.GetAuthorAsync(accId, It.IsAny<CancellationToken>()))
              .ReturnsAsync(author);
 
-        _repo.Setup(r => r.GetStoryForAuthorAsync(s.story_id, author.account_id, It.IsAny<CancellationToken>()))
+        _repo.Setup(r => r.GetByIdForAuthorAsync(s.story_id, author.account_id, It.IsAny<CancellationToken>()))
              .ReturnsAsync(s);
 
         _repo.Setup(r => r.GetChapterCountAsync(s.story_id, It.IsAny<CancellationToken>()))
@@ -1184,7 +1184,7 @@ public class AuthorStoryServiceTests
         _repo.Setup(r => r.GetAuthorAsync(accId, It.IsAny<CancellationToken>()))
              .ReturnsAsync(author);
 
-        _repo.Setup(r => r.GetStoryForAuthorAsync(s.story_id, author.account_id, It.IsAny<CancellationToken>()))
+        _repo.Setup(r => r.GetByIdForAuthorAsync(s.story_id, author.account_id, It.IsAny<CancellationToken>()))
              .ReturnsAsync(s);
 
         _repo.Setup(r => r.GetChapterCountAsync(s.story_id, It.IsAny<CancellationToken>()))
@@ -1211,7 +1211,7 @@ public class AuthorStoryServiceTests
         _repo.Setup(r => r.GetAuthorAsync(accId, It.IsAny<CancellationToken>()))
              .ReturnsAsync(author);
 
-        _repo.Setup(r => r.GetStoryForAuthorAsync(s.story_id, author.account_id, It.IsAny<CancellationToken>()))
+        _repo.Setup(r => r.GetByIdForAuthorAsync(s.story_id, author.account_id, It.IsAny<CancellationToken>()))
              .ReturnsAsync(s);
 
         _repo.Setup(r => r.GetChapterCountAsync(s.story_id, It.IsAny<CancellationToken>()))
@@ -1220,7 +1220,7 @@ public class AuthorStoryServiceTests
         _repo.Setup(r => r.GetContentApprovalsForStoryAsync(s.story_id, It.IsAny<CancellationToken>()))
              .ReturnsAsync(new List<content_approve>());
 
-        _repo.Setup(r => r.UpdateStoryAsync(s, It.IsAny<CancellationToken>()))
+        _repo.Setup(r => r.UpdateAsync(s, It.IsAny<CancellationToken>()))
              .Returns(Task.CompletedTask);
 
         var res = await _svc.CompleteAsync(accId, s.story_id, CancellationToken.None);
@@ -1228,7 +1228,7 @@ public class AuthorStoryServiceTests
         res.Status.Should().Be("completed");
         s.status.Should().Be("completed");
 
-        _repo.Verify(r => r.UpdateStoryAsync(s, It.IsAny<CancellationToken>()), Times.Once);
+        _repo.Verify(r => r.UpdateAsync(s, It.IsAny<CancellationToken>()), Times.Once);
         _repo.VerifyAll();
     }
 }

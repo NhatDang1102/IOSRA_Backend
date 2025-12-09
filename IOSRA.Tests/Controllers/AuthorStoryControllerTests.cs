@@ -73,7 +73,7 @@ namespace IOSRA.Tests.Controllers
                 .Verifiable();
 
             // Act
-            var result = await _controller.List(status, CancellationToken.None);
+            var result = await _controller.GetAll(status, CancellationToken.None);
 
             // Assert
             var ok = result as OkObjectResult;
@@ -97,7 +97,7 @@ namespace IOSRA.Tests.Controllers
                 .Verifiable();
 
             // Act
-            var result = await _controller.List(status, CancellationToken.None);
+            var result = await _controller.GetAll(status, CancellationToken.None);
 
             // Assert
             var ok = result as OkObjectResult;
@@ -131,7 +131,7 @@ namespace IOSRA.Tests.Controllers
                 .Verifiable();
 
             // Act
-            var result = await _controller.Get(storyId, CancellationToken.None);
+            var result = await _controller.GetById(storyId, CancellationToken.None);
 
             // Assert
             var ok = result as OkObjectResult;
@@ -219,7 +219,7 @@ namespace IOSRA.Tests.Controllers
                 .Verifiable();
 
             // Act
-            var result = await _controller.Update(storyId, req, CancellationToken.None);
+            var result = await _controller.UpdateDraft(storyId, req, CancellationToken.None);
 
             // Assert
             var ok = result as OkObjectResult;
@@ -254,7 +254,7 @@ namespace IOSRA.Tests.Controllers
                 .Verifiable();
 
             // Act
-            var result = await _controller.Submit(storyId, req, CancellationToken.None);
+            var result = await _controller.SubmitForReview(storyId, req, CancellationToken.None);
 
             // Assert
             var ok = result as OkObjectResult;
@@ -288,7 +288,7 @@ namespace IOSRA.Tests.Controllers
                 .Verifiable();
 
             // Act
-            var result = await _controller.Complete(storyId, CancellationToken.None);
+            var result = await _controller.CompleteStory(storyId, CancellationToken.None);
 
             // Assert
             var ok = result as OkObjectResult;

@@ -165,7 +165,7 @@ public class AuthorChapterServiceTests
         _storyRepo.Setup(r => r.GetAuthorAsync(accId, It.IsAny<CancellationToken>()))
                   .ReturnsAsync(author);
 
-        _storyRepo.Setup(r => r.GetStoryForAuthorAsync(storyId, author.account_id, It.IsAny<CancellationToken>()))
+        _storyRepo.Setup(r => r.GetByIdForAuthorAsync(storyId, author.account_id, It.IsAny<CancellationToken>()))
                   .ReturnsAsync((story?)null);
 
         var act = () => _svc.CreateAsync(accId, storyId, req, CancellationToken.None);
@@ -194,7 +194,7 @@ public class AuthorChapterServiceTests
         _storyRepo.Setup(r => r.GetAuthorAsync(accId, It.IsAny<CancellationToken>()))
                   .ReturnsAsync(author);
 
-        _storyRepo.Setup(r => r.GetStoryForAuthorAsync(story.story_id, author.account_id, It.IsAny<CancellationToken>()))
+        _storyRepo.Setup(r => r.GetByIdForAuthorAsync(story.story_id, author.account_id, It.IsAny<CancellationToken>()))
                   .ReturnsAsync(story);
 
         var act = () => _svc.CreateAsync(accId, story.story_id, req, CancellationToken.None);
@@ -221,13 +221,13 @@ public class AuthorChapterServiceTests
         _storyRepo.Setup(r => r.GetAuthorAsync(accId, It.IsAny<CancellationToken>()))
                   .ReturnsAsync(author);
 
-        _storyRepo.Setup(r => r.GetStoryForAuthorAsync(story.story_id, author.account_id, It.IsAny<CancellationToken>()))
+        _storyRepo.Setup(r => r.GetByIdForAuthorAsync(story.story_id, author.account_id, It.IsAny<CancellationToken>()))
                   .ReturnsAsync(story);
 
         _chapterRepo.Setup(r => r.GetLastAuthorChapterRejectedAtAsync(author.account_id, It.IsAny<CancellationToken>()))
                     .ReturnsAsync((DateTime?)null);
 
-        _chapterRepo.Setup(r => r.StoryHasPendingChapterAsync(story.story_id, It.IsAny<CancellationToken>()))
+        _chapterRepo.Setup(r => r.HasPendingChapterAsync(story.story_id, It.IsAny<CancellationToken>()))
                     .ReturnsAsync(false);
 
         var act = () => _svc.CreateAsync(accId, story.story_id, req, CancellationToken.None);
@@ -255,13 +255,13 @@ public class AuthorChapterServiceTests
         _storyRepo.Setup(r => r.GetAuthorAsync(accId, It.IsAny<CancellationToken>()))
                   .ReturnsAsync(author);
 
-        _storyRepo.Setup(r => r.GetStoryForAuthorAsync(story.story_id, author.account_id, It.IsAny<CancellationToken>()))
+        _storyRepo.Setup(r => r.GetByIdForAuthorAsync(story.story_id, author.account_id, It.IsAny<CancellationToken>()))
                   .ReturnsAsync(story);
 
         _chapterRepo.Setup(r => r.GetLastAuthorChapterRejectedAtAsync(author.account_id, It.IsAny<CancellationToken>()))
                     .ReturnsAsync((DateTime?)null);
 
-        _chapterRepo.Setup(r => r.StoryHasPendingChapterAsync(story.story_id, It.IsAny<CancellationToken>()))
+        _chapterRepo.Setup(r => r.HasPendingChapterAsync(story.story_id, It.IsAny<CancellationToken>()))
                     .ReturnsAsync(false);
 
         var act = () => _svc.CreateAsync(accId, story.story_id, req, CancellationToken.None);
@@ -289,13 +289,13 @@ public class AuthorChapterServiceTests
         _storyRepo.Setup(r => r.GetAuthorAsync(accId, It.IsAny<CancellationToken>()))
                   .ReturnsAsync(author);
 
-        _storyRepo.Setup(r => r.GetStoryForAuthorAsync(story.story_id, author.account_id, It.IsAny<CancellationToken>()))
+        _storyRepo.Setup(r => r.GetByIdForAuthorAsync(story.story_id, author.account_id, It.IsAny<CancellationToken>()))
                   .ReturnsAsync(story);
 
         _chapterRepo.Setup(r => r.GetLastAuthorChapterRejectedAtAsync(author.account_id, It.IsAny<CancellationToken>()))
                     .ReturnsAsync((DateTime?)null);
 
-        _chapterRepo.Setup(r => r.StoryHasPendingChapterAsync(story.story_id, It.IsAny<CancellationToken>()))
+        _chapterRepo.Setup(r => r.HasPendingChapterAsync(story.story_id, It.IsAny<CancellationToken>()))
                     .ReturnsAsync(false);
 
         _chapterRepo.Setup(r => r.GetLanguageByCodeAsync("xx", It.IsAny<CancellationToken>()))
@@ -328,13 +328,13 @@ public class AuthorChapterServiceTests
         _storyRepo.Setup(r => r.GetAuthorAsync(accId, It.IsAny<CancellationToken>()))
                   .ReturnsAsync(author);
 
-        _storyRepo.Setup(r => r.GetStoryForAuthorAsync(story.story_id, author.account_id, It.IsAny<CancellationToken>()))
+        _storyRepo.Setup(r => r.GetByIdForAuthorAsync(story.story_id, author.account_id, It.IsAny<CancellationToken>()))
                   .ReturnsAsync(story);
 
         _chapterRepo.Setup(r => r.GetLastAuthorChapterRejectedAtAsync(author.account_id, It.IsAny<CancellationToken>()))
                     .ReturnsAsync((DateTime?)null);
 
-        _chapterRepo.Setup(r => r.StoryHasPendingChapterAsync(story.story_id, It.IsAny<CancellationToken>()))
+        _chapterRepo.Setup(r => r.HasPendingChapterAsync(story.story_id, It.IsAny<CancellationToken>()))
                     .ReturnsAsync(false);
 
         _chapterRepo.Setup(r => r.GetLanguageByCodeAsync("vi", It.IsAny<CancellationToken>()))
@@ -368,13 +368,13 @@ public class AuthorChapterServiceTests
         _storyRepo.Setup(r => r.GetAuthorAsync(accId, It.IsAny<CancellationToken>()))
                   .ReturnsAsync(author);
 
-        _storyRepo.Setup(r => r.GetStoryForAuthorAsync(story.story_id, author.account_id, It.IsAny<CancellationToken>()))
+        _storyRepo.Setup(r => r.GetByIdForAuthorAsync(story.story_id, author.account_id, It.IsAny<CancellationToken>()))
                   .ReturnsAsync(story);
 
         _chapterRepo.Setup(r => r.GetLastAuthorChapterRejectedAtAsync(author.account_id, It.IsAny<CancellationToken>()))
                     .ReturnsAsync((DateTime?)null);
 
-        _chapterRepo.Setup(r => r.StoryHasPendingChapterAsync(story.story_id, It.IsAny<CancellationToken>()))
+        _chapterRepo.Setup(r => r.HasPendingChapterAsync(story.story_id, It.IsAny<CancellationToken>()))
                     .ReturnsAsync(false);
 
         _chapterRepo.Setup(r => r.GetLanguageByCodeAsync("vi", It.IsAny<CancellationToken>()))
@@ -389,7 +389,7 @@ public class AuthorChapterServiceTests
         _storage.Setup(s => s.UploadAsync(story.story_id, It.IsAny<Guid>(), content, It.IsAny<CancellationToken>()))
                 .ReturnsAsync("chapter-content-key");
 
-        _chapterRepo.Setup(r => r.AddAsync(It.IsAny<chapter>(), It.IsAny<CancellationToken>()))
+        _chapterRepo.Setup(r => r.CreateAsync(It.IsAny<chapter>(), It.IsAny<CancellationToken>()))
                     .ReturnsAsync((chapter c, CancellationToken _) => c);
 
         _chapterRepo.Setup(r => r.GetContentApprovalsForChapterAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
@@ -423,10 +423,10 @@ public class AuthorChapterServiceTests
         _storyRepo.Setup(r => r.GetAuthorAsync(accId, It.IsAny<CancellationToken>()))
                   .ReturnsAsync(author);
 
-        _storyRepo.Setup(r => r.GetStoryForAuthorAsync(story.story_id, author.account_id, It.IsAny<CancellationToken>()))
+        _storyRepo.Setup(r => r.GetByIdForAuthorAsync(story.story_id, author.account_id, It.IsAny<CancellationToken>()))
                   .ReturnsAsync(story);
 
-        var act = () => _svc.ListAsync(accId, story.story_id, "UNKNOWN", CancellationToken.None);
+        var act = () => _svc.GetAllAsync(accId, story.story_id, "UNKNOWN", CancellationToken.None);
 
         await act.Should().ThrowAsync<AppException>()
                  .WithMessage("*Unsupported status*");
@@ -447,13 +447,13 @@ public class AuthorChapterServiceTests
         _storyRepo.Setup(r => r.GetAuthorAsync(accId, It.IsAny<CancellationToken>()))
                   .ReturnsAsync(author);
 
-        _storyRepo.Setup(r => r.GetStoryForAuthorAsync(story.story_id, author.account_id, It.IsAny<CancellationToken>()))
+        _storyRepo.Setup(r => r.GetByIdForAuthorAsync(story.story_id, author.account_id, It.IsAny<CancellationToken>()))
                   .ReturnsAsync(story);
 
-        _chapterRepo.Setup(r => r.GetByStoryAsync(story.story_id, null, It.IsAny<CancellationToken>()))
+        _chapterRepo.Setup(r => r.GetAllByStoryAsync(story.story_id, null, It.IsAny<CancellationToken>()))
                     .ReturnsAsync(new List<chapter> { ch });
 
-        var res = await _svc.ListAsync(accId, story.story_id, null, CancellationToken.None);
+        var res = await _svc.GetAllAsync(accId, story.story_id, null, CancellationToken.None);
 
         res.Should().HaveCount(1);
         res[0].ChapterId.Should().Be(ch.chapter_id);
@@ -503,7 +503,7 @@ public class AuthorChapterServiceTests
         _chapterRepo.Setup(r => r.GetByIdAsync(chapterId, It.IsAny<CancellationToken>()))
                     .ReturnsAsync(chapter);
 
-        _chapterRepo.Setup(r => r.StoryHasPendingChapterAsync(story.story_id, It.IsAny<CancellationToken>()))
+        _chapterRepo.Setup(r => r.HasPendingChapterAsync(story.story_id, It.IsAny<CancellationToken>()))
                     .ReturnsAsync(false);
 
         _storage.Setup(s => s.DownloadAsync("content-key", It.IsAny<CancellationToken>()))
@@ -566,7 +566,7 @@ public class AuthorChapterServiceTests
         _chapterRepo.Setup(r => r.GetByIdAsync(chapterId, It.IsAny<CancellationToken>()))
                     .ReturnsAsync(chapter);
 
-        _chapterRepo.Setup(r => r.StoryHasPendingChapterAsync(story.story_id, It.IsAny<CancellationToken>()))
+        _chapterRepo.Setup(r => r.HasPendingChapterAsync(story.story_id, It.IsAny<CancellationToken>()))
                     .ReturnsAsync(false);
 
         _storage.Setup(s => s.DownloadAsync("content-key", It.IsAny<CancellationToken>()))
@@ -634,7 +634,7 @@ public class AuthorChapterServiceTests
         _chapterRepo.Setup(r => r.GetByIdAsync(chapterId, It.IsAny<CancellationToken>()))
                     .ReturnsAsync(chapter);
 
-        _chapterRepo.Setup(r => r.StoryHasPendingChapterAsync(story.story_id, It.IsAny<CancellationToken>()))
+        _chapterRepo.Setup(r => r.HasPendingChapterAsync(story.story_id, It.IsAny<CancellationToken>()))
                     .ReturnsAsync(false);
 
         _storage.Setup(s => s.DownloadAsync("content-key", It.IsAny<CancellationToken>()))
@@ -689,7 +689,7 @@ public class AuthorChapterServiceTests
         _chapterRepo.Setup(r => r.GetByIdAsync(chapter.chapter_id, It.IsAny<CancellationToken>()))
                     .ReturnsAsync(chapter);
 
-        _storyRepo.Setup(r => r.GetStoryForAuthorAsync(chapter.story_id, author.account_id, It.IsAny<CancellationToken>()))
+        _storyRepo.Setup(r => r.GetByIdForAuthorAsync(chapter.story_id, author.account_id, It.IsAny<CancellationToken>()))
                   .ReturnsAsync(story);
 
         var act = () => _svc.WithdrawAsync(accId, chapter.chapter_id, CancellationToken.None);
@@ -715,10 +715,10 @@ public class AuthorChapterServiceTests
         _storyRepo.Setup(r => r.GetAuthorAsync(accId, It.IsAny<CancellationToken>()))
                   .ReturnsAsync(author);
 
-        _storyRepo.Setup(r => r.GetStoryForAuthorAsync(story.story_id, author.account_id, It.IsAny<CancellationToken>()))
+        _storyRepo.Setup(r => r.GetByIdForAuthorAsync(story.story_id, author.account_id, It.IsAny<CancellationToken>()))
                   .ReturnsAsync(story);
 
-        _chapterRepo.Setup(r => r.GetForAuthorAsync(story.story_id, chapter.chapter_id, author.account_id, It.IsAny<CancellationToken>()))
+        _chapterRepo.Setup(r => r.GetByIdForAuthorAsync(story.story_id, chapter.chapter_id, author.account_id, It.IsAny<CancellationToken>()))
                     .ReturnsAsync(chapter);
 
         var req = new ChapterUpdateRequest(); // mọi field đều null
@@ -745,10 +745,10 @@ public class AuthorChapterServiceTests
         _storyRepo.Setup(r => r.GetAuthorAsync(accId, It.IsAny<CancellationToken>()))
                   .ReturnsAsync(author);
 
-        _storyRepo.Setup(r => r.GetStoryForAuthorAsync(story.story_id, author.account_id, It.IsAny<CancellationToken>()))
+        _storyRepo.Setup(r => r.GetByIdForAuthorAsync(story.story_id, author.account_id, It.IsAny<CancellationToken>()))
                   .ReturnsAsync(story);
 
-        _chapterRepo.Setup(r => r.GetForAuthorAsync(story.story_id, chapter.chapter_id, author.account_id, It.IsAny<CancellationToken>()))
+        _chapterRepo.Setup(r => r.GetByIdForAuthorAsync(story.story_id, chapter.chapter_id, author.account_id, It.IsAny<CancellationToken>()))
                     .ReturnsAsync(chapter);
 
         var newContent = LongContent(100);
