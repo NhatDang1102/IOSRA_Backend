@@ -11,7 +11,7 @@ namespace Contract.DTOs.Response.Chapter
         public string ChapterTitle { get; set; } = null!;
         public int PriceDias { get; set; }
         public long WalletBalanceAfter { get; set; }
-        public long AuthorShareVnd { get; set; }
+        public long AuthorShareAmount { get; set; }
         public DateTime PurchasedAt { get; set; }
     }
 }

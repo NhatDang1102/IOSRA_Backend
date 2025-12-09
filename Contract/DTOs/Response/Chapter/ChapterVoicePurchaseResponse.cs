@@ -8,7 +8,7 @@ namespace Contract.DTOs.Response.Chapter
         public Guid StoryId { get; set; }
         public int TotalPriceDias { get; set; }
         public long WalletBalanceAfter { get; set; }
-        public long AuthorShareVnd { get; set; }
+        public long AuthorShareAmount { get; set; }
         public DateTime PurchasedAt { get; set; }
         public ChapterPurchasedVoiceResponse[] Voices { get; set; } = Array.Empty<ChapterPurchasedVoiceResponse>();
     }

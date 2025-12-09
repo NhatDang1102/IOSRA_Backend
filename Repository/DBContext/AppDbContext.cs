@@ -131,9 +131,9 @@ namespace Repository.DBContext
             {
                 entity.HasKey(e => e.account_id).HasName("PRIMARY");
                 entity.Property(e => e.account_id).ValueGeneratedNever();
-                entity.Property(e => e.revenue_balance_vnd).HasDefaultValue(0L);
-                entity.Property(e => e.revenue_pending_vnd).HasDefaultValue(0L);
-                entity.Property(e => e.revenue_withdrawn_vnd).HasDefaultValue(0L);
+                entity.Property(e => e.revenue_balance).HasDefaultValue(0L);
+                entity.Property(e => e.revenue_pending).HasDefaultValue(0L);
+                entity.Property(e => e.revenue_withdrawn).HasDefaultValue(0L);
 
                 entity.HasOne(d => d.account).WithOne(p => p.author).HasConstraintName("fk_author_account");
 
@@ -151,7 +151,7 @@ namespace Repository.DBContext
             {
                 entity.HasKey(e => e.trans_id).HasName("PRIMARY");
                 entity.Property(e => e.trans_id).ValueGeneratedNever();
-                entity.Property(e => e.amount_vnd).HasDefaultValue(0L);
+                entity.Property(e => e.amount).HasDefaultValue(0L);
                 entity.Property(e => e.created_at).HasDefaultValueSql("CURRENT_TIMESTAMP");
 
                 entity.HasOne(d => d.author).WithMany(p => p.author_revenue_transactions)

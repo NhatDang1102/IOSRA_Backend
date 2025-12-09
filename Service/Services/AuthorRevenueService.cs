@@ -41,16 +41,16 @@ namespace Service.Services
             var author = await _repository.GetAuthorAsync(authorAccountId, ct)
                          ?? throw new AppException("AuthorProfileMissing", "Author profile was not found.", 404);
 
-            var balance = author.revenue_balance_vnd;
-            var pending = author.revenue_pending_vnd;
-            var withdrawn = author.revenue_withdrawn_vnd;
+            var balance = author.revenue_balance;
+            var pending = author.revenue_pending;
+            var withdrawn = author.revenue_withdrawn;
 
             return new AuthorRevenueSummaryResponse
             {
-                RevenueBalanceVnd = balance,
-                RevenuePendingVnd = pending,
-                RevenueWithdrawnVnd = withdrawn,
-                TotalRevenueVnd = balance + pending + withdrawn,
+                RevenueBalance = balance,
+                RevenuePending = pending,
+                RevenueWithdrawn = withdrawn,
+                TotalRevenue = balance + pending + withdrawn,
                 RankName = author.rank?.rank_name,
                 RankRewardRate = author.rank?.reward_rate
             };
@@ -90,7 +90,7 @@ namespace Service.Services
                 {
                     TransactionId = t.trans_id,
                     Type = t.type,
-                    AmountVnd = t.amount_vnd,
+                    Amount = t.amount,
                     ChapterId = chapter?.chapter_id,
                     ChapterTitle = chapter?.title,
                     PurchaseLogId = t.purchase_log_id,
@@ -121,13 +121,13 @@ namespace Service.Services
             var amount = request.Amount;
             if (amount < 100000)
             {
-                throw new AppException("AmountTooSmall", "Minimum withdraw amount is 100000 VND.", 400);
+                throw new AppException("AmountTooSmall", "Minimum withdraw amount is 100000 units.", 400);
             }
 
             var author = await _repository.GetAuthorAsync(authorAccountId, ct)
                          ?? throw new AppException("AuthorProfileMissing", "Author profile was not found.", 404);
 
-            if (author.revenue_balance_vnd < amount)
+            if (author.revenue_balance < amount)
             {
                 throw new AppException("InsufficientRevenue", "Not enough revenue balance to withdraw.", 400);
             }
@@ -150,8 +150,8 @@ namespace Service.Services
 
             await using var transaction = await _repository.BeginTransactionAsync(ct);
 
-            author.revenue_balance_vnd -= amount;
-            author.revenue_pending_vnd += amount;
+            author.revenue_balance -= amount;
+            author.revenue_pending += amount;
 
             var opRequest = await _opRequestRepository.CreateWithdrawRequestAsync(
                 authorAccountId,
@@ -164,7 +164,7 @@ namespace Service.Services
                 trans_id = Guid.NewGuid(),
                 author_id = author.account_id,
                 type = "withdraw_reserve",
-                amount_vnd = -amount,
+                amount = -amount,
                 request_id = opRequest.request_id,
                 created_at = now,
                 metadata = payloadJson

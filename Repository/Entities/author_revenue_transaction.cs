@@ -20,7 +20,7 @@ public partial class author_revenue_transaction
     public string type { get; set; } = null!;
 
     [Column(TypeName = "bigint")]
-    public long amount_vnd { get; set; }
+    public long amount { get; set; }
 
     public Guid? purchase_log_id { get; set; }
 

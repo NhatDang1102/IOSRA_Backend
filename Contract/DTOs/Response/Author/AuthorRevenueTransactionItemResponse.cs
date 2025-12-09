@@ -7,7 +7,7 @@ namespace Contract.DTOs.Response.Author
     {
         public Guid TransactionId { get; set; }
         public string Type { get; set; } = null!;
-        public long AmountVnd { get; set; }
+        public long Amount { get; set; }
         public Guid? ChapterId { get; set; }
         public string? ChapterTitle { get; set; }
         public Guid? PurchaseLogId { get; set; }

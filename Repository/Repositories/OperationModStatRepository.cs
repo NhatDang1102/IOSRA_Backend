@@ -86,7 +86,7 @@ namespace Repository.Repositories
                 source = purchases.Select(t => new StatPointSource
                 {
                     Timestamp = t.created_at,
-                    Value = t.amount_vnd
+                    Value = t.amount
                 });
             }
 

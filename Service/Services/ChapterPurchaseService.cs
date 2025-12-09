@@ -124,21 +124,21 @@ namespace Service.Services
             var author = story.author
                          ?? throw new AppException("AuthorNotFound", "Author profile is missing.", 404);
 
-            var grossVnd = priceDias * VndPerDia;
+            var grossAmount = priceDias * VndPerDia;
             var rewardRate = author.rank?.reward_rate ?? 0m;
-            var authorShare = (long)Math.Round(grossVnd * (rewardRate / 100m), MidpointRounding.AwayFromZero);
+            var authorShare = (long)Math.Round(grossAmount * (rewardRate / 100m), MidpointRounding.AwayFromZero);
             if (authorShare < 0)
             {
                 authorShare = 0;
             }
 
-            author.revenue_balance_vnd += authorShare;
+            author.revenue_balance += authorShare;
 
             var metadata = JsonSerializer.Serialize(new
             {
                 chapterId = chapter.chapter_id,
                 priceDias,
-                grossVnd,
+                grossAmount,
                 rewardRate
             }, JsonOptions);
 
@@ -147,7 +147,7 @@ namespace Service.Services
                 trans_id = Guid.NewGuid(),
                 author_id = author.account_id,
                 type = "purchase",
-                amount_vnd = authorShare,
+                amount = authorShare,
                 purchase_log_id = purchaseId,
                 metadata = metadata,
                 created_at = now
@@ -167,7 +167,7 @@ namespace Service.Services
                 ChapterTitle = chapter.title,
                 PriceDias = (int)priceDias,
                 WalletBalanceAfter = wallet.balance_coin,
-                AuthorShareVnd = authorShare,
+                AuthorShareAmount = authorShare,
                 PurchasedAt = now
             };
         }
@@ -308,15 +308,15 @@ namespace Service.Services
             var author = story.author
                          ?? throw new AppException("AuthorNotFound", "Author profile is missing.", 404);
 
-            var grossVnd = totalDias * VndPerDia;
+            var grossAmount = totalDias * VndPerDia;
             var rewardRate = author.rank?.reward_rate ?? 0m;
-            var authorShare = (long)Math.Round(grossVnd * (rewardRate / 100m), MidpointRounding.AwayFromZero);
+            var authorShare = (long)Math.Round(grossAmount * (rewardRate / 100m), MidpointRounding.AwayFromZero);
             if (authorShare < 0)
             {
                 authorShare = 0;
             }
 
-            author.revenue_balance_vnd += authorShare;
+            author.revenue_balance += authorShare;
 
             var metadata = JsonSerializer.Serialize(new
             {
@@ -324,7 +324,7 @@ namespace Service.Services
                 voiceIds = newVoices.Select(v => v.voice_id),
                 priceDias = totalDias,
                 rewardRate,
-                grossVnd
+                grossAmount
             }, JsonOptions);
 
             await _chapterPurchaseRepository.AddAuthorRevenueTransactionAsync(new author_revenue_transaction
@@ -332,7 +332,7 @@ namespace Service.Services
                 trans_id = Guid.NewGuid(),
                 author_id = author.account_id,
                 type = "purchase",
-                amount_vnd = authorShare,
+                amount = authorShare,
                 voice_purchase_id = purchaseId,
                 metadata = metadata,
                 created_at = now
@@ -349,7 +349,7 @@ namespace Service.Services
                 StoryId = chapter.story_id,
                 TotalPriceDias = (int)totalDias,
                 WalletBalanceAfter = wallet.balance_coin,
-                AuthorShareVnd = authorShare,
+                AuthorShareAmount = authorShare,
                 PurchasedAt = now,
                 Voices = purchaseVoices.ToArray()
             };
