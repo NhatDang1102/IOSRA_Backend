@@ -96,7 +96,7 @@ namespace Service.Background
                     await notificationService.CreateAsync(new NotificationCreateModel(
                         subscription.user_id,
                         NotificationTypes.SubscriptionReminder,
-                        "Đừng quên nhận dias hôm nay",
+                        "Đừng quên nhận kim cương hôm nay",
                         $"Bạn vẫn chưa nhận {dailyDias} dias từ gói {planName}. Nhấn để nhận ngay!",
                         new
                         {
