@@ -73,12 +73,12 @@ namespace IOSRA.Tests.Controllers
             };
 
             _authorChapterService
-                .Setup(s => s.ListAsync(_accountId, storyId, status, It.IsAny<CancellationToken>()))
+                .Setup(s => s.GetAllAsync(_accountId, storyId, status, It.IsAny<CancellationToken>()))
                 .ReturnsAsync(expected)
                 .Verifiable();
 
             // Act
-            var result = await _controller.List(storyId, status, CancellationToken.None);
+            var result = await _controller.GetAll(storyId, status, CancellationToken.None);
 
             // Assert
             var ok = result as OkObjectResult;
@@ -98,12 +98,12 @@ namespace IOSRA.Tests.Controllers
             var expected = (IReadOnlyList<ChapterListItemResponse>)new List<ChapterListItemResponse>();
 
             _authorChapterService
-                .Setup(s => s.ListAsync(_accountId, storyId, status, It.IsAny<CancellationToken>()))
+                .Setup(s => s.GetAllAsync(_accountId, storyId, status, It.IsAny<CancellationToken>()))
                 .ReturnsAsync(expected)
                 .Verifiable();
 
             // Act
-            var result = await _controller.List(storyId, status, CancellationToken.None);
+            var result = await _controller.GetAll(storyId, status, CancellationToken.None);
 
             // Assert
             var ok = result as OkObjectResult;
@@ -136,12 +136,12 @@ namespace IOSRA.Tests.Controllers
             };
 
             _authorChapterService
-                .Setup(s => s.GetAsync(_accountId, storyId, chapterId, It.IsAny<CancellationToken>()))
+                .Setup(s => s.GetByIdAsync(_accountId, storyId, chapterId, It.IsAny<CancellationToken>()))
                 .ReturnsAsync(expected)
                 .Verifiable();
 
             // Act
-            var result = await _controller.Get(storyId, chapterId, CancellationToken.None);
+            var result = await _controller.GetById(storyId, chapterId, CancellationToken.None);
 
             // Assert
             var ok = result as OkObjectResult;
@@ -230,7 +230,7 @@ namespace IOSRA.Tests.Controllers
                 .Verifiable();
 
             // Act
-            var result = await _controller.Update(storyId, chapterId, req, CancellationToken.None);
+            var result = await _controller.UpdateDraft(storyId, chapterId, req, CancellationToken.None);
 
             // Assert
             var ok = result as OkObjectResult;
@@ -266,7 +266,7 @@ namespace IOSRA.Tests.Controllers
                 .Verifiable();
 
             // Act
-            var result = await _controller.Submit(chapterId, req, CancellationToken.None);
+            var result = await _controller.SubmitForReview(chapterId, req, CancellationToken.None);
 
             // Assert
             var ok = result as OkObjectResult;
@@ -301,7 +301,7 @@ namespace IOSRA.Tests.Controllers
                 .Verifiable();
 
             // Act
-            var result = await _controller.Withdraw(chapterId, CancellationToken.None);
+            var result = await _controller.WithdrawChapter(chapterId, CancellationToken.None);
 
             // Assert
             var ok = result as OkObjectResult;
