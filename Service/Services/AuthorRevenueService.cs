@@ -119,9 +119,9 @@ namespace Service.Services
             }
 
             var amount = request.Amount;
-            if (amount < 100000)
+            if (amount < 1000)
             {
-                throw new AppException("AmountTooSmall", "Minimum withdraw amount is 100000 units.", 400);
+                throw new AppException("AmountTooSmall", "Minimum withdraw amount is 1000 units.", 400);
             }
 
             var author = await _repository.GetAuthorAsync(authorAccountId, ct)
