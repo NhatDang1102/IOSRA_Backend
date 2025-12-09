@@ -332,6 +332,7 @@ namespace Service.Services
                         var story = await _moderationRepository.GetStoryAsync(targetId, ct);
                         if (story != null)
                         {
+                            response.TargetAccountId = story.author_id;
                             response.Story = new ReportStoryDetailResponse
                             {
                                 StoryId = story.story_id,
@@ -351,6 +352,7 @@ namespace Service.Services
                         var chapter = await _moderationRepository.GetChapterAsync(targetId, ct);
                         if (chapter != null)
                         {
+                            response.TargetAccountId = chapter.story?.author_id ?? chapter.story?.author?.account_id;
                             response.Chapter = new ReportChapterDetailResponse
                             {
                                 ChapterId = chapter.chapter_id,
@@ -372,6 +374,7 @@ namespace Service.Services
                         var comment = await _moderationRepository.GetCommentAsync(targetId, ct);
                         if (comment != null)
                         {
+                            response.TargetAccountId = comment.reader_id;
                             response.Comment = new ReportCommentDetailResponse
                             {
                                 CommentId = comment.comment_id,

@@ -7,6 +7,7 @@ namespace Contract.DTOs.Response.Report
         public Guid ReportId { get; set; }
         public string TargetType { get; set; } = null!;
         public Guid TargetId { get; set; }
+        public Guid? TargetAccountId { get; set; }
         public Guid ReporterId { get; set; }
         public string ReporterUsername { get; set; } = null!;
         public Guid? ModeratorId { get; set; }
