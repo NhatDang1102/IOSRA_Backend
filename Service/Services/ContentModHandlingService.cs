@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -16,16 +17,33 @@ namespace Service.Services
         private static readonly string[] StoryAllowedStatuses = { "hidden", "published", "completed" };
         private static readonly string[] ChapterAllowedStatuses = { "hidden", "published" };
         private static readonly string[] CommentAllowedStatuses = { "visible", "hidden" };
+        private static readonly IReadOnlyDictionary<int, TimeSpan> StrikeDurations = new Dictionary<int, TimeSpan>
+        {
+            { 1, TimeSpan.FromDays(1) },
+            { 2, TimeSpan.FromDays(3) },
+            { 3, TimeSpan.FromDays(30) },
+            { 4, TimeSpan.FromDays(365 * 100) }
+        };
+        private static readonly IReadOnlyDictionary<int, string> StrikeDurationLabels = new Dictionary<int, string>
+        {
+            { 1, "1 day" },
+            { 2, "3 days" },
+            { 3, "30 days" },
+            { 4, "100 years" }
+        };
 
         private readonly IModerationRepository _moderationRepository;
         private readonly IProfileRepository _profileRepository;
+        private readonly IMailSender _mailSender;
 
         public ContentModHandlingService(
             IModerationRepository moderationRepository,
-            IProfileRepository profileRepository)
+            IProfileRepository profileRepository,
+            IMailSender mailSender)
         {
             _moderationRepository = moderationRepository;
             _profileRepository = profileRepository;
+            _mailSender = mailSender;
         }
 
         public async Task<ModerationStatusResponse> UpdateStoryStatusAsync(Guid moderatorAccountId, Guid storyId, ContentStatusUpdateRequest request, CancellationToken ct = default)
@@ -67,32 +85,38 @@ namespace Service.Services
             return BuildResponse("comment", commentId, normalizedStatus);
         }
 
-        public async Task OverrideStrikeAsync(Guid targetAccountId, StrikeStatusUpdateRequest request, CancellationToken ct = default)
+        public async Task ApplyStrikeAsync(Guid targetAccountId, StrikeLevelUpdateRequest request, CancellationToken ct = default)
         {
-            if (request.Strike > 3)
+            if (!StrikeDurations.TryGetValue(request.Level, out var duration))
             {
-                throw new AppException("InvalidStrike", "Strike must be between 0 and 3.", 400);
+                throw new AppException("InvalidStrikeLevel", "Strike level must be between 1 and 4.", 400);
             }
 
             var account = await _profileRepository.GetAccountByIdAsync(targetAccountId, ct)
                           ?? throw new AppException("AccountNotFound", "Account was not found.", 404);
 
-            var normalizedStatus = NormalizeStrikeStatus(request.Status);
-            DateTime? restrictedUntil = request.RestrictedUntil;
+            var now = TimezoneConverter.VietnamNow;
+            var baseStart = account.strike_restricted_until.HasValue && account.strike_restricted_until > now
+                ? account.strike_restricted_until.Value
+                : now;
+            var restrictedUntil = baseStart.Add(duration);
+            var highestLevel = (byte)Math.Max(account.strike, request.Level);
 
-            if (string.Equals(normalizedStatus, ReportStrikeStatus.Restricted, StringComparison.OrdinalIgnoreCase))
-            {
-                if (!restrictedUntil.HasValue)
-                {
-                    throw new AppException("RestrictedUntilRequired", "restrictedUntil is required when status is restricted.", 400);
-                }
-            }
-            else
-            {
-                restrictedUntil = null;
-            }
+            await _profileRepository.UpdateStrikeAsync(
+                account.account_id,
+                highestLevel,
+                ReportStrikeStatus.Restricted,
+                restrictedUntil,
+                ct);
 
-            await _profileRepository.UpdateStrikeAsync(account.account_id, request.Strike, normalizedStatus, restrictedUntil, ct);
+            var durationLabel = StrikeDurationLabels[request.Level];
+            var reasonText = $"A moderator applied strike level {request.Level} (account restricted for {durationLabel}). Please review and follow IOSRA policies.";
+            await _mailSender.SendStrikeWarningEmailAsync(
+                account.email,
+                string.IsNullOrWhiteSpace(account.username) ? account.email : account.username,
+                reasonText,
+                highestLevel,
+                restrictedUntil);
         }
 
         private static string NormalizeStatus(string? value, string[] allowed, string label)
@@ -111,22 +135,6 @@ namespace Service.Services
             return normalized;
         }
 
-        private static string NormalizeStrikeStatus(string? status)
-        {
-            if (string.IsNullOrWhiteSpace(status))
-            {
-                throw new AppException("InvalidStrikeStatus", "Strike status is required.", 400);
-            }
-
-            var normalized = status.Trim().ToLowerInvariant();
-            if (normalized != ReportStrikeStatus.None && normalized != ReportStrikeStatus.Restricted)
-            {
-                throw new AppException("InvalidStrikeStatus", $"Unsupported strike status '{status}'.", 400);
-            }
-
-            return normalized;
-        }
-
         private static ModerationStatusResponse BuildResponse(string targetType, Guid targetId, string status)
             => new ModerationStatusResponse
             {
@@ -137,7 +145,6 @@ namespace Service.Services
 
         private static class ReportStrikeStatus
         {
-            public const string None = "none";
             public const string Restricted = "restricted";
         }
     }

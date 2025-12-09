@@ -11,6 +11,6 @@ namespace Service.Interfaces
         Task<ModerationStatusResponse> UpdateStoryStatusAsync(Guid moderatorAccountId, Guid storyId, ContentStatusUpdateRequest request, CancellationToken ct = default);
         Task<ModerationStatusResponse> UpdateChapterStatusAsync(Guid moderatorAccountId, Guid chapterId, ContentStatusUpdateRequest request, CancellationToken ct = default);
         Task<ModerationStatusResponse> UpdateCommentStatusAsync(Guid moderatorAccountId, Guid commentId, ContentStatusUpdateRequest request, CancellationToken ct = default);
-        Task OverrideStrikeAsync(Guid targetAccountId, StrikeStatusUpdateRequest request, CancellationToken ct = default);
+        Task ApplyStrikeAsync(Guid targetAccountId, StrikeLevelUpdateRequest request, CancellationToken ct = default);
     }
 }

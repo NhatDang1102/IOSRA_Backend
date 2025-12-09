@@ -46,10 +46,10 @@ namespace Main.Controllers
         }
 
         [HttpPut("accounts/{accountId:guid}/strike-status")]
-        public async Task<IActionResult> OverrideStrike(Guid accountId, [FromBody] StrikeStatusUpdateRequest request, CancellationToken ct = default)
+        public async Task<IActionResult> ApplyStrike(Guid accountId, [FromBody] StrikeLevelUpdateRequest request, CancellationToken ct = default)
         {
-            await _service.OverrideStrikeAsync(accountId, request, ct);
-            return Ok(new { message = "Strike status updated" });
+            await _service.ApplyStrikeAsync(accountId, request, ct);
+            return Ok(new { message = "Strike updated", level = request.Level });
         }
 
         [HttpGet("reports")]

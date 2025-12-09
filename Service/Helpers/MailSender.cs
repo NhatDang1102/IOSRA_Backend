@@ -125,8 +125,8 @@ namespace Service.Helpers
         public async Task SendStrikeWarningEmailAsync(string toEmail, string username, string reason, byte strikeCount, DateTime? restrictedUntil)
         {
             var body = $"Hello {username},\n"
-                       + $"We received a valid report against your content for reason: {reason}.\n"
-                       + $"Your current strike count is {strikeCount}.";
+                       + $"{reason}\n"
+                       + $"Current strike level: {strikeCount}.";
 
             if (restrictedUntil.HasValue)
             {
