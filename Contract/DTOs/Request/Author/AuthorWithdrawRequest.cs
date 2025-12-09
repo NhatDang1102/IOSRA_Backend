@@ -4,7 +4,7 @@ namespace Contract.DTOs.Request.Author
 {
     public class AuthorWithdrawRequest
     {
-        [Range(100000, long.MaxValue, ErrorMessage = "Amount must be at least 100000 units.")]
+        [Range(1000, long.MaxValue, ErrorMessage = "Amount must be at least 1000 units.")]
         public long Amount { get; set; }
 
         [Required]
