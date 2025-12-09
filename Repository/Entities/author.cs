@@ -26,13 +26,13 @@ public partial class author
     public uint total_follower { get; set; }
 
     [Column(TypeName = "bigint")]
-    public long revenue_balance_vnd { get; set; }
+    public long revenue_balance { get; set; }
 
     [Column(TypeName = "bigint")]
-    public long revenue_pending_vnd { get; set; }
+    public long revenue_pending { get; set; }
 
     [Column(TypeName = "bigint")]
-    public long revenue_withdrawn_vnd { get; set; }
+    public long revenue_withdrawn { get; set; }
 
     [ForeignKey("account_id")]
     [InverseProperty("author")]

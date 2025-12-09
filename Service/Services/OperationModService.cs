@@ -164,10 +164,10 @@ namespace Service.Implementations
 
             //gọi transaction: đảm bảo status và cập nhật số dư phải đều thành công, ko thì rollback hết 
             await using var transaction = await _authorRevenueRepository.BeginTransactionAsync(ct);
-            
+
             //tính toán lại revenue cho author
-            author.revenue_pending_vnd -= amount;
-            author.revenue_withdrawn_vnd += amount;
+            author.revenue_pending -= amount;
+            author.revenue_withdrawn += amount;
 
             entity.status = "approved";
             entity.omod_id = omodAccountId;
@@ -224,8 +224,10 @@ namespace Service.Implementations
 
             await using var transaction = await _authorRevenueRepository.BeginTransactionAsync(ct);
 
-            author.revenue_pending_vnd -= amount;
-            author.revenue_balance_vnd += amount;
+            author.revenue_pending -= amount;
+            author.revenue_balance += amount;
+
+
 
             entity.status = "rejected";
             entity.omod_id = omodAccountId;
@@ -239,7 +241,7 @@ namespace Service.Implementations
                 trans_id = Guid.NewGuid(),
                 author_id = author.account_id,
                 type = "withdraw_release",
-                amount_vnd = amount,
+                amount = amount,
                 request_id = entity.request_id,
                 metadata = metadata,
                 created_at = now
