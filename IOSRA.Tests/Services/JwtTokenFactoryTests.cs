@@ -12,99 +12,102 @@ using Service.Interfaces;      // IJwtTokenFactory
 using Service.Models;          // JwtTokenResult
 using Xunit;
 
-public class JwtTokenFactoryTests
+namespace IOSRA.Tests.Controllers
 {
-    private readonly IJwtTokenFactory _factory;
-
-    public JwtTokenFactoryTests()
+    public class JwtTokenFactoryTests
     {
-        // Config in-memory cho phần Jwt
-        var dict = new Dictionary<string, string?>
+        private readonly IJwtTokenFactory _factory;
+
+        public JwtTokenFactoryTests()
         {
-            ["Jwt:Key"] = "super-secret-key-for-jwt-tests-123456", // đủ dài cho HMAC
-            ["Jwt:Issuer"] = "iosra-test-issuer",
-            ["Jwt:Audience"] = "iosra-test-audience",
-            ["Jwt:ExpiresMinutes"] = "120"
+            // Config in-memory cho phần Jwt
+            var dict = new Dictionary<string, string?>
+            {
+                ["Jwt:Key"] = "super-secret-key-for-jwt-tests-123456", // đủ dài cho HMAC
+                ["Jwt:Issuer"] = "iosra-test-issuer",
+                ["Jwt:Audience"] = "iosra-test-audience",
+                ["Jwt:ExpiresMinutes"] = "120"
+            };
+
+            IConfiguration config = new ConfigurationBuilder()
+                .AddInMemoryCollection(dict)
+                .Build();
+
+            _factory = new JwtTokenFactory(config);
+        }
+
+        private static account MakeAccount(Guid id) => new account
+        {
+            account_id = id,
+            email = "user@test.com",
+            username = "user01",
+            status = "unbanned",
+            strike = 0,
+            password_hash = "hash"
         };
 
-        IConfiguration config = new ConfigurationBuilder()
-            .AddInMemoryCollection(dict)
-            .Build();
+        // CASE: Tạo token đầy đủ claim + issuer/audience + roles
+        [Fact]
+        public void CreateToken_Should_Include_Account_Claims_And_Roles()
+        {
+            var accId = Guid.NewGuid();
+            var acc = MakeAccount(accId);
+            var roles = new[] { "reader", "author" };
 
-        _factory = new JwtTokenFactory(config);
-    }
+            // Act
+            var tokenResult = _factory.CreateToken(acc, roles);
 
-    private static account MakeAccount(Guid id) => new account
-    {
-        account_id = id,
-        email = "user@test.com",
-        username = "user01",
-        status = "unbanned",
-        strike = 0,
-        password_hash = "hash"
-    };
+            // Assert cơ bản: token không rỗng
+            tokenResult.Token.Should().NotBeNullOrWhiteSpace();
+            tokenResult.ExpiresAt.Should().BeAfter(DateTime.UtcNow);
 
-    // CASE: Tạo token đầy đủ claim + issuer/audience + roles
-    [Fact]
-    public void CreateToken_Should_Include_Account_Claims_And_Roles()
-    {
-        var accId = Guid.NewGuid();
-        var acc = MakeAccount(accId);
-        var roles = new[] { "reader", "author" };
+            var handler = new JwtSecurityTokenHandler();
+            var jwt = handler.ReadJwtToken(tokenResult.Token);
 
-        // Act
-        var tokenResult = _factory.CreateToken(acc, roles);
+            // Issuer / Audience từ config
+            jwt.Issuer.Should().Be("iosra-test-issuer");
+            jwt.Audiences.Should().ContainSingle("iosra-test-audience");
 
-        // Assert cơ bản: token không rỗng
-        tokenResult.Token.Should().NotBeNullOrWhiteSpace();
-        tokenResult.ExpiresAt.Should().BeAfter(DateTime.UtcNow);
+            // Claims chính
+            var claims = jwt.Claims.ToList();
 
-        var handler = new JwtSecurityTokenHandler();
-        var jwt = handler.ReadJwtToken(tokenResult.Token);
+            claims.FirstOrDefault(c => c.Type == JwtRegisteredClaimNames.Sub)
+                  ?.Value.Should().Be(accId.ToString());
 
-        // Issuer / Audience từ config
-        jwt.Issuer.Should().Be("iosra-test-issuer");
-        jwt.Audiences.Should().ContainSingle("iosra-test-audience");
+            claims.FirstOrDefault(c => c.Type == JwtRegisteredClaimNames.Email)
+                  ?.Value.Should().Be("user@test.com");
 
-        // Claims chính
-        var claims = jwt.Claims.ToList();
+            claims.FirstOrDefault(c => c.Type == "username")
+                  ?.Value.Should().Be("user01");
 
-        claims.FirstOrDefault(c => c.Type == JwtRegisteredClaimNames.Sub)
-              ?.Value.Should().Be(accId.ToString());
+            // Jti phải có và không rỗng
+            claims.FirstOrDefault(c => c.Type == JwtRegisteredClaimNames.Jti)
+                  ?.Value.Should().NotBeNullOrWhiteSpace();
 
-        claims.FirstOrDefault(c => c.Type == JwtRegisteredClaimNames.Email)
-              ?.Value.Should().Be("user@test.com");
+            // Roles
+            var roleClaims = claims.Where(c => c.Type == ClaimTypes.Role)
+                                   .Select(c => c.Value)
+                                   .ToList();
+            roleClaims.Should().BeEquivalentTo(roles);
 
-        claims.FirstOrDefault(c => c.Type == "username")
-              ?.Value.Should().Be("user01");
+            // Hạn token nằm trong tương lai
+            jwt.ValidTo.Should().BeAfter(DateTime.UtcNow);
+        }
 
-        // Jti phải có và không rỗng
-        claims.FirstOrDefault(c => c.Type == JwtRegisteredClaimNames.Jti)
-              ?.Value.Should().NotBeNullOrWhiteSpace();
+        // CASE: Roles = null -> không sinh claim Role
+        [Fact]
+        public void CreateToken_Should_Not_Contain_Role_Claims_When_Roles_Null()
+        {
+            var acc = MakeAccount(Guid.NewGuid());
 
-        // Roles
-        var roleClaims = claims.Where(c => c.Type == ClaimTypes.Role)
-                               .Select(c => c.Value)
-                               .ToList();
-        roleClaims.Should().BeEquivalentTo(roles);
+            var tokenResult = _factory.CreateToken(acc, roles: null);
 
-        // Hạn token nằm trong tương lai
-        jwt.ValidTo.Should().BeAfter(DateTime.UtcNow);
-    }
+            tokenResult.Token.Should().NotBeNullOrWhiteSpace();
 
-    // CASE: Roles = null -> không sinh claim Role
-    [Fact]
-    public void CreateToken_Should_Not_Contain_Role_Claims_When_Roles_Null()
-    {
-        var acc = MakeAccount(Guid.NewGuid());
+            var handler = new JwtSecurityTokenHandler();
+            var jwt = handler.ReadJwtToken(tokenResult.Token);
 
-        var tokenResult = _factory.CreateToken(acc, roles: null);
-
-        tokenResult.Token.Should().NotBeNullOrWhiteSpace();
-
-        var handler = new JwtSecurityTokenHandler();
-        var jwt = handler.ReadJwtToken(tokenResult.Token);
-
-        jwt.Claims.Where(c => c.Type == ClaimTypes.Role).Should().BeEmpty();
+            jwt.Claims.Where(c => c.Type == ClaimTypes.Role).Should().BeEmpty();
+        }
     }
 }

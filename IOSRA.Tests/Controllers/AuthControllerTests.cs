@@ -10,6 +10,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Moq;
 using Service.Interfaces;
+using Service.Models;              // RefreshTokenIssueResult
 using System.IdentityModel.Tokens.Jwt;
 using Xunit;
 
@@ -64,11 +65,15 @@ namespace IOSRA.Tests.Controllers
             _auth.Verify(a => a.SendRegisterOtpAsync(req, It.IsAny<CancellationToken>()), Times.Once);
             _auth.VerifyNoOtherCalls();
             _blacklist.VerifyNoOtherCalls();
+            _refreshTokenStore.VerifyNoOtherCalls();
         }
 
         [Fact]
         public async Task Verify_Should_Return_LoginResponse()
         {
+            // cần HttpContext để set refresh cookie
+            SetUser();
+
             var req = new VerifyOtpRequest { Email = "test@example.com", Otp = "123456" };
 
             var expected = new LoginResponse
@@ -83,6 +88,13 @@ namespace IOSRA.Tests.Controllers
                  .ReturnsAsync(expected)
                  .Verifiable();
 
+            _refreshTokenStore.Setup(r => r.IssueAsync(expected.AccountId, It.IsAny<CancellationToken>()))
+                              .ReturnsAsync(new RefreshTokenIssueResult
+                              {
+                                  Token = "refresh-token",
+                                  ExpiresAt = DateTime.UtcNow.AddDays(30)
+                              });
+
             var result = await _controller.Verify(req, CancellationToken.None);
 
             var ok = result as OkObjectResult;
@@ -92,11 +104,17 @@ namespace IOSRA.Tests.Controllers
             _auth.Verify(a => a.VerifyRegisterAsync(req, It.IsAny<CancellationToken>()), Times.Once);
             _auth.VerifyNoOtherCalls();
             _blacklist.VerifyNoOtherCalls();
+
+            _refreshTokenStore.Verify(r => r.IssueAsync(expected.AccountId, It.IsAny<CancellationToken>()), Times.Once);
+            _refreshTokenStore.VerifyNoOtherCalls();
         }
 
         [Fact]
         public async Task Login_Should_Return_LoginResponse()
         {
+            // cần HttpContext để set refresh cookie
+            SetUser();
+
             var req = new LoginRequest
             {
                 Identifier = "test@example.com",
@@ -115,6 +133,13 @@ namespace IOSRA.Tests.Controllers
                  .ReturnsAsync(expected)
                  .Verifiable();
 
+            _refreshTokenStore.Setup(r => r.IssueAsync(expected.AccountId, It.IsAny<CancellationToken>()))
+                              .ReturnsAsync(new RefreshTokenIssueResult
+                              {
+                                  Token = "refresh-token",
+                                  ExpiresAt = DateTime.UtcNow.AddDays(30)
+                              });
+
             var result = await _controller.Login(req, CancellationToken.None);
 
             var ok = result as OkObjectResult;
@@ -124,11 +149,17 @@ namespace IOSRA.Tests.Controllers
             _auth.Verify(a => a.LoginAsync(req, It.IsAny<CancellationToken>()), Times.Once);
             _auth.VerifyNoOtherCalls();
             _blacklist.VerifyNoOtherCalls();
+
+            _refreshTokenStore.Verify(r => r.IssueAsync(expected.AccountId, It.IsAny<CancellationToken>()), Times.Once);
+            _refreshTokenStore.VerifyNoOtherCalls();
         }
 
         [Fact]
         public async Task GoogleLogin_Should_Return_LoginResponse()
         {
+            // cần HttpContext để set refresh cookie
+            SetUser();
+
             var req = new GoogleLoginRequest { IdToken = "google-token" };
 
             var expected = new LoginResponse
@@ -143,6 +174,13 @@ namespace IOSRA.Tests.Controllers
                  .ReturnsAsync(expected)
                  .Verifiable();
 
+            _refreshTokenStore.Setup(r => r.IssueAsync(expected.AccountId, It.IsAny<CancellationToken>()))
+                              .ReturnsAsync(new RefreshTokenIssueResult
+                              {
+                                  Token = "refresh-token",
+                                  ExpiresAt = DateTime.UtcNow.AddDays(30)
+                              });
+
             var result = await _controller.GoogleLogin(req, CancellationToken.None);
 
             var ok = result as OkObjectResult;
@@ -152,11 +190,17 @@ namespace IOSRA.Tests.Controllers
             _auth.Verify(a => a.LoginWithGoogleAsync(req, It.IsAny<CancellationToken>()), Times.Once);
             _auth.VerifyNoOtherCalls();
             _blacklist.VerifyNoOtherCalls();
+
+            _refreshTokenStore.Verify(r => r.IssueAsync(expected.AccountId, It.IsAny<CancellationToken>()), Times.Once);
+            _refreshTokenStore.VerifyNoOtherCalls();
         }
 
         [Fact]
         public async Task CompleteGoogleRegister_Should_Return_LoginResponse()
         {
+            // cần HttpContext để set refresh cookie
+            SetUser();
+
             var req = new CompleteGoogleRegisterRequest
             {
                 IdToken = "google-token",
@@ -175,6 +219,13 @@ namespace IOSRA.Tests.Controllers
                  .ReturnsAsync(expected)
                  .Verifiable();
 
+            _refreshTokenStore.Setup(r => r.IssueAsync(expected.AccountId, It.IsAny<CancellationToken>()))
+                              .ReturnsAsync(new RefreshTokenIssueResult
+                              {
+                                  Token = "refresh-token",
+                                  ExpiresAt = DateTime.UtcNow.AddDays(30)
+                              });
+
             var result = await _controller.CompleteGoogleRegister(req, CancellationToken.None);
 
             var ok = result as OkObjectResult;
@@ -184,6 +235,9 @@ namespace IOSRA.Tests.Controllers
             _auth.Verify(a => a.CompleteGoogleRegisterAsync(req, It.IsAny<CancellationToken>()), Times.Once);
             _auth.VerifyNoOtherCalls();
             _blacklist.VerifyNoOtherCalls();
+
+            _refreshTokenStore.Verify(r => r.IssueAsync(expected.AccountId, It.IsAny<CancellationToken>()), Times.Once);
+            _refreshTokenStore.VerifyNoOtherCalls();
         }
 
         [Fact]
@@ -203,6 +257,7 @@ namespace IOSRA.Tests.Controllers
             _auth.Verify(a => a.SendForgotOtpAsync(req, It.IsAny<CancellationToken>()), Times.Once);
             _auth.VerifyNoOtherCalls();
             _blacklist.VerifyNoOtherCalls();
+            _refreshTokenStore.VerifyNoOtherCalls();
         }
 
         [Fact]
@@ -228,6 +283,7 @@ namespace IOSRA.Tests.Controllers
             _auth.Verify(a => a.VerifyForgotAsync(req, It.IsAny<CancellationToken>()), Times.Once);
             _auth.VerifyNoOtherCalls();
             _blacklist.VerifyNoOtherCalls();
+            _refreshTokenStore.VerifyNoOtherCalls();
         }
 
         [Fact]
@@ -261,6 +317,7 @@ namespace IOSRA.Tests.Controllers
 
             _blacklist.VerifyNoOtherCalls();
             _auth.VerifyNoOtherCalls();
+            _refreshTokenStore.VerifyNoOtherCalls();
         }
 
         [Fact]
@@ -274,6 +331,7 @@ namespace IOSRA.Tests.Controllers
 
             _blacklist.VerifyNoOtherCalls();
             _auth.VerifyNoOtherCalls();
+            _refreshTokenStore.VerifyNoOtherCalls();
         }
 
         [Fact]
@@ -290,6 +348,7 @@ namespace IOSRA.Tests.Controllers
 
             _blacklist.VerifyNoOtherCalls();
             _auth.VerifyNoOtherCalls();
+            _refreshTokenStore.VerifyNoOtherCalls();
         }
     }
 }
