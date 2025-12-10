@@ -37,7 +37,7 @@ namespace Service.Services
         }
 
         private static readonly string[] AllowedStatuses = { "pending", "published", "rejected" };
-
+        //get all list chapter trong content approve 
         public async Task<IReadOnlyList<ChapterModerationQueueItem>> ListAsync(string? status, CancellationToken ct = default)
         {
             var statuses = NormalizeStatuses(status);
@@ -73,7 +73,7 @@ namespace Service.Services
             var chapter = approval.chapter ?? throw new InvalidOperationException("Chapter navigation was not loaded for moderation entry.");
             return MapQueueItem(chapter, approval);
         }
-
+        //quyết định kiểm duyệt 
         public async Task ModerateAsync(Guid moderatorAccountId, Guid reviewId, ChapterModerationDecisionRequest request, CancellationToken ct = default)
         {
             var approval = await _chapterRepository.GetContentApprovalByIdAsync(reviewId, ct)

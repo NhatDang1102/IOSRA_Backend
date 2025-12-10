@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
@@ -17,6 +17,7 @@ namespace Repository.Repositories
         {
         }
 
+        //lấy list theo status query cho cmod
         public async Task<IReadOnlyList<chapter>> GetForModerationAsync(IEnumerable<string> statuses, CancellationToken ct = default)
         {
             var statusList = statuses?
@@ -38,7 +39,7 @@ namespace Repository.Repositories
                 .OrderByDescending(c => c.submitted_at ?? c.updated_at)
                 .ToListAsync(ct);
         }
-
+        //như trên nhưng lấy theo id 
         public Task<content_approve?> GetContentApprovalByIdAsync(Guid reviewId, CancellationToken ct = default)
             => _db.content_approves
                   .Include(c => c.chapter!)

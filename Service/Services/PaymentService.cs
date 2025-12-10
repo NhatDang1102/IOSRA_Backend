@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
@@ -47,7 +47,7 @@ public class PaymentService : IPaymentService
 
     public Task<CreatePaymentLinkResponse> CreateSubscriptionLinkAsync(Guid accountId, CreateSubscriptionPaymentLinkRequest request, CancellationToken ct = default)
         => CreateSubscriptionPaymentLinkAsync(accountId, request, ct);
-
+    //tạo link payos từ amount (bóc trong db ra), tạo luôn ordercode rồi gọi api _payOS.createPaymentLink
     private async Task<CreatePaymentLinkResponse> CreateDiaTopupLinkAsync(Guid accountId, ulong amount, CancellationToken ct)
     {
         if (amount == 0)
@@ -142,7 +142,7 @@ public class PaymentService : IPaymentService
             TransactionId = orderCode.ToString()
         };
     }
-
+    //xác minh tính hợp lí của data webhook từ payos, nếu khớp thì gd thành công 
     public async Task<bool> HandlePayOSWebhookAsync(WebhookType webhookBody, CancellationToken ct = default)
     {
         WebhookData webhookData;

@@ -24,6 +24,7 @@ namespace Service.Services
             _logger = logger;
         }
 
+        //lấy hết plan trong db
         public async Task<IReadOnlyList<SubscriptionPlanResponse>> GetPlansAsync(CancellationToken ct = default)
         {
             var plans = await _repository.GetPlansAsync(ct);
@@ -39,7 +40,7 @@ namespace Service.Services
                 })
                 .ToList();
         }
-
+        //check status subscrtion của reader 
         public async Task<SubscriptionStatusResponse> GetStatusAsync(Guid accountId, CancellationToken ct = default)
         {
             var now = TimezoneConverter.VietnamNow;
@@ -71,7 +72,7 @@ namespace Service.Services
                 CanClaimToday = !subscription.last_claim_date.HasValue || subscription.last_claim_date.Value != today
             };
         }
-
+        //check hnay đã nhận dias chưa và nếu chưa thì cho nhận
         public async Task<SubscriptionClaimResponse> ClaimDailyAsync(Guid accountId, CancellationToken ct = default)
         {
             var now = TimezoneConverter.VietnamNow;

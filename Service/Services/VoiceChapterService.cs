@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
@@ -39,13 +39,13 @@ namespace Service.Services
             _voicePricingService = voicePricingService;
             _logger = logger;
         }
-
+        //lấy chapter
         public async Task<VoiceChapterStatusResponse> GetAsync(Guid requesterAccountId, Guid chapterId, CancellationToken ct = default)
         {
             var chapter = await LoadAuthorChapterAsync(chapterId, requesterAccountId, includeVoices: true, ct);
             return MapChapter(chapter);
         }
-
+        //lấy content từ cloud storage rồi trả về số char
         public async Task<VoiceChapterCharCountResponse> GetCharCountAsync(Guid authorAccountId, Guid chapterId, CancellationToken ct = default)
         {
             var chapter = await LoadAuthorChapterAsync(chapterId, authorAccountId, includeVoices: false, ct);
@@ -69,7 +69,7 @@ namespace Service.Services
                 CharacterCount = content.Length
             };
         }
-
+        //lấy voice list trong db
         public async Task<IReadOnlyList<VoicePresetResponse>> GetPresetsAsync(CancellationToken ct = default)
         {
             var presets = await _db.voice_lists
@@ -87,9 +87,10 @@ namespace Service.Services
                 Description = v.description ?? string.Empty
             }).ToArray();
         }
-
+        //tạo voice
         public async Task<VoiceChapterOrderResponse> OrderVoicesAsync(Guid authorAccountId, Guid chapterId, VoiceChapterOrderRequest request, CancellationToken ct = default)
         {
+            //check voice preset có trong list db k 
             if (request?.VoiceIds == null || request.VoiceIds.Count == 0)
             {
                 throw new AppException("VoiceSelectionRequired", "Please select at least one voice preset.", 400);
@@ -288,13 +289,14 @@ namespace Service.Services
         private async Task GenerateVoiceAsync(chapter chapter, chapter_voice row, voice_list preset, string content, CancellationToken ct)
         {
             try
-            {
+            { //tạo bản ghi processing trong api 
                 row.voice ??= preset;
                 row.status = "processing";
                 row.error_message = null;
                 row.completed_at = null;
                 await _db.SaveChangesAsync(ct);
 
+                //gọi api để tạo byte audio mp3 rồi up lên cloud
                 var audioBytes = await _elevenLabsClient.SynthesizeAsync(preset.provider_voice_id, content, ct);
                 var storageKey = await _voiceStorage.UploadAsync(chapter.story_id, chapter.chapter_id, preset.voice_id, audioBytes, ct);
 

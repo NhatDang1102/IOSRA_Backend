@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
@@ -17,16 +17,18 @@ namespace Repository.Repositories
         {
         }
 
+        //lấy giá nạp dias tương ứng dầu tiên 
         public Task<topup_pricing?> GetDiaTopupPricingAsync(ulong amount, CancellationToken ct = default)
             => _db.topup_pricings.AsNoTracking().FirstOrDefaultAsync(p => p.amount_vnd == amount && p.is_active, ct);
 
+        //giống trên nhưng lấy cả list 
         public Task<List<topup_pricing>> GetDiaTopupPricingsAsync(CancellationToken ct = default)
             => _db.topup_pricings
                   .AsNoTracking()
                   .Where(p => p.is_active)
                   .OrderBy(p => p.amount_vnd)
                   .ToListAsync(ct);
-
+        //tạo mới/lấy info wallet của user
         public async Task<dia_wallet> GetOrCreateDiaWalletAsync(Guid accountId, CancellationToken ct = default)
         {
             var wallet = await _db.dia_wallets.FirstOrDefaultAsync(w => w.account_id == accountId, ct);
@@ -44,24 +46,24 @@ namespace Repository.Repositories
             }
             return wallet;
         }
-
+        //thêm vô payment mới status pending 
         public Task AddDiaPaymentAsync(dia_payment payment, CancellationToken ct = default)
         {
             _db.dia_payments.Add(payment);
             return Task.CompletedTask;
         }
-
+        //truy vấn payment theo order code và include cả wallet để update số dư sau webhook
         public Task<dia_payment?> GetDiaPaymentByOrderCodeAsync(string orderCode, CancellationToken ct = default)
             => _db.dia_payments
                 .Include(p => p.wallet)
                 .FirstOrDefaultAsync(p => p.order_code == orderCode, ct);
-
+        //ghi lại ls gd ví (ví dụ nạp thêm thì topup và delta là dương)
         public Task AddWalletPaymentAsync(wallet_payment payment, CancellationToken ct = default)
         {
             _db.wallet_payments.Add(payment);
             return Task.CompletedTask;
         }
-
+        //thêm vô receipt sau khi gd thành côn
         public Task AddPaymentReceiptAsync(payment_receipt receipt, CancellationToken ct = default)
         {
             _db.payment_receipts.Add(receipt);

@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Text.Json;
 using System.Threading;
@@ -28,7 +28,7 @@ namespace Service.Services
             _notificationRepository = notificationRepository;
             _dispatcher = dispatcher;
         }
-
+        //tạo noti mới 
         public async Task<NotificationResponse> CreateAsync(NotificationCreateModel model, CancellationToken ct = default)
         {
             var entity = new notification
@@ -46,6 +46,7 @@ namespace Service.Services
             await _notificationRepository.AddAsync(entity, ct);
 
             var response = Map(entity);
+            //gọi signalr bắn liền tới cilent
             await _dispatcher.DispatchAsync(response);
             return response;
         }

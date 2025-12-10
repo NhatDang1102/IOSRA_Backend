@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
@@ -29,7 +29,7 @@ namespace Service.Services
             _elevenLabsClient = elevenLabsClient;
             _storage = storage;
         }
-
+        //lấy list mood trong db
         public async Task<IReadOnlyList<MoodResponse>> GetMoodsAsync(CancellationToken ct = default)
         {
             var moods = await _repository.GetMoodsAsync(ct);
@@ -50,7 +50,7 @@ namespace Service.Services
             var tracks = await _repository.GetTracksAsync(moodCode, ct);
             return tracks.Select(Map).ToArray();
         }
-
+        //tạo bản nhạc mới 
         public async Task<MoodTrackResponse> CreateAsync(Guid moderatorId, MoodTrackCreateRequest request, CancellationToken ct = default)
         {
             if (request == null)
@@ -90,7 +90,7 @@ namespace Service.Services
             entity.mood_codeNavigation = mood;
             return Map(entity);
         }
-
+        //đổi tên nhạc
         public async Task<MoodTrackResponse> UpdateAsync(Guid trackId, MoodTrackUpdateRequest request, CancellationToken ct = default)
         {
             if (request == null)
@@ -122,7 +122,7 @@ namespace Service.Services
 
             return Map(track);
         }
-
+        //xóa nhạc 
         public async Task DeleteAsync(Guid trackId, CancellationToken ct = default)
         {
             var track = await _repository.GetTrackAsync(trackId, ct)

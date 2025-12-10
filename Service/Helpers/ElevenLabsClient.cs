@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Net.Http;
 using System.Net.Http.Json;
 using System.Text.Json;
@@ -24,7 +24,7 @@ namespace Service.Helpers
             _settings = options.Value;
             _logger = logger;
         }
-
+        //gọi model elv flash 2.5 (mỗi cái này hỗ trợ tiếng việt)
         public async Task<byte[]> SynthesizeAsync(string voiceId, string text, CancellationToken ct = default)
         {
             var payload = new
