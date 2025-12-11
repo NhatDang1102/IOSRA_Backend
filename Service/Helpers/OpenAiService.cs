@@ -592,6 +592,50 @@ If no policy issue exists, state clearly that no deductions were applied.";
             return reply.Trim();
         }
 
+        public async Task<string> SummarizeChapterAsync(string content, CancellationToken ct = default)
+        {
+            if (string.IsNullOrWhiteSpace(content))
+            {
+                return string.Empty;
+            }
+
+            var systemPrompt = "You are a literary editor. Read the provided chapter content and generate a concise summary (approx. 100-120 words). IMPORTANT: Detect the language of the content and write the summary in that EXACT same language. Do not add any introductory phrases like 'Here is the summary:',just return the summary and no more.";
+            var payload = new ChatCompletionsRequest
+            {
+                Model = _settings.ChatModel,
+                Temperature = 0.3,
+                MaxTokens = 200,
+                Messages = new[]
+                {
+                    new ChatMessage { Role = "system", Content = systemPrompt },
+                    new ChatMessage { Role = "user", Content = content }
+                }
+            };
+
+            try
+            {
+                using var request = new HttpRequestMessage(HttpMethod.Post, "chat/completions");
+                request.Content = new StringContent(JsonSerializer.Serialize(payload, _jsonOptions), Encoding.UTF8, "application/json");
+                using var response = await _httpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, ct);
+
+                if (!response.IsSuccessStatusCode)
+                {
+                    return string.Empty; // Return empty on failure to avoid blocking the user flow
+                }
+
+                var envelope = await response.Content.ReadFromJsonAsync<ChatCompletionsResponse>(_jsonOptions, ct);
+                var summary = envelope?.Choices?
+                    .Select(c => c.Message?.Content)
+                    .FirstOrDefault(c => !string.IsNullOrWhiteSpace(c));
+
+                return summary?.Trim() ?? string.Empty;
+            }
+            catch
+            {
+                return string.Empty; // Fail silently
+            }
+        }
+
         private static string ComposeContent(string title, string? description)
         {
             var builder = new StringBuilder();

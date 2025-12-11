@@ -235,6 +235,8 @@ namespace Service.Services
             var content = await _contentStorage.DownloadAsync(chapter.content_url, ct);
             //lúc submit mới gọi luôn openAI chấm cảm xúc (default là neutral)
             chapter.mood_code = await DetectMoodAsync(content, ct);
+            //gọi AI tóm tắt chapter
+            chapter.summary = await _openAiModerationService.SummarizeChapterAsync(content, ct);
             //gọi openAI kiểm duyệt 
             var moderation = await _openAiModerationService.ModerateChapterAsync(chapter.title, content, ct);
             var aiScoreDecimal = (decimal)Math.Round(moderation.Score, 2, MidpointRounding.AwayFromZero);
