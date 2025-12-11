@@ -43,8 +43,19 @@ namespace Service.Services
             await EnsurePremiumSubscriptionAsync(accountId, ct);
 
             var sanitized = request.Message.Trim();
+
+            // RAG: 1. Extract keywords via AI
+            var keywords = await _chatService.ExtractKeywordsAsync(sanitized, ct);
+
+            // RAG: 2. Search DB with keywords
+            var searchResults = await _repository.SearchContentAsync(keywords, 3, ct);
+            
+            var contextString = searchResults.Count > 0 
+                ? "\n\nRelevant Database Content:\n" + string.Join("\n", searchResults) 
+                : string.Empty;
+
             var history = await _repository.GetHistoryAsync(accountId, ct);
-            var promptMessages = BuildPrompt(history, sanitized);
+            var promptMessages = BuildPrompt(history, sanitized, contextString);
             var reply = await _chatService.ChatAsync(promptMessages, ct);
 
             var now = TimezoneConverter.VietnamNow;
@@ -70,11 +81,15 @@ namespace Service.Services
             return BuildResponse(history);
         }
 
-        private static List<AiChatPromptMessage> BuildPrompt(IReadOnlyList<AiChatStoredMessage> history, string newMessage)
+        private static List<AiChatPromptMessage> BuildPrompt(IReadOnlyList<AiChatStoredMessage> history, string newMessage, string contextString)
         {
+            var systemMessage = SystemPrompt + (string.IsNullOrEmpty(contextString) 
+                ? "" 
+                : "\nUse the following database information to answer if relevant. If the user asks about stories, authors, or chapters found here, prioritize this data." + contextString);
+
             var prompt = new List<AiChatPromptMessage>
             {
-                new AiChatPromptMessage("system", SystemPrompt)
+                new AiChatPromptMessage("system", systemMessage)
             };
 
             foreach (var message in history.TakeLast(MaxHistoryMessages))

@@ -149,6 +149,16 @@ namespace Repository.Repositories
                   .Select(c => (DateTime?)c.created_at)
                   .FirstOrDefaultAsync(ct);
 
+        public async Task<IReadOnlyList<chapter>> GetChaptersMissingSummaryAsync(int limit = 10, CancellationToken ct = default)
+        {
+            return await _db.chapter
+                .Include(c => c.story)
+                .Where(c => c.status == "published" && c.summary == null)
+                .OrderByDescending(c => c.created_at)
+                .Take(limit)
+                .ToListAsync(ct);
+        }
+
         public Task SaveChangesAsync(CancellationToken ct = default)
             => _db.SaveChangesAsync(ct);
     }

@@ -636,6 +636,48 @@ If no policy issue exists, state clearly that no deductions were applied.";
             }
         }
 
+        public async Task<List<string>> ExtractKeywordsAsync(string userQuery, CancellationToken ct = default)
+        {
+            if (string.IsNullOrWhiteSpace(userQuery)) return new List<string>();
+
+            var systemPrompt = "You are a search query optimizer. Extract 3-5 distinct, relevant search keywords or short phrases (in the same language as the query) that would help find content related to the user's request in a database. Return ONLY a comma-separated list. Example: 'transfer student, new school, học sinh mới'.";
+            
+            var payload = new ChatCompletionsRequest
+            {
+                Model = _settings.ChatModel,
+                Temperature = 0.3,
+                MaxTokens = 100,
+                Messages = new[]
+                {
+                    new ChatMessage { Role = "system", Content = systemPrompt },
+                    new ChatMessage { Role = "user", Content = userQuery }
+                }
+            };
+
+            try
+            {
+                using var request = new HttpRequestMessage(HttpMethod.Post, "chat/completions");
+                request.Content = new StringContent(JsonSerializer.Serialize(payload, _jsonOptions), Encoding.UTF8, "application/json");
+                using var response = await _httpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, ct);
+
+                if (!response.IsSuccessStatusCode) return new List<string> { userQuery };
+
+                var envelope = await response.Content.ReadFromJsonAsync<ChatCompletionsResponse>(_jsonOptions, ct);
+                var content = envelope?.Choices?.FirstOrDefault()?.Message?.Content;
+
+                if (string.IsNullOrWhiteSpace(content)) return new List<string> { userQuery };
+
+                return content.Split(',', StringSplitOptions.RemoveEmptyEntries)
+                    .Select(k => k.Trim())
+                    .Where(k => !string.IsNullOrWhiteSpace(k))
+                    .ToList();
+            }
+            catch
+            {
+                return new List<string> { userQuery };
+            }
+        }
+
         private static string ComposeContent(string title, string? description)
         {
             var builder = new StringBuilder();

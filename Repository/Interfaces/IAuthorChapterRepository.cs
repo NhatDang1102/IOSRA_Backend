@@ -25,6 +25,8 @@ namespace Repository.Interfaces
         Task<DateTime?> GetLastRejectedAtAsync(Guid chapterId, CancellationToken ct = default);
         Task<DateTime?> GetLastAuthorChapterRejectedAtAsync(Guid authorId, CancellationToken ct = default);
 
+        Task<IReadOnlyList<chapter>> GetChaptersMissingSummaryAsync(int limit = 10, CancellationToken ct = default);
+
         Task SaveChangesAsync(CancellationToken ct = default);
     }
 }
