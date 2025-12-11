@@ -12,6 +12,8 @@ using Repository.Interfaces;
 using Service.Exceptions;
 using Service.Interfaces;
 
+using Microsoft.Extensions.DependencyInjection;
+
 namespace Service.Services
 {
     public class AdminService : IAdminService
