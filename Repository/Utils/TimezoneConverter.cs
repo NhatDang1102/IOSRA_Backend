@@ -11,7 +11,8 @@ namespace Repository.Utils
         // Lấy thời gian hiện tại theo múi giờ Việt Nam (GMT+7)
         public static DateTime Now()
         {
-            return DateTime.UtcNow + VietnamOffset;
+            var vietnamTime = DateTime.UtcNow + VietnamOffset;
+            return new DateTime(vietnamTime.Ticks, DateTimeKind.Unspecified);
         }
 
         // Alias cho dễ đọc
