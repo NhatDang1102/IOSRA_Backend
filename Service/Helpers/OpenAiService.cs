@@ -37,7 +37,10 @@ namespace Service.Helpers
             "Detect self-harm or suicide promotion/instructions.",
             "Detect instructions or promotion of illegal activities (drugs, hacking, weapons, etc.).",
             "Detect sharing of personal data/doxxing (phone, address, bank info).",
-            "Detect low-quality/irrelevant filler or advertising masquerading as a chapter."
+            "Detect low-quality/irrelevant filler or advertising masquerading as a chapter.",
+            "Detect frequent grammar, spelling, or punctuation errors.",
+            "Detect poor formatting, excessive capitalization, or 'wall of text' paragraphs.",
+            "Detect weak, bland, or excessively repetitive prose."
         };
 
         //từ những phạm vi trên, định ra mức trừ điểm (Ở MỨC TƯƠNG ĐỐI vì AI mỗi lần response khác nhau)
@@ -105,6 +108,13 @@ namespace Service.Helpers
                 labels = new[] { "low_quality", "irrelevant_ad" },
                 penalties = new[] { "-1.5 advertisements/placeholder text", "-0.5 mild off-topic content" },
                 note = "Apply to chapters with <100 useful words."
+            },
+            new
+            {
+                category = "Writing Quality",
+                labels = new[] { "grammar_spelling", "poor_formatting", "weak_prose" },
+                penalties = new[] { "-0.5 frequent typos/grammar errors", "-0.5 poor formatting (wall of text, capitalization)", "-0.25 basic/repetitive prose" },
+                note = "Penalize amateur writing styles even if content is safe."
             }
         };
 
@@ -168,7 +178,10 @@ namespace Service.Helpers
             var combined = ComposeContent(primary, secondary);
             var ai = await RequestModerationAsync(profile, combined, ct);
 
-            var rawScore = ai?.Score ?? 10.0;
+            // Calculate score from penalties to ensure accuracy
+            var totalDeduction = ai?.Violations?.Sum(v => Math.Abs(v.Penalty ?? 0)) ?? 0;
+            var rawScore = 10.0 - totalDeduction;
+            
             var score = Math.Clamp(Math.Round(rawScore, 2, MidpointRounding.AwayFromZero), 0.0, 10.0);
             var normalizedDecision = ai?.Decision?.ToLowerInvariant();
 
@@ -233,17 +246,18 @@ namespace Service.Helpers
         private async Task<ModerationAiResponse?> RequestModerationAsync(ModerationProfile profile, string content, CancellationToken ct)
         {
             //define system openAI 
-            var moderationInstructions = @"Return JSON only with shape { ""score"": number, ""decision"": ""auto_approved|pending_manual_review|rejected"", ""violations"": [{ ""label"": string, ""evidence"": [string] }], ""explanation"": { ""english"": string, ""vietnamese"": string } }.
-Start from base score = 10.00 and subtract penalties exactly as defined in ""deductions"". Every time you subtract points you MUST add a violation entry (label must match the table) and quote the offending snippet inside ""evidence"".
+            var moderationInstructions = @"Return JSON only with shape { ""score"": number, ""decision"": ""auto_approved|pending_manual_review|rejected"", ""violations"": [{ ""label"": string, ""evidence"": [string], ""penalty"": number }], ""explanation"": { ""english"": string, ""vietnamese"": string } }.
+Start from base score = 10.00 and subtract penalties exactly as defined in ""deductions"". Every time you subtract points you MUST add a violation entry (label must match the table), set the ""penalty"" field to the positive number of points deducted (e.g. 1.5), and quote the offending snippet inside ""evidence"".
 Rules that must always be enforced:
 - Any URL, external link, or redirect CTA (http, https, www, .com, bit.ly, telegram, discord.gg, invite codes, etc.) => label ""url_redirect"" and subtract at least 1.5 points per link.
 - Spam, nonsense, or repeated tokens (""up up up"", ""aaaaaaaa"", ""test test"", placeholder text) => label ""spam_repetition"" and subtract at least 1.0 point.
 - Explicit sexual content, violence, hate speech, self-harm, illegal instructions, personal data, and irrelevant ads must follow the deduction table. Protected-class hate or sexual content with minors should reduce the score below 5 and typically be rejected.
-- If ANY violation exists, the final score must be < 10 and the violation must be listed. Never return 10.00 when a deduction was applied.
+- If ANY violation exists, the violation must be listed with its penalty. Never return 10.00 when a deduction was applied.
 - Decision mapping: score >= 7 and no forced rejection => auto_approved; 5 <= score < 7 => pending_manual_review; score < 5 or forced labels => rejected.
 Explanation requirements:
 - Always provide both English and Vietnamese summaries.
-- Mention each deduction explicitly, e.g., ""-1.5 for url_redirect because the text contains http://example"".
+- Describe each violation and the penalty applied (e.g. ""-1.5 for url_redirect"").
+- DO NOT state the final calculated score in the text summary; the system will display it based on the penalties.
 - Paraphrase slurs rather than repeating them verbatim.
 If no policy issue exists, state clearly that no deductions were applied.";
 
@@ -330,7 +344,9 @@ If no policy issue exists, state clearly that no deductions were applied.";
             //chỉ sử dụng explanation AI nếu đủ cả english và vn trong response 
             if (!string.IsNullOrWhiteSpace(english) && !string.IsNullOrWhiteSpace(vietnamese))
             {
-                return $"English:\n{english.Trim()}\n\nTiếng việt:\n{vietnamese.Trim()}";
+                var headerEn = $"Automated Score: {score:0.00}/10.00";
+                var headerVn = $"Điểm tự động: {score:0.00}/10.00";
+                return $"English:\n{headerEn}\n{english.Trim()}\n\nTiếng việt:\n{headerVn}\n{vietnamese.Trim()}";
             }
 
             //check trong decision của AI có rejected hay là auto approved để build explanation cuối 
@@ -683,6 +699,9 @@ If no policy issue exists, state clearly that no deductions were applied.";
 
             [JsonPropertyName("evidence")]
             public string[]? Evidence { get; init; }
+
+            [JsonPropertyName("penalty")]
+            public double? Penalty { get; init; }
         }
 
         private sealed record ModerationAiExplanation

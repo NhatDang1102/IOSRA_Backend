@@ -2,11 +2,12 @@ using Amazon.S3;
 using Contract.DTOs.Settings;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
+using Service.Background;
 using Service.Helpers;
 using Service.Implementations;
-using Service.Services;
 using Service.Interfaces;
-using Service.Background;
+using Service.Queues;
+using Service.Services;
 using System;
 using System.Net.Http.Headers;
 
@@ -34,6 +35,7 @@ namespace Service
             services.AddSingleton<IVoiceAudioStorage, CloudflareR2VoiceStorage>();
             services.AddSingleton<IMoodMusicStorage, CloudflareR2MoodMusicStorage>();
             services.AddSingleton<IRefreshTokenStore, RedisRefreshTokenStore>();
+            services.AddSingleton<IVoiceSynthesisQueue, VoiceSynthesisQueue>();
 
             services.AddHttpClient<OpenAiService>((sp, client) =>
             {
@@ -102,7 +104,7 @@ namespace Service
             services.AddScoped<IAIChatService, AIChatService>();
             services.AddHostedService<StoryWeeklyViewSyncJob>();
             services.AddHostedService<SubscriptionReminderJob>();
-
+            services.AddHostedService<VoiceSynthesisWorker>();
             return services;
         }
     }
