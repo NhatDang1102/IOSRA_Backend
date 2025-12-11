@@ -105,7 +105,7 @@ namespace Service
             services.AddHostedService<StoryWeeklyViewSyncJob>();
             services.AddHostedService<SubscriptionReminderJob>();
             services.AddHostedService<VoiceSynthesisWorker>();
-            services.AddHostedService<SummaryBackfillJob>();
+            // services.AddHostedService<SummaryBackfillJob>();
             return services;
         }
     }

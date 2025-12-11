@@ -640,13 +640,18 @@ If no policy issue exists, state clearly that no deductions were applied.";
         {
             if (string.IsNullOrWhiteSpace(userQuery)) return new List<string>();
 
-            var systemPrompt = "You are a search query optimizer. Extract 3-5 distinct, relevant search keywords or short phrases (in the same language as the query) that would help find content related to the user's request in a database. Return ONLY a comma-separated list. Example: 'transfer student, new school, học sinh mới'.";
+            var systemPrompt = "You are a search query expander for a storytelling database. Your goal is to bridge the gap between user intent and database content (stories, chapters, authors).\n" +
+                               "Analyze the user's query and generate a comprehensive list of 5-10 search terms. Include:\n" +
+                               "1. Exact important keywords from the query (names, titles).\n" +
+                               "2. Synonyms and related concepts (e.g. 'animal' -> 'pet, beast, dog, cat, zoo').\n" +
+                               "3. English translations if the query is non-English, and vice-versa (e.g. 'hồi quy' -> 'regressor, returnee').\n" +
+                               "Return ONLY a comma-separated list of strings. Do not explain.";
             
             var payload = new ChatCompletionsRequest
             {
                 Model = _settings.ChatModel,
-                Temperature = 0.3,
-                MaxTokens = 100,
+                Temperature = 0.5, // Slightly higher creativity for synonyms
+                MaxTokens = 150,
                 Messages = new[]
                 {
                     new ChatMessage { Role = "system", Content = systemPrompt },
@@ -670,6 +675,7 @@ If no policy issue exists, state clearly that no deductions were applied.";
                 return content.Split(',', StringSplitOptions.RemoveEmptyEntries)
                     .Select(k => k.Trim())
                     .Where(k => !string.IsNullOrWhiteSpace(k))
+                    .Distinct(StringComparer.OrdinalIgnoreCase)
                     .ToList();
             }
             catch

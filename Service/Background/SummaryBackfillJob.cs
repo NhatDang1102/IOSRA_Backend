@@ -9,6 +9,8 @@ using Service.Interfaces;
 
 namespace Service.Background
 {
+    // Job temporarily disabled as backfill is complete
+    /*
     public class SummaryBackfillJob : BackgroundService
     {
         private static readonly TimeSpan IdleDelay = TimeSpan.FromMinutes(10);
@@ -104,4 +106,5 @@ namespace Service.Background
             return true;
         }
     }
+    */
 }
