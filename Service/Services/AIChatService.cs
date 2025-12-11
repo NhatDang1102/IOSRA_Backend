@@ -16,7 +16,7 @@ namespace Service.Services
     public class AIChatService : IAIChatService
     {
         private const string PremiumPlanCode = "premium_month";
-        private const string SystemPrompt = "You are IOSRA's helpful storytelling assistant. Provide concise, friendly answers and keep content PG-13.";
+        private const string SystemPrompt = "You are IOSRA's helpful storytelling assistant. Your sole purpose is to provide concise, friendly answers based ONLY on the information available in the provided database content. If you cannot find the answer within the given context, you MUST state that you do not have information in the database about it, without using external knowledge. Keep content PG-13.";
         private const int MaxHistoryMessages = 40;
 
         private readonly IAIChatRepository _repository;
