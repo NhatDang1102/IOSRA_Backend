@@ -255,7 +255,7 @@ namespace Service.Services
             var authorRank = chapter.story?.author?.rank?.rank_name;
             if (string.IsNullOrWhiteSpace(authorRank) || string.Equals(authorRank, "Casual", StringComparison.OrdinalIgnoreCase))
             {
-                throw new AppException("VoiceNotAllowed", "Only Bronze rank or higher authors can generate voice.", 403);
+                throw new AppException("VoiceNotAllowed", "Rank đồng trở lên mới được tạo voice.", 403);
             }
         }
 
