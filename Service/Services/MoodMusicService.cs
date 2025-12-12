@@ -106,7 +106,7 @@ namespace Service.Services
                 var title = request.Title.Trim();
                 if (string.IsNullOrWhiteSpace(title))
                 {
-                    throw new AppException("TitleRequired", "Title cannot be empty.", 400);
+                    throw new AppException("TitleRequired", "Title không thể trống.", 400);
                 }
                 track.title = title;
             }
