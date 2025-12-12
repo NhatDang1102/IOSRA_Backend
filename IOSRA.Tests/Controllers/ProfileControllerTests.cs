@@ -57,7 +57,6 @@ namespace IOSRA.Tests.Controllers
                 Email = "test@example.com",
                 Bio = "bio",
                 Gender = "unspecified",
-                VoiceCharBalance = 0,
                 IsAuthor = false
             };
 
@@ -84,8 +83,7 @@ namespace IOSRA.Tests.Controllers
             var expected = new ProfileWalletResponse
             {
                 DiaBalance = 100,
-                IsAuthor = true,
-                VoiceCharBalance = 1234
+                IsAuthor = true
             };
 
             _profile.Setup(p => p.GetWalletAsync(_accountId, It.IsAny<CancellationToken>()))

@@ -6,11 +6,6 @@ namespace Contract.DTOs.Response.Profile
     {
         public long DiaBalance { get; set; }
         public bool IsAuthor { get; set; }
-        public long? VoiceCharBalance { get; set; }
-        public SubscriptionStatusResponse Subscription { get; set; } = new SubscriptionStatusResponse
-        {
-            HasActiveSubscription = false,
-            CanClaimToday = false
-        };
+        public SubscriptionStatusResponse? Subscription { get; set; }
     }
 }

@@ -29,8 +29,8 @@ namespace IOSRA.Tests.Controllers
         private static chapter_price_rule Rule(uint min, uint? max, uint price) =>
             new chapter_price_rule
             {
-                min_word_count = min,
-                max_word_count = max,
+                min_char_count = min,
+                max_char_count = max,
                 dias_price = price
             };
 

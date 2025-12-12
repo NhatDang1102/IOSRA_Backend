@@ -532,14 +532,7 @@ namespace Repository.DBContext
                 entity.Property(e => e.is_active).HasDefaultValueSql("1");
             });
 
-            modelBuilder.Entity<voice_topup_pricing>(entity =>
-            {
-                entity.HasKey(e => e.pricing_id).HasName("PRIMARY");
-                entity.Property(e => e.pricing_id).ValueGeneratedNever();
-                entity.Property(e => e.updated_at)
-                    .ValueGeneratedOnAddOrUpdate()
-                    .HasDefaultValueSql("CURRENT_TIMESTAMP");
-            });
+
 
             modelBuilder.Entity<payment_receipt>(entity =>
             {

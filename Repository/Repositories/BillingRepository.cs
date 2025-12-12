@@ -82,51 +82,6 @@ namespace Repository.Repositories
         public Task<subscription_payment?> GetSubscriptionPaymentByOrderCodeAsync(string orderCode, CancellationToken ct = default)
             => _db.subscription_payments.FirstOrDefaultAsync(p => p.order_code == orderCode, ct);
 
-        public Task<voice_topup_pricing?> GetVoiceTopupPricingAsync(ulong amount, CancellationToken ct = default)
-            => _db.voice_topup_pricings.AsNoTracking().FirstOrDefaultAsync(p => p.amount_vnd == amount && p.is_active, ct);
-
-        public Task<List<voice_topup_pricing>> GetVoiceTopupPricingsAsync(CancellationToken ct = default)
-            => _db.voice_topup_pricings
-                  .AsNoTracking()
-                  .Where(p => p.is_active)
-                  .OrderBy(p => p.amount_vnd)
-                  .ToListAsync(ct);
-
-        public async Task<voice_wallet> GetOrCreateVoiceWalletAsync(Guid accountId, CancellationToken ct = default)
-        {
-            var wallet = await _db.voice_wallets.FirstOrDefaultAsync(w => w.account_id == accountId, ct);
-            if (wallet == null)
-            {
-                wallet = new voice_wallet
-                {
-                    wallet_id = Guid.NewGuid(),
-                    account_id = accountId,
-                    balance_chars = 0,
-                    updated_at = Repository.Utils.TimezoneConverter.VietnamNow
-                };
-                _db.voice_wallets.Add(wallet);
-            }
-            return wallet;
-        }
-
-        public Task AddVoicePaymentAsync(voice_payment payment, CancellationToken ct = default)
-        {
-            _db.voice_payments.Add(payment);
-            return Task.CompletedTask;
-        }
-
-        public Task<voice_payment?> GetVoicePaymentByOrderCodeAsync(string orderCode, CancellationToken ct = default)
-            => _db.voice_payments
-                .Include(v => v.voice_wallet)
-                    .ThenInclude(w => w.account)
-                .FirstOrDefaultAsync(v => v.order_code == orderCode, ct);
-
-        public Task AddVoiceWalletPaymentAsync(voice_wallet_payment payment, CancellationToken ct = default)
-        {
-            _db.voice_wallet_payments.Add(payment);
-            return Task.CompletedTask;
-        }
-
         public Task SaveChangesAsync(CancellationToken ct = default)
             => _db.SaveChangesAsync(ct);
     }

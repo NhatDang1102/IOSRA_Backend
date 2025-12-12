@@ -21,13 +21,6 @@ namespace Repository.Interfaces
         Task AddSubscriptionPaymentAsync(subscription_payment payment, CancellationToken ct = default);
         Task<subscription_payment?> GetSubscriptionPaymentByOrderCodeAsync(string orderCode, CancellationToken ct = default);
 
-        Task<voice_topup_pricing?> GetVoiceTopupPricingAsync(ulong amount, CancellationToken ct = default);
-        Task<List<voice_topup_pricing>> GetVoiceTopupPricingsAsync(CancellationToken ct = default);
-        Task<voice_wallet> GetOrCreateVoiceWalletAsync(Guid accountId, CancellationToken ct = default);
-        Task AddVoicePaymentAsync(voice_payment payment, CancellationToken ct = default);
-        Task<voice_payment?> GetVoicePaymentByOrderCodeAsync(string orderCode, CancellationToken ct = default);
-        Task AddVoiceWalletPaymentAsync(voice_wallet_payment payment, CancellationToken ct = default);
-
         Task SaveChangesAsync(CancellationToken ct = default);
     }
 }

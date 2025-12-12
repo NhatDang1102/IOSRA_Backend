@@ -64,9 +64,6 @@ public partial class account
     public virtual dia_wallet? dia_wallet { get; set; }
 
     [InverseProperty("account")]
-    public virtual voice_wallet? voice_wallet { get; set; }
-
-    [InverseProperty("account")]
     public virtual reader? reader { get; set; }
 
     [InverseProperty("reporter")]

@@ -19,7 +19,6 @@ namespace Contract.DTOs.Response.Profile
         public byte Strike { get; set; }
         public string StrikeStatus { get; set; } = "none";
         public DateTime? StrikeRestrictedUntil { get; set; }
-        public long VoiceCharBalance { get; set; }
         public bool IsAuthor { get; set; }
         public AuthorProfileSummary? Author { get; set; }
     }

@@ -17,7 +17,6 @@ namespace Repository.Repositories
         public Task<account?> GetAccountByIdAsync(Guid accountId, CancellationToken ct = default)
             => _db.accounts
                 .Include(a => a.dia_wallet)
-                .Include(a => a.voice_wallet)
                 .Include(a => a.author!)
                     .ThenInclude(author => author.rank)
                 .FirstOrDefaultAsync(a => a.account_id == accountId, ct);

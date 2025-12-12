@@ -107,7 +107,6 @@ namespace Service.Implementations
                 Strike = acc.strike,
                 StrikeStatus = string.IsNullOrWhiteSpace(acc.strike_status) ? "none" : acc.strike_status,
                 StrikeRestrictedUntil = acc.strike_restricted_until,
-                VoiceCharBalance = acc.voice_wallet?.balance_chars ?? 0,
                 IsAuthor = author is not null,
                 Author = authorSummary
             };
@@ -120,7 +119,6 @@ namespace Service.Implementations
                           ?? throw new AppException("AccountNotFound", "Không tìm thấy tài khoản.", 404);
 
             var diaWallet = account.dia_wallet;
-            var voiceWallet = account.voice_wallet;
 
             //check coi có phải author ko
             var isAuthor = account.author != null;
@@ -131,7 +129,6 @@ namespace Service.Implementations
             {
                 DiaBalance = diaWallet?.balance_dias ?? 0,
                 IsAuthor = isAuthor,
-                VoiceCharBalance = isAuthor ? voiceWallet?.balance_chars : null,
                 Subscription = subscription
             };
         }

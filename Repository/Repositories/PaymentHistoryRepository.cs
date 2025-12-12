@@ -14,7 +14,6 @@ namespace Repository.Repositories
     public class PaymentHistoryRepository : BaseRepository, IPaymentHistoryRepository
     {
         private const string TypeDia = "dia_topup";
-        private const string TypeVoice = "voice_topup";
         private const string TypeSubscription = "subscription";
 
         public PaymentHistoryRepository(AppDbContext db) : base(db)
@@ -49,23 +48,7 @@ namespace Repository.Repositories
                     PlanName = null
                 });
 
-            var voiceQuery = _db.voice_payments
-                .AsNoTracking()
-                .Where(p => p.voice_wallet.account_id == accountId)
-                .Select(p => new PaymentHistoryRecord
-                {
-                    PaymentId = p.topup_id,
-                    Type = TypeVoice,
-                    Provider = p.provider,
-                    OrderCode = p.order_code,
-                    AmountVnd = p.amount_vnd,
-                    GrantedValue = p.chars_granted,
-                    GrantedUnit = "chars",
-                    Status = p.status,
-                    CreatedAt = p.created_at,
-                    PlanCode = null,
-                    PlanName = null
-                });
+            // var voiceQuery = ... removed
 
             var subscriptionQuery = _db.subscription_payments
                 .AsNoTracking()
@@ -86,7 +69,6 @@ namespace Repository.Repositories
                 });
 
             var combined = diaQuery
-                .Concat(voiceQuery)
                 .Concat(subscriptionQuery);
 
             if (!string.IsNullOrWhiteSpace(type))
