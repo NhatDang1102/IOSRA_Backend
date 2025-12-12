@@ -11,9 +11,9 @@ public class chapter_price_rule
     
     public Guid rule_id { get; set; }
 
-    public uint min_word_count { get; set; }
+    public uint min_char_count { get; set; }
 
-    public uint? max_word_count { get; set; }
+    public uint? max_char_count { get; set; }
 
     public uint dias_price { get; set; }
 

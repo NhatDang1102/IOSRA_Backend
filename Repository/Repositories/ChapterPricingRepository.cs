@@ -23,7 +23,7 @@ namespace Repository.Repositories
             //lấy giá trong db (as no tracking để ef core ko cần theo dõi vì k có tác động gì thay đỏi data)
             return await _db.chapter_price_rules
                 .AsNoTracking()
-                .OrderBy(r => r.min_word_count)
+                .OrderBy(r => r.min_char_count)
                 .ToListAsync(ct);
         }
     }

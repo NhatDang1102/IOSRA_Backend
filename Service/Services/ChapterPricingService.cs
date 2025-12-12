@@ -25,24 +25,24 @@ namespace Service.Services
         }
 
         //lấy giá trong db (để ko hard code)
-        public async Task<int> GetPriceAsync(int wordCount, CancellationToken ct = default)
+        public async Task<int> GetPriceAsync(int charCount, CancellationToken ct = default)
         {
-            if (wordCount <= 0)
+            if (charCount <= 0)
             {
-                throw new AppException("InvalidWordCount", "Word count must be positive.", 400);
+                throw new AppException("InvalidCharCount", "Character count must be positive.", 400);
             }
 
             var rules = await GetRulesAsync(ct);
-            //tìm tier gá phù hợp từ min và max word count 
+            //tìm tier gá phù hợp từ min và max char count 
             var rule = rules
                 .FirstOrDefault(r =>
-                    wordCount >= r.min_word_count &&
-                    (!r.max_word_count.HasValue || wordCount <= r.max_word_count.Value));
+                    charCount >= r.min_char_count &&
+                    (!r.max_char_count.HasValue || charCount <= r.max_char_count.Value));
 
             if (rule == null)
             { //ko có cái nào thỏa mãn yêu cầu thì lấy cái cao nhất 
                 // fallback to highest tier
-                rule = rules.OrderByDescending(r => r.min_word_count).FirstOrDefault();
+                rule = rules.OrderByDescending(r => r.min_char_count).FirstOrDefault();
             }
 
             if (rule == null)

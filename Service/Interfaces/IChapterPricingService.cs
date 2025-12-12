@@ -5,6 +5,6 @@ namespace Service.Interfaces
 {
     public interface IChapterPricingService
     {
-        Task<int> GetPriceAsync(int wordCount, CancellationToken ct = default);
+        Task<int> GetPriceAsync(int charCount, CancellationToken ct = default);
     }
 }

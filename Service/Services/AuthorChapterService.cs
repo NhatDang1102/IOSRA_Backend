@@ -109,7 +109,7 @@ namespace Service.Services
             //đếm số KÍ TỰ
             var charCount = content.Length;
             //định giá 
-            var price = await _chapterPricingService.GetPriceAsync(wordCount, ct);
+            var price = await _chapterPricingService.GetPriceAsync(charCount, ct);
             //định no. của chapter 
             var chapterNumber = await _chapterRepository.GetNextChapterNumberAsync(story.story_id, ct);
             var chapterId = Guid.NewGuid();
@@ -389,7 +389,7 @@ namespace Service.Services
                 }
 
                 var charCount = content.Length;
-                var price = await _chapterPricingService.GetPriceAsync(wordCount, ct);
+                var price = await _chapterPricingService.GetPriceAsync(charCount, ct);
                 var previousContentKey = chapter.content_url;
                 string? newContentKey = null;
                 try
