@@ -13,10 +13,20 @@ namespace Main.Controllers
     public class VoiceChapterController : AppControllerBase
     {
         private readonly IVoiceChapterService _voiceChapterService;
+        private readonly IVoicePricingService _voicePricingService;
 
-        public VoiceChapterController(IVoiceChapterService voiceChapterService)
+        public VoiceChapterController(IVoiceChapterService voiceChapterService, IVoicePricingService voicePricingService)
         {
             _voiceChapterService = voiceChapterService;
+            _voicePricingService = voicePricingService;
+        }
+
+        [HttpGet("pricing-rules")]
+        [AllowAnonymous]
+        public async Task<IActionResult> GetPricingRules(CancellationToken ct = default)
+        {
+            var rules = await _voicePricingService.GetAllRulesAsync(ct);
+            return Ok(rules);
         }
 
         [HttpGet("{chapterId:guid}")]

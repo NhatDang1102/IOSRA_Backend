@@ -9,6 +9,8 @@ using Repository.Interfaces;
 using Service.Exceptions;
 using Service.Interfaces;
 
+using Contract.DTOs.Response.Voice;
+
 namespace Service.Services
 {
     public class VoicePricingService : IVoicePricingService
@@ -22,6 +24,18 @@ namespace Service.Services
         {
             _repository = repository;
             _cache = cache;
+        }
+
+        public async Task<IReadOnlyList<VoicePricingRuleResponse>> GetAllRulesAsync(CancellationToken ct = default)
+        {
+            var rules = await GetRulesAsync(ct);
+            return rules.Select(r => new VoicePricingRuleResponse
+            {
+                MinCharCount = (int)r.min_char_count,
+                MaxCharCount = r.max_char_count.HasValue ? (int)r.max_char_count.Value : null,
+                GenerationCostDias = (int)r.generation_dias,
+                SellingPriceDias = (int)r.dias_price
+            }).ToList();
         }
 
         public async Task<int> GetPriceAsync(int charCount, CancellationToken ct = default)
