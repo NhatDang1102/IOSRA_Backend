@@ -126,12 +126,13 @@ namespace Service.Services
             {
                 throw new AppException("VoiceAlreadyGenerated", "All requested voices have already been generated.", 400);
             }
-
-            var wallet = await _db.voice_wallets.FirstOrDefaultAsync(w => w.account_id == authorAccountId, ct);
-            if (wallet == null)
-            {
-                throw new AppException("VoiceWalletMissing", "Please top-up voice characters before ordering.", 400);
-            }
+            
+            // Xóa bỏ kiểm tra ví voice cũ
+            // var wallet = await _db.voice_wallets.FirstOrDefaultAsync(w => w.account_id == authorAccountId, ct);
+            // if (wallet == null)
+            // {
+            //     throw new AppException("VoiceWalletMissing", "Please top-up voice characters before ordering.", 400);
+            // }
 
             var content = (await _contentStorage.DownloadAsync(chapter.content_url, ct)).Trim();
             if (content.Length == 0)
@@ -142,17 +143,30 @@ namespace Service.Services
             var charPerVoice = content.Length;
             chapter.char_count = charPerVoice;
             var totalCharsNeeded = (long)charPerVoice * newPresets.Count;
-            if (wallet.balance_chars < totalCharsNeeded)
+            // var totalCharsNeeded = (long)charPerVoice * newPresets.Count;
+
+            // Lấy chi phí tạo voice bằng Dias
+            var generationCostDias = await _voicePricingService.GetGenerationCostAsync(charPerVoice, ct);
+            var totalGenerationCost = generationCostDias * newPresets.Count;
+
+            // Lấy author entity để trừ tiền
+            var author = await _db.authors.Include(a => a.account).FirstOrDefaultAsync(a => a.account_id == authorAccountId, ct)
+                         ?? throw new AppException("AuthorNotFound", "Author profile not found.", 404);
+
+            // Kiểm tra và trừ từ revenue_balance
+            if (author.revenue_balance < totalGenerationCost)
             {
-                throw new AppException("VoiceBalanceInsufficient", "Not enough voice characters. Please top-up.", 400, new
+                throw new AppException("InsufficientRevenue", "Not enough revenue balance to generate voice. Please earn more Dias.", 400, new
                 {
-                    required = totalCharsNeeded,
-                    available = wallet.balance_chars
+                    required = totalGenerationCost,
+                    available = author.revenue_balance
                 });
             }
 
+            author.revenue_balance -= totalGenerationCost;
+            
             var now = TimezoneConverter.VietnamNow;
-            var voicePrice = await _voicePricingService.GetPriceAsync(charPerVoice, ct);
+            // var voicePrice = await _voicePricingService.GetPriceAsync(charPerVoice, ct); // Sử dụng GetGenerationCost thay thế
 
             var chapterVoiceRows = new List<chapter_voice>();
             foreach (var preset in newPresets)
@@ -165,30 +179,51 @@ namespace Service.Services
                     status = "pending",
                     requested_at = now,
                     char_cost = charPerVoice,
-                    dias_price = (uint)voicePrice
+                    dias_price = (uint)await _voicePricingService.GetPriceAsync(charPerVoice, ct) // Giá bán cho Reader
                 };
                 chapter.chapter_voices.Add(entity);
                 chapterVoiceRows.Add(entity);
             }
             var voiceJobIds = chapterVoiceRows.Select(v => v.voice_id).ToArray();
 
-            wallet.balance_chars -= totalCharsNeeded;
-            wallet.updated_at = now;
+            // Xóa logic cập nhật ví voice cũ
+            // wallet.balance_chars -= totalCharsNeeded;
+            // wallet.updated_at = now;
 
-            var paymentLog = new voice_wallet_payment
-            {
-                trs_id = Guid.NewGuid(),
-                wallet_id = wallet.wallet_id,
-                type = "purchase",
-                char_delta = -totalCharsNeeded,
-                char_after = wallet.balance_chars,
-                ref_id = chapter.chapter_id,
-                created_at = now,
-                note = $"Voice order ({newPresets.Count} preset(s))"
-            };
+            // Xóa logic tạo paymentLog cũ
+            // var paymentLog = new voice_wallet_payment
+            // {
+            //     trs_id = Guid.NewGuid(),
+            //     wallet_id = wallet.wallet_id,
+            //     type = "purchase",
+            //     char_delta = -totalCharsNeeded,
+            //     char_after = wallet.balance_chars,
+            //     ref_id = chapter.chapter_id,
+            //     created_at = now,
+            //     note = $"Voice order ({newPresets.Count} preset(s))"
+            // };
 
             await using var transaction = await _db.Database.BeginTransactionAsync(ct);
-            _db.voice_wallet_payments.Add(paymentLog);
+            // Xóa logic thêm paymentLog cũ
+            // _db.voice_wallet_payments.Add(paymentLog);
+            
+            // Ghi log vào author_revenue_transaction
+            await _db.author_revenue_transaction.AddAsync(new author_revenue_transaction
+            {
+                trans_id = Guid.NewGuid(),
+                author_id = authorAccountId,
+                type = "voice_generation",
+                amount = -totalGenerationCost,
+                metadata = JsonSerializer.Serialize(new
+                {
+                    chapterId = chapter.chapter_id,
+                    charCount = charPerVoice,
+                    generatedVoices = newPresets.Select(p => p.voice_id).ToArray(),
+                    costDias = totalGenerationCost
+                }),
+                created_at = now
+            }, ct);
+
             await _db.SaveChangesAsync(ct);
             await transaction.CommitAsync(ct);
 
@@ -206,8 +241,11 @@ namespace Service.Services
                     .OrderBy(v => v.voice?.voice_name)
                     .Select(MapVoice)
                     .ToArray(),
-                CharactersCharged = totalCharsNeeded,
-                WalletBalance = wallet.balance_chars
+                // Xóa các trường cũ
+                // CharactersCharged = totalCharsNeeded,
+                // WalletBalance = wallet.balance_chars
+                TotalGenerationCostDias = totalGenerationCost,
+                AuthorRevenueBalanceAfter = author.revenue_balance
             };
         }
 

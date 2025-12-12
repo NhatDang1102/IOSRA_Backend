@@ -49,6 +49,31 @@ namespace Service.Services
             return (int)rule.dias_price;
         }
 
+        public async Task<int> GetGenerationCostAsync(int charCount, CancellationToken ct = default)
+        {
+            if (charCount <= 0)
+            {
+                throw new AppException("InvalidCharCount", "Character count must be positive.", 400);
+            }
+
+            var rules = await GetRulesAsync(ct);
+            var rule = rules.FirstOrDefault(r =>
+                charCount >= r.min_char_count &&
+                (!r.max_char_count.HasValue || charCount <= r.max_char_count.Value));
+
+            if (rule == null)
+            {
+                rule = rules.OrderByDescending(r => r.min_char_count).FirstOrDefault();
+            }
+
+            if (rule == null)
+            {
+                throw new AppException("VoicePricingMissing", "Voice pricing rules are not configured.", 500);
+            }
+
+            return (int)rule.generation_dias;
+        }
+
         private async Task<IReadOnlyList<voice_price_rule>> GetRulesAsync(CancellationToken ct)
         {
             if (_cache.TryGetValue(CacheKey, out IReadOnlyList<voice_price_rule>? cached) && cached?.Count > 0)

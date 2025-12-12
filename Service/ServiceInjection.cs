@@ -91,7 +91,6 @@ namespace Service
             services.AddScoped<IChapterTranslationService, ChapterTranslationService>();
             services.AddScoped<IVoicePricingService, VoicePricingService>();
             services.AddScoped<IPaymentService, PaymentService>();
-            services.AddScoped<IVoicePaymentService, VoicePaymentService>();
             services.AddScoped<ISubscriptionService, SubscriptionService>();
             services.AddScoped<IVoiceChapterService, VoiceChapterService>();
             services.AddScoped<IReportService, ReportService>();

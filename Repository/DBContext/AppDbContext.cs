@@ -53,10 +53,6 @@ namespace Repository.DBContext
         public virtual DbSet<tag> tag { get; set; } = null!;
         public virtual DbSet<voice_list> voice_lists { get; set; } = null!;
         public virtual DbSet<wallet_payment> wallet_payments { get; set; } = null!;
-        public virtual DbSet<voice_wallet> voice_wallets { get; set; } = null!;
-        public virtual DbSet<voice_payment> voice_payments { get; set; } = null!;
-        public virtual DbSet<voice_topup_pricing> voice_topup_pricings { get; set; } = null!;
-        public virtual DbSet<voice_wallet_payment> voice_wallet_payments { get; set; } = null!;
         public virtual DbSet<payment_receipt> payment_receipts { get; set; } = null!;
 
         public virtual DbSet<voice_price_rule> voice_price_rules { get; set; } = null!;
@@ -323,42 +319,6 @@ namespace Repository.DBContext
                     .HasDefaultValueSql("CURRENT_TIMESTAMP");
 
                 entity.HasOne(d => d.account).WithOne(p => p.dia_wallet).HasConstraintName("fk_wallet_account");
-            });
-
-            modelBuilder.Entity<voice_wallet>(entity =>
-            {
-                entity.HasKey(e => e.wallet_id).HasName("PRIMARY");
-                entity.Property(e => e.wallet_id).ValueGeneratedNever();
-                entity.Property(e => e.updated_at)
-                    .ValueGeneratedOnAddOrUpdate()
-                    .HasDefaultValueSql("CURRENT_TIMESTAMP");
-
-                entity.HasOne(d => d.account).WithOne(p => p.voice_wallet).HasConstraintName("fk_voice_wallet_account");
-            });
-
-            modelBuilder.Entity<voice_payment>(entity =>
-            {
-                entity.HasKey(e => e.topup_id).HasName("PRIMARY");
-                entity.Property(e => e.topup_id).ValueGeneratedNever();
-                entity.Property(e => e.created_at).HasDefaultValueSql("CURRENT_TIMESTAMP");
-                entity.Property(e => e.status).HasDefaultValueSql("'pending'");
-
-                entity.HasOne(d => d.voice_wallet).WithMany(p => p.voice_payments)
-                    .OnDelete(DeleteBehavior.ClientSetNull)
-                    .HasConstraintName("fk_voice_payment_wallet");
-            });
-
-            modelBuilder.Entity<voice_wallet_payment>(entity =>
-            {
-                entity.HasKey(e => e.trs_id).HasName("PRIMARY");
-                entity.Property(e => e.trs_id).ValueGeneratedNever();
-                entity.Property(e => e.created_at).HasDefaultValueSql("CURRENT_TIMESTAMP");
-                entity.Property(e => e.note).HasMaxLength(255);
-                entity.Property(e => e.type).HasColumnType("enum('topup','purchase','refund')");
-
-                entity.HasOne(d => d.voice_wallet).WithMany(p => p.voice_wallet_payments)
-                    .OnDelete(DeleteBehavior.Cascade)
-                    .HasConstraintName("fk_voice_wallet_payment_wallet");
             });
 
             modelBuilder.Entity<favorite_story>(entity =>

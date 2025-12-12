@@ -18,6 +18,8 @@ public partial class voice_price_rule
 
     public uint dias_price { get; set; }
 
+    public uint generation_dias { get; set; }
+
     [Column(TypeName = "datetime")]
     public DateTime created_at { get; set; }
 }

@@ -23,7 +23,7 @@ namespace Service.Services
             PropertyNameCaseInsensitive = true
         };
 
-        private static readonly string[] AllowedTypes = { "purchase", "withdraw_reserve", "withdraw_release" };
+        private static readonly string[] AllowedTypes = { "purchase", "withdraw_reserve", "withdraw_release", "voice_generation" };
 
         private readonly IAuthorRevenueRepository _repository;
         private readonly IOpRequestRepository _opRequestRepository;

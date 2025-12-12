@@ -16,7 +16,7 @@ public partial class author_revenue_transaction
 
     public Guid author_id { get; set; }
 
-    [Column(TypeName = "enum('purchase','withdraw_reserve','withdraw_release')")]
+    [Column(TypeName = "enum('purchase','withdraw_reserve','withdraw_release','voice_generation')")]
     public string type { get; set; } = null!;
 
     [Column(TypeName = "bigint")]
