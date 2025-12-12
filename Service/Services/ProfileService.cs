@@ -129,7 +129,7 @@ namespace Service.Implementations
 
             return new ProfileWalletResponse
             {
-                DiaBalance = diaWallet?.balance_coin ?? 0,
+                DiaBalance = diaWallet?.balance_dias ?? 0,
                 IsAuthor = isAuthor,
                 VoiceCharBalance = isAuthor ? voiceWallet?.balance_chars : null,
                 Subscription = subscription

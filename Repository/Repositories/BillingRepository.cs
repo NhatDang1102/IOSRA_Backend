@@ -38,8 +38,8 @@ namespace Repository.Repositories
                 {
                     wallet_id = Guid.NewGuid(),
                     account_id = accountId,
-                    balance_coin = 0,
-                    locked_coin = 0,
+                    balance_dias = 0,
+                    locked_dias = 0,
                     updated_at = Repository.Utils.TimezoneConverter.VietnamNow
                 };
                 _db.dia_wallets.Add(wallet);

@@ -91,13 +91,12 @@ namespace Service.Services
                 throw new AppException("InvalidPrice", "Chapter price is not configured.", 400);
             }
 
-            if (wallet.balance_coin < priceDias)
             {
                 throw new AppException("InsufficientBalance", "Not enough dias in wallet.", 400);
             }
 
             var now = TimezoneConverter.VietnamNow;
-            wallet.balance_coin -= priceDias;
+            wallet.balance_dias -= priceDias;
             wallet.updated_at = now;
 
             var purchaseId = Guid.NewGuid();
@@ -115,8 +114,8 @@ namespace Service.Services
                 trs_id = Guid.NewGuid(),
                 wallet_id = wallet.wallet_id,
                 type = "purchase",
-                coin_delta = -priceDias,
-                coin_after = wallet.balance_coin,
+                dias_delta = -priceDias,
+                dias_after = wallet.balance_dias,
                 ref_id = purchaseId,
                 created_at = now
             }, ct);
@@ -166,7 +165,7 @@ namespace Service.Services
                 ChapterNo = (int)chapter.chapter_no,
                 ChapterTitle = chapter.title,
                 PriceDias = (int)priceDias,
-                WalletBalanceAfter = wallet.balance_coin,
+                WalletBalanceAfter = wallet.balance_dias,
                 AuthorShareAmount = authorShare,
                 PurchasedAt = now
             };
@@ -250,13 +249,13 @@ namespace Service.Services
             }
 
             var wallet = await _billingRepository.GetOrCreateDiaWalletAsync(readerAccountId, ct);
-            if (wallet.balance_coin < totalDias)
+            if (wallet.balance_dias < totalDias)
             {
                 throw new AppException("InsufficientBalance", "Not enough dias in wallet.", 400);
             }
 
             var now = TimezoneConverter.VietnamNow;
-            wallet.balance_coin -= totalDias;
+            wallet.balance_dias -= totalDias;
             wallet.updated_at = now;
 
             var purchaseId = Guid.NewGuid();
@@ -299,8 +298,8 @@ namespace Service.Services
                 trs_id = Guid.NewGuid(),
                 wallet_id = wallet.wallet_id,
                 type = "purchase",
-                coin_delta = -totalDias,
-                coin_after = wallet.balance_coin,
+                dias_delta = -totalDias,
+                dias_after = wallet.balance_dias,
                 ref_id = purchaseId,
                 created_at = now
             }, ct);
@@ -348,7 +347,7 @@ namespace Service.Services
                 ChapterId = chapter.chapter_id,
                 StoryId = chapter.story_id,
                 TotalPriceDias = (int)totalDias,
-                WalletBalanceAfter = wallet.balance_coin,
+                WalletBalanceAfter = wallet.balance_dias,
                 AuthorShareAmount = authorShare,
                 PurchasedAt = now,
                 Voices = purchaseVoices.ToArray()

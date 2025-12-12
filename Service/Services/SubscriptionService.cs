@@ -97,23 +97,22 @@ namespace Service.Services
                 {
                     wallet_id = Guid.NewGuid(),
                     account_id = accountId,
-                    balance_coin = 0,
-                    locked_coin = 0,
+                    balance_dias = 0,
+                    locked_dias = 0,                    
                     updated_at = now
                 };
                 await _repository.AddWalletAsync(wallet, ct);
             }
 
-            wallet.balance_coin += plan.daily_dias;
-            wallet.updated_at = now;
+                                wallet.balance_dias += plan.daily_dias;            wallet.updated_at = now;
 
             var walletPayment = new wallet_payment
             {
                 trs_id = Guid.NewGuid(),
                 wallet_id = wallet.wallet_id,
                 type = "adjust",
-                coin_delta = (long)plan.daily_dias,
-                coin_after = wallet.balance_coin,
+                                        dias_delta = (long)plan.daily_dias,
+                                        dias_after = wallet.balance_dias,               
                 ref_id = subscription.sub_id,
                 created_at = now
             };
@@ -128,7 +127,7 @@ namespace Service.Services
             {
                 SubscriptionId = subscription.sub_id,
                 ClaimedDias = plan.daily_dias,
-                WalletBalance = wallet.balance_coin,
+                WalletBalance = wallet.balance_dias,
                 ClaimedAt = now,
                 NextClaimAvailableAt = today.AddDays(1).ToDateTime(TimeOnly.MinValue)
             };

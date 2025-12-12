@@ -21,9 +21,9 @@ public partial class wallet_payment
     [Column(TypeName = "enum('purchase','withdraw','topup','adjust')")]
     public string type { get; set; } = null!;
 
-    public long coin_delta { get; set; }
+    public long dias_delta { get; set; }
 
-    public long coin_after { get; set; }
+    public long dias_after { get; set; }
 
     
     public Guid? ref_id { get; set; }

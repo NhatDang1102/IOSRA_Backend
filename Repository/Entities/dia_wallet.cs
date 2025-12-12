@@ -17,9 +17,9 @@ public partial class dia_wallet
     
     public Guid account_id { get; set; }
 
-    public long balance_coin { get; set; }
+    public long balance_dias { get; set; }
 
-    public long locked_coin { get; set; }
+    public long locked_dias { get; set; }
 
     [Column(TypeName = "datetime")]
     public DateTime updated_at { get; set; }

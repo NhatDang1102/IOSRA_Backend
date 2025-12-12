@@ -178,8 +178,8 @@ public class PaymentService : IPaymentService
                 try
                 {
                     var wallet = diaPayment.wallet;
-                    var newBalance = wallet.balance_coin + (long)diaPayment.diamond_granted;
-                    wallet.balance_coin = newBalance;
+                                var newBalance = wallet.balance_dias + (long)diaPayment.diamond_granted;
+                                wallet.balance_dias = newBalance;                    
                     wallet.updated_at = now;
 
                     await _billingRepository.AddWalletPaymentAsync(new wallet_payment
@@ -187,8 +187,8 @@ public class PaymentService : IPaymentService
                         trs_id = Guid.NewGuid(),
                         wallet_id = wallet.wallet_id,
                         type = "topup",
-                        coin_delta = (long)diaPayment.diamond_granted,
-                        coin_after = newBalance,
+                                        dias_delta = (long)diaPayment.diamond_granted,
+                                        dias_after = newBalance,                      
                         ref_id = diaPayment.topup_id,
                         created_at = now
                     });
