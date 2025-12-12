@@ -91,6 +91,7 @@ namespace Service.Services
                 throw new AppException("InvalidPrice", "Chapter price is not configured.", 400);
             }
 
+            if (wallet.balance_dias < priceDias)
             {
                 throw new AppException("InsufficientBalance", "Not enough dias in wallet.", 400);
             }
