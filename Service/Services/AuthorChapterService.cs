@@ -19,6 +19,7 @@ namespace Service.Services
     public class AuthorChapterService : IAuthorChapterService
     { //số chữ min khi up chap 
         private const int MinContentLength = 50;
+        private const int MaxContentLength = 10000;
         private readonly IAuthorChapterRepository _chapterRepository;
         private readonly IAuthorStoryRepository _storyRepository;
         private readonly IChapterContentStorage _contentStorage;
@@ -100,7 +101,11 @@ namespace Service.Services
             {
                 throw new AppException("ChapterContentTooShort", $"Chapter content must contain at least {MinContentLength} characters.", 400);
             }
-            //đếm số TỪ (số từ ko phải số kí tự) 
+            if (content.Length > MaxContentLength)
+            {
+                throw new AppException("ChapterContentTooLong", $"Chapter content must not exceed {MaxContentLength} characters.", 400);
+            }
+            //đếm số TỪ (số từ ko phải số kí tự)  
             var wordCount = CountWords(content);
             if (wordCount <= 0)
             {
@@ -380,6 +385,10 @@ namespace Service.Services
                 if (content.Length < MinContentLength)
                 {
                     throw new AppException("ChapterContentTooShort", $"Chapter content must contain at least {MinContentLength} characters.", 400);
+                }
+                if (content.Length > MaxContentLength)
+                {
+                    throw new AppException("ChapterContentTooLong", $"Chapter content must not exceed {MaxContentLength} characters.", 400);
                 }
 
                 var wordCount = CountWords(content);
