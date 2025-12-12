@@ -19,7 +19,6 @@ namespace Service.Services
 {
     public class ChapterPurchaseService : IChapterPurchaseService
     {
-        private const int VndPerDia = 100;
         private static readonly JsonSerializerOptions JsonOptions = new()
         {
             PropertyNamingPolicy = JsonNamingPolicy.CamelCase
@@ -124,22 +123,16 @@ namespace Service.Services
             var author = story.author
                          ?? throw new AppException("AuthorNotFound", "Author profile is missing.", 404);
 
-            var grossAmount = priceDias * VndPerDia;
-            var rewardRate = author.rank?.reward_rate ?? 0m;
-            var authorShare = (long)Math.Round(grossAmount * (rewardRate / 100m), MidpointRounding.AwayFromZero);
-            if (authorShare < 0)
-            {
-                authorShare = 0;
-            }
-
+            //đổi format: 1 Dia mua = 1 Dia revenue (đơn vị Dias).
+            //author ăn hết số Dias bán được. Việc chia sẻ doanh thu (RewardRate) sẽ tính khi Rút tiền.
+            var authorShare = priceDias;
             author.revenue_balance += authorShare;
 
             var metadata = JsonSerializer.Serialize(new
             {
                 chapterId = chapter.chapter_id,
                 priceDias,
-                grossAmount,
-                rewardRate
+                buyerId = readerAccountId
             }, JsonOptions);
 
             await _chapterPurchaseRepository.AddAuthorRevenueTransactionAsync(new author_revenue_transaction
@@ -308,14 +301,8 @@ namespace Service.Services
             var author = story.author
                          ?? throw new AppException("AuthorNotFound", "Author profile is missing.", 404);
 
-            var grossAmount = totalDias * VndPerDia;
-            var rewardRate = author.rank?.reward_rate ?? 0m;
-            var authorShare = (long)Math.Round(grossAmount * (rewardRate / 100m), MidpointRounding.AwayFromZero);
-            if (authorShare < 0)
-            {
-                authorShare = 0;
-            }
-
+            // Logic mới: 1 Dia mua = 1 Dia revenue.
+            var authorShare = totalDias;
             author.revenue_balance += authorShare;
 
             var metadata = JsonSerializer.Serialize(new
@@ -323,8 +310,7 @@ namespace Service.Services
                 chapterId = chapter.chapter_id,
                 voiceIds = newVoices.Select(v => v.voice_id),
                 priceDias = totalDias,
-                rewardRate,
-                grossAmount
+                buyerId = readerAccountId
             }, JsonOptions);
 
             await _chapterPurchaseRepository.AddAuthorRevenueTransactionAsync(new author_revenue_transaction
