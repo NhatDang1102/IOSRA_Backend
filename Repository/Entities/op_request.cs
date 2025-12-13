@@ -32,7 +32,7 @@ public partial class op_request
     [Column(TypeName = "text")]
     public string? omod_note { get; set; }
 
-    [Column(TypeName = "enum('pending','approved','rejected')")]
+    [Column(TypeName = "enum('pending','approved','rejected','confirmed')")]
     public string status { get; set; } = null!;
 
     [StringLength(64)]

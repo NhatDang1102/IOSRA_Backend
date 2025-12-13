@@ -42,6 +42,13 @@ namespace Main.Controllers
             return Ok(result);
         }
 
+        [HttpPost("withdraw/{requestId:guid}/confirm")]
+        public async Task<IActionResult> ConfirmReceipt(Guid requestId, CancellationToken ct)
+        {
+            await _authorRevenueService.ConfirmReceiptAsync(AccountId, requestId, ct);
+            return Ok(new { message = "Receipt confirmed." });
+        }
+
         [HttpGet("withdraw")]
         public async Task<ActionResult<IReadOnlyList<AuthorWithdrawRequestResponse>>> ListWithdrawRequests([FromQuery] string? status, CancellationToken ct)
         {

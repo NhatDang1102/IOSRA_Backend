@@ -176,6 +176,27 @@ namespace Service.Services
             return MapWithdrawResponse(opRequest, payload);
         }
 
+        public async Task ConfirmReceiptAsync(Guid authorAccountId, Guid requestId, CancellationToken ct = default)
+        {
+            var request = await _opRequestRepository.GetWithdrawRequestAsync(requestId, ct)
+                          ?? throw new AppException("RequestNotFound", "Withdraw request was not found.", 404);
+
+            if (request.requester_id != authorAccountId)
+            {
+                throw new AppException("RequestNotFound", "Withdraw request was not found.", 404);
+            }
+
+            if (!string.Equals(request.status, "approved", StringComparison.OrdinalIgnoreCase))
+            {
+                throw new AppException("InvalidState", "Only approved requests can be confirmed.", 400);
+            }
+
+            request.status = "confirmed";
+            
+
+            await _opRequestRepository.UpdateOpRequestAsync(request, ct);
+        }
+
         public async Task<IReadOnlyList<AuthorWithdrawRequestResponse>> GetWithdrawRequestsAsync(Guid authorAccountId, string? status, CancellationToken ct = default)
         {
             var requests = await _opRequestRepository.ListWithdrawRequestsAsync(authorAccountId, status, ct);

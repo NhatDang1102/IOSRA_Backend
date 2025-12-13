@@ -13,6 +13,7 @@ namespace Service.Interfaces
         Task<AuthorRevenueSummaryResponse> GetSummaryAsync(Guid authorAccountId, CancellationToken ct = default);
         Task<PagedResult<AuthorRevenueTransactionItemResponse>> GetTransactionsAsync(Guid authorAccountId, AuthorRevenueTransactionQuery query, CancellationToken ct = default);
         Task<AuthorWithdrawRequestResponse> SubmitWithdrawAsync(Guid authorAccountId, AuthorWithdrawRequest request, CancellationToken ct = default);
+        Task ConfirmReceiptAsync(Guid authorAccountId, Guid requestId, CancellationToken ct = default);
         Task<IReadOnlyList<AuthorWithdrawRequestResponse>> GetWithdrawRequestsAsync(Guid authorAccountId, string? status, CancellationToken ct = default);
     }
 }
