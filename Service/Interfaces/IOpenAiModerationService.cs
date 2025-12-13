@@ -22,5 +22,6 @@ namespace Service.Interfaces
         Task<OpenAiModerationResult> ModerateStoryAsync(string title, string? description, CancellationToken ct = default);
         Task<OpenAiModerationResult> ModerateChapterAsync(string title, string content, CancellationToken ct = default);
         Task<string> SummarizeChapterAsync(string content, CancellationToken ct = default);
+        Task<string> DetectMoodAsync(string content, CancellationToken ct = default);
     }
 }

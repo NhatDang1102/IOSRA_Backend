@@ -98,9 +98,8 @@ namespace IOSRA.Tests.Controllers
         {
             var act = () => _svc.GetPriceAsync(wordCount, CancellationToken.None);
 
-            await act.Should().ThrowAsync<AppException>()
-                     .WithMessage("*Word count must be positive*");
-
+                        await act.Should().ThrowAsync<AppException>()
+                            .WithMessage("*Character count must be positive*");
             _repo.VerifyNoOtherCalls();
         }
 

@@ -34,6 +34,11 @@ namespace IOSRA.Tests.Services
             _storyRepo = new Mock<IAuthorStoryRepository>(MockBehavior.Strict);
             _storage = new Mock<IChapterContentStorage>(MockBehavior.Strict);
             _modAi = new Mock<IOpenAiModerationService>(MockBehavior.Strict);
+            // Default mock setups for OpenAiModerationService to prevent Strict Mock errors
+            _modAi.Setup(m => m.SummarizeChapterAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+                  .ReturnsAsync("Test Summary");
+            _modAi.Setup(m => m.DetectMoodAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+                  .ReturnsAsync("neutral");
             _followers = new Mock<IFollowerNotificationService>(MockBehavior.Strict);
             _pricing = new Mock<IChapterPricingService>(MockBehavior.Strict);
 
@@ -502,6 +507,9 @@ namespace IOSRA.Tests.Services
             _storage.Setup(s => s.DownloadAsync("content-key", It.IsAny<CancellationToken>()))
                     .ReturnsAsync("bad content");
 
+            _modAi.Setup(m => m.SummarizeChapterAsync("bad content", It.IsAny<CancellationToken>()))
+                  .ReturnsAsync("Summary of bad content");
+
             var violations = new List<ModerationViolation>
             {
                 new("badword", 2, new List<string> { "sample 1" })
@@ -571,6 +579,9 @@ namespace IOSRA.Tests.Services
 
             _storage.Setup(s => s.DownloadAsync("content-key", It.IsAny<CancellationToken>()))
                     .ReturnsAsync("content ok");
+
+            _modAi.Setup(m => m.SummarizeChapterAsync("content ok", It.IsAny<CancellationToken>()))
+                  .ReturnsAsync("Summary of good content");
 
             var aiResult = new OpenAiModerationResult(
                 ShouldReject: false,
@@ -646,6 +657,9 @@ namespace IOSRA.Tests.Services
 
             _storage.Setup(s => s.DownloadAsync("content-key", It.IsAny<CancellationToken>()))
                     .ReturnsAsync("content mid");
+
+            _modAi.Setup(m => m.SummarizeChapterAsync("content mid", It.IsAny<CancellationToken>()))
+                  .ReturnsAsync("Summary of mid content");
 
             var aiResult = new OpenAiModerationResult(
                 ShouldReject: false,
