@@ -140,6 +140,15 @@ namespace Service.Services
             {
                 throw new AppException("VoiceAlreadyGenerated", "All requested voices have already been generated.", 400);
             }
+
+            var content = (await _contentStorage.DownloadAsync(chapter.content_url, ct)).Trim();
+            if (content.Length == 0)
+            {
+                throw new AppException("ChapterContentEmpty", "Chapter content is empty.", 400);
+            }
+
+            var charPerVoice = content.Length;
+            chapter.char_count = charPerVoice;
             
             // Lấy chi phí tạo voice bằng Dias
             var generationCostDias = await _voicePricingService.GetGenerationCostAsync(charPerVoice, ct);
