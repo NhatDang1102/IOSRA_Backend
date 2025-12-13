@@ -38,7 +38,20 @@ namespace Service.Services
         public async Task<VoiceChapterStatusResponse> GetAsync(Guid requesterAccountId, Guid chapterId, CancellationToken ct = default)
         {
             var chapter = await LoadAuthorChapterAsync(chapterId, requesterAccountId, includeVoices: true, ct);
-            return MapChapter(chapter);
+            var charCount = (int)chapter.char_count;
+            int generationCost = 0;
+            if (charCount > 0)
+            {
+                try
+                {
+                    generationCost = await _voicePricingService.GetGenerationCostAsync(charCount, ct);
+                }
+                catch
+                {
+                    // Ignore pricing errors for status check
+                }
+            }
+            return MapChapter(chapter, charCount, generationCost);
         }
 
         public async Task<VoiceChapterCharCountResponse> GetCharCountAsync(Guid authorAccountId, Guid chapterId, CancellationToken ct = default)
@@ -128,24 +141,6 @@ namespace Service.Services
                 throw new AppException("VoiceAlreadyGenerated", "All requested voices have already been generated.", 400);
             }
             
-            // Xóa bỏ kiểm tra ví voice cũ
-            // var wallet = await _db.voice_wallets.FirstOrDefaultAsync(w => w.account_id == authorAccountId, ct);
-            // if (wallet == null)
-            // {
-            //     throw new AppException("VoiceWalletMissing", "Please top-up voice characters before ordering.", 400);
-            // }
-
-            var content = (await _contentStorage.DownloadAsync(chapter.content_url, ct)).Trim();
-            if (content.Length == 0)
-            {
-                throw new AppException("ChapterContentEmpty", "Chapter content is empty.", 400);
-            }
-
-            var charPerVoice = content.Length;
-            chapter.char_count = charPerVoice;
-            var totalCharsNeeded = (long)charPerVoice * newPresets.Count;
-            // var totalCharsNeeded = (long)charPerVoice * newPresets.Count;
-
             // Lấy chi phí tạo voice bằng Dias
             var generationCostDias = await _voicePricingService.GetGenerationCostAsync(charPerVoice, ct);
             var totalGenerationCost = generationCostDias * newPresets.Count;
@@ -187,26 +182,7 @@ namespace Service.Services
             }
             var voiceJobIds = chapterVoiceRows.Select(v => v.voice_id).ToArray();
 
-            // Xóa logic cập nhật ví voice cũ
-            // wallet.balance_chars -= totalCharsNeeded;
-            // wallet.updated_at = now;
-
-            // Xóa logic tạo paymentLog cũ
-            // var paymentLog = new voice_wallet_payment
-            // {
-            //     trs_id = Guid.NewGuid(),
-            //     wallet_id = wallet.wallet_id,
-            //     type = "purchase",
-            //     char_delta = -totalCharsNeeded,
-            //     char_after = wallet.balance_chars,
-            //     ref_id = chapter.chapter_id,
-            //     created_at = now,
-            //     note = $"Voice order ({newPresets.Count} preset(s))"
-            // };
-
             await using var transaction = await _db.Database.BeginTransactionAsync(ct);
-            // Xóa logic thêm paymentLog cũ
-            // _db.voice_wallet_payments.Add(paymentLog);
             
             // Ghi log vào author_revenue_transaction
             await _db.author_revenue_transaction.AddAsync(new author_revenue_transaction
@@ -242,9 +218,6 @@ namespace Service.Services
                     .OrderBy(v => v.voice?.voice_name)
                     .Select(MapVoice)
                     .ToArray(),
-                // Xóa các trường cũ
-                // CharactersCharged = totalCharsNeeded,
-                // WalletBalance = wallet.balance_chars
                 TotalGenerationCostDias = totalGenerationCost,
                 AuthorRevenueBalanceAfter = author.revenue_balance
             };
@@ -283,7 +256,7 @@ namespace Service.Services
             return chapter;
         }
 
-        private VoiceChapterStatusResponse MapChapter(chapter chapter)
+        private VoiceChapterStatusResponse MapChapter(chapter chapter, int charCount, int generationCost)
         {
             var voices = chapter.chapter_voices
                 .OrderBy(v => v.voice?.voice_name)
@@ -295,6 +268,8 @@ namespace Service.Services
                 ChapterId = chapter.chapter_id,
                 StoryId = chapter.story_id,
                 ChapterTitle = chapter.title,
+                CharCount = charCount,
+                GenerationCostPerVoiceDias = generationCost,
                 Voices = voices
             };
         }

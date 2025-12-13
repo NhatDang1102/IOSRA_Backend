@@ -443,30 +443,6 @@ CREATE TABLE topup_pricing (
 INSERT INTO `topup_pricing` VALUES ('530b368b-c2d6-11f0-831d-be03b0a058d6',2000,550,1,'2025-12-02 08:14:33'),('530b3bc7-c2d6-11f0-831d-be03b0a058d6',3000,1150,1,'2025-12-02 08:14:33'),('530b3fab-c2d6-11f0-831d-be03b0a058d6',4000,2400,1,'2025-12-02 08:14:34');
 
 
-CREATE TABLE voice_wallet (
-  wallet_id    CHAR(36) NOT NULL,
-  account_id   CHAR(36) NOT NULL,
-  balance_chars BIGINT NOT NULL DEFAULT 0,
-  updated_at   DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  PRIMARY KEY (wallet_id),
-  UNIQUE KEY ux_voice_wallet_account (account_id),
-  CONSTRAINT fk_voice_wallet_account FOREIGN KEY (account_id)
-    REFERENCES account(account_id) ON DELETE CASCADE ON UPDATE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
-
-  CREATE TABLE voice_topup_pricing (
-    pricing_id       CHAR(36) NOT NULL,
-    amount_vnd       BIGINT UNSIGNED NOT NULL,
-    chars_granted    BIGINT UNSIGNED NOT NULL,
-    is_active        TINYINT(1) NOT NULL DEFAULT 1,
-    updated_at       DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    PRIMARY KEY (pricing_id),
-    UNIQUE KEY ux_voice_topup_amount (amount_vnd)
-  ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
-
-INSERT INTO `voice_topup_pricing` VALUES ('4ff48f2a-c5f2-11f0-a5ae-4ac6068f4a77',5000,10000,1,'2025-12-02 12:44:18'),('4ff4ae7d-c5f2-11f0-a5ae-4ac6068f4a77',6000,21500,1,'2025-12-02 12:44:43');
-
-
   CREATE TABLE chapter_price_rule (
   rule_id char(36) NOT NULL,
   min_word_count int unsigned NOT NULL,
@@ -491,37 +467,6 @@ CREATE TABLE voice_price_rule (
 
 INSERT INTO `voice_price_rule` VALUES ('9f3fb829-4d70-4fe2-957b-0d4b6f3be7cc',5001,10000,10,'2025-11-25 11:01:19'),('a3f3e55e-90de-4d63-9ef2-6b1744931fcb',1501,5000,7,'2025-11-25 11:01:19'),('bb65ce30-0bdd-4f33-9f2d-7c28d21a5e3b',0,1500,5,'2025-11-25 11:01:19'),('c4af9db3-1dde-4b14-9b94-0888405c81f0',10001,NULL,15,'2025-11-25 11:01:19');
 
-
-CREATE TABLE voice_payment (
-  topup_id        CHAR(36) NOT NULL,
-  wallet_id       CHAR(36) NOT NULL,
-  provider        VARCHAR(50) NOT NULL,
-  order_code      VARCHAR(50) NOT NULL,
-  amount_vnd      BIGINT UNSIGNED NOT NULL,
-  chars_granted   BIGINT UNSIGNED NOT NULL,
-  status          ENUM('pending','success','failed','refunded','cancelled') NOT NULL DEFAULT 'pending',
-  created_at      DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  PRIMARY KEY (topup_id),
-  UNIQUE KEY ux_voice_order_code (order_code),
-  KEY ix_voice_payment_wallet (wallet_id),
-  CONSTRAINT fk_voice_payment_wallet FOREIGN KEY (wallet_id)
-    REFERENCES voice_wallet(wallet_id) ON DELETE RESTRICT ON UPDATE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
-
-  CREATE TABLE voice_wallet_payment (
-    trs_id     CHAR(36) NOT NULL,
-    wallet_id  CHAR(36) NOT NULL,
-    type       ENUM('topup','purchase','refund') NOT NULL DEFAULT 'purchase',
-    char_delta BIGINT NOT NULL,
-    char_after BIGINT NOT NULL,
-    ref_id     CHAR(36) NULL,
-    note       VARCHAR(255) NULL,
-    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    PRIMARY KEY (trs_id),
-    KEY ix_voice_wallet_payment_wallet (wallet_id),
-    CONSTRAINT fk_voice_wallet_payment_wallet FOREIGN KEY (wallet_id)
-      REFERENCES voice_wallet(wallet_id) ON DELETE CASCADE ON UPDATE CASCADE
-  ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
   CREATE TABLE voice_purchase_log (
     voice_purchase_id CHAR(36) NOT NULL,
