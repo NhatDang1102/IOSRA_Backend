@@ -717,15 +717,3 @@ ALTER TABLE chapter
   ADD CONSTRAINT fk_chapter_mood FOREIGN KEY (mood_code)
     REFERENCES chapter_mood(mood_code) ON DELETE SET NULL ON UPDATE CASCADE;
 
-CREATE TABLE IF NOT EXISTS chapter_mood_tracks (
-  track_id        CHAR(36) NOT NULL,
-  mood_code       VARCHAR(32) NOT NULL,
-  title           VARCHAR(128) NOT NULL,
-  duration_seconds INT NOT NULL DEFAULT 30,
-  storage_path    VARCHAR(512) NOT NULL,
-  created_at      DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  updated_at      DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  PRIMARY KEY (track_id),
-  KEY ix_mood_track_mood (mood_code),
-  CONSTRAINT fk_mood_track_mood FOREIGN KEY (mood_code) REFERENCES chapter_mood(mood_code) ON DELETE CASCADE ON UPDATE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
