@@ -693,39 +693,4 @@ ON DUPLICATE KEY UPDATE
   duration_days = VALUES(duration_days),
   daily_dias = VALUES(daily_dias);
 
--- ===================== Chapter mood support =====================
-CREATE TABLE IF NOT EXISTS chapter_mood (
-  mood_code      VARCHAR(32) NOT NULL,
-  mood_name      VARCHAR(64) NOT NULL,
-  description    VARCHAR(255) NULL,
-  created_at     DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  updated_at     DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  PRIMARY KEY (mood_code)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
-INSERT INTO chapter_mood (mood_code, mood_name, description) VALUES
-  ('calm', 'Calm', 'Light, soothing ambient mood'),
-  ('sad', 'Melancholic', 'Somber and emotional tone'),
-  ('mysterious', 'Mysterious', 'Enigmatic and suspenseful atmosphere'),
-  ('excited', 'Excited', 'High energy, adventurous feel'),
-  ('romantic', 'Romantic', 'Warm, heartfelt mood'),
-  ('neutral', 'Neutral', 'Balanced or unidentified feeling')
-ON DUPLICATE KEY UPDATE mood_name = VALUES(mood_name), description = VALUES(description);
-
-ALTER TABLE chapter
-  ADD COLUMN mood_code VARCHAR(32) NULL AFTER char_count,
-  ADD CONSTRAINT fk_chapter_mood FOREIGN KEY (mood_code)
-    REFERENCES chapter_mood(mood_code) ON DELETE SET NULL ON UPDATE CASCADE;
-
-CREATE TABLE IF NOT EXISTS chapter_mood_tracks (
-  track_id        CHAR(36) NOT NULL,
-  mood_code       VARCHAR(32) NOT NULL,
-  title           VARCHAR(128) NOT NULL,
-  duration_seconds INT NOT NULL DEFAULT 30,
-  storage_path    VARCHAR(512) NOT NULL,
-  created_at      DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  updated_at      DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  PRIMARY KEY (track_id),
-  KEY ix_mood_track_mood (mood_code),
-  CONSTRAINT fk_mood_track_mood FOREIGN KEY (mood_code) REFERENCES chapter_mood(mood_code) ON DELETE CASCADE ON UPDATE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
