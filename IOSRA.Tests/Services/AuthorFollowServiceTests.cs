@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using FluentAssertions;
+using Microsoft.Extensions.Caching.Memory;
 using Moq;
 using Repository.Entities;
 using Repository.Interfaces;
@@ -24,6 +25,7 @@ namespace IOSRA.Tests.Controllers
         private readonly Mock<IProfileRepository> _profileRepo;
         private readonly Mock<IAuthorStoryRepository> _authorRepo;
         private readonly Mock<INotificationService> _notify;
+        private readonly Mock<IMemoryCache> _cache;
         private readonly AuthorFollowService _svc;
 
         public AuthorFollowServiceTests()
@@ -32,12 +34,14 @@ namespace IOSRA.Tests.Controllers
             _profileRepo = new Mock<IProfileRepository>(MockBehavior.Strict);
             _authorRepo = new Mock<IAuthorStoryRepository>(MockBehavior.Strict);
             _notify = new Mock<INotificationService>(MockBehavior.Strict);
+            _cache = new Mock<IMemoryCache>(MockBehavior.Strict);
 
             _svc = new AuthorFollowService(
                 _followRepo.Object,
                 _profileRepo.Object,
                 _authorRepo.Object,
-                _notify.Object);
+                _notify.Object,
+                _cache.Object);
         }
 
         private static reader MakeReader(Guid id, string username = "reader1")
@@ -212,6 +216,8 @@ namespace IOSRA.Tests.Controllers
                     It.IsAny<CancellationToken>()))
                    .ReturnsAsync(new Contract.DTOs.Response.Notification.NotificationResponse());
 
+            _cache.Setup(c => c.Remove(It.IsAny<object>()));
+
             var result = await _svc.FollowAsync(readerId, authorId, new AuthorFollowRequest { EnableNotifications = true }, CancellationToken.None);
 
             result.IsFollowing.Should().BeTrue();
@@ -221,6 +227,7 @@ namespace IOSRA.Tests.Controllers
             _authorRepo.VerifyAll();
             _followRepo.VerifyAll();
             _notify.VerifyAll();
+            _cache.VerifyAll();
         }
 
         // CASE : UnfollowAsync – chưa follow -> lỗi 404
@@ -270,6 +277,7 @@ namespace IOSRA.Tests.Controllers
                        .Returns(Task.CompletedTask);
             _authorRepo.Setup(a => a.SaveChangesAsync(It.IsAny<CancellationToken>()))
                        .Returns(Task.CompletedTask);
+            _cache.Setup(c => c.Remove(It.IsAny<object>()));
 
             await _svc.UnfollowAsync(readerId, authorId, CancellationToken.None);
 
@@ -278,6 +286,7 @@ namespace IOSRA.Tests.Controllers
             _profileRepo.VerifyAll();
             _authorRepo.VerifyAll();
             _followRepo.VerifyAll();
+            _cache.VerifyAll();
         }
 
         // CASE : UpdateNotificationAsync – chưa follow -> lỗi
