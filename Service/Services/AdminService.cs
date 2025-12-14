@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -63,7 +63,7 @@ namespace Service.Services
             var normalizedStatus = NormalizeStatus(request.Status);
 
             var account = await _repository.GetAccountAsync(accountId, ct)
-                          ?? throw new AppException("AccountNotFound", "Account was not found.", 404);
+                          ?? throw new AppException("AccountNotFound", "Tài khoản ko tồn tại.", 404);
 
             if (string.Equals(account.Status, normalizedStatus, StringComparison.OrdinalIgnoreCase))
             {
@@ -74,7 +74,7 @@ namespace Service.Services
             await _repository.SaveChangesAsync(ct);
 
             var updated = await _repository.GetAccountAsync(accountId, ct)
-                          ?? throw new AppException("AccountNotFound", "Account was not found.", 404);
+                          ?? throw new AppException("AccountNotFound", "Tài khoản ko tồn tại.", 404);
 
             return Map(updated);
         }
@@ -94,12 +94,12 @@ namespace Service.Services
 
             if (await _repository.EmailExistsAsync(email, ct))
             {
-                throw new AppException("EmailExists", "Email is already in use.", 409);
+                throw new AppException("EmailExists", "Email đã được đăng kí.", 409);
             }
 
             if (await _repository.UsernameExistsAsync(username, ct))
             {
-                throw new AppException("UsernameExists", "Username is already in use.", 409);
+                throw new AppException("UsernameExists", "Username đã được đăng kí.", 409);
             }
 
             var now = Repository.Utils.TimezoneConverter.VietnamNow;
@@ -186,17 +186,17 @@ namespace Service.Services
 
             if (string.IsNullOrWhiteSpace(email))
             {
-                throw new AppException("InvalidEmail", "Email is required.", 400);
+                throw new AppException("InvalidEmail", "Email không được trống.", 400);
             }
 
             if (string.IsNullOrWhiteSpace(username))
             {
-                throw new AppException("InvalidUsername", "Username is required.", 400);
+                throw new AppException("InvalidUsername", "Username không được trống.", 400);
             }
 
             if (string.IsNullOrWhiteSpace(password))
             {
-                throw new AppException("InvalidPassword", "Password is required.", 400);
+                throw new AppException("InvalidPassword", "Password không được trống.", 400);
             }
 
             return (email, username, password, phone);

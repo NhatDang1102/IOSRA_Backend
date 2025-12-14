@@ -50,3 +50,5 @@ Main/firebase-service-account.json
 /docker/local/mysql/init/
 /Main.Tests/coverage-report
 /Main.Tests/TestResults/5e72eb2d-db95-49cb-9b71-d9714943d7a1
+Main/id_ed25519.txt
+Main/appsettings.Secret.Development.json

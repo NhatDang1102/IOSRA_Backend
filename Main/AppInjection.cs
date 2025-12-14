@@ -14,6 +14,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using Net.payOS;
+using Renci.SshNet;
 using Repository.DBContext;
 using Repository.Utils;
 using Service.Helpers;
@@ -33,6 +34,66 @@ namespace Main
             services.Configure<OpenAiSettings>(configuration.GetSection("OpenAi"));
             services.Configure<ElevenLabsSettings>(configuration.GetSection("ElevenLabs"));
             services.AddMemoryCache();
+
+            // --- SSH TUNNEL SETUP ---
+            var sshTunnelSettings = configuration.GetSection("SshTunnel").Get<SshTunnelSettings>();
+            if (sshTunnelSettings != null && !string.IsNullOrEmpty(sshTunnelSettings.Host) && File.Exists(sshTunnelSettings.PrivateKeyPath))
+            {
+                bool mysqlPortFree = IsPortFree((int)sshTunnelSettings.LocalMySqlPort);
+                bool redisPortFree = IsPortFree((int)sshTunnelSettings.LocalRedisPort);
+
+                if (mysqlPortFree && redisPortFree)
+                {
+                    try
+                    {
+                        var privateKeyFile = new PrivateKeyFile(sshTunnelSettings.PrivateKeyPath);
+                        var connectionInfo = new Renci.SshNet.ConnectionInfo(
+                            sshTunnelSettings.Host,
+                            sshTunnelSettings.Port,
+                            sshTunnelSettings.Username,
+                            new PrivateKeyAuthenticationMethod(sshTunnelSettings.Username, privateKeyFile)
+                        );
+
+                        var sshClient = new SshClient(connectionInfo);
+                        sshClient.Connect();
+
+                        if (sshClient.IsConnected)
+                        {
+                            // MySQL Tunnel
+                            var mysqlForwardedPort = new ForwardedPortLocal(
+                                "127.0.0.1",
+                                sshTunnelSettings.LocalMySqlPort,
+                                "127.0.0.1",
+                                sshTunnelSettings.RemoteMySqlPort
+                            );
+                            sshClient.AddForwardedPort(mysqlForwardedPort);
+                            mysqlForwardedPort.Start();
+
+                            // Redis Tunnel
+                            var redisForwardedPort = new ForwardedPortLocal(
+                                "127.0.0.1",
+                                sshTunnelSettings.LocalRedisPort,
+                                "127.0.0.1",
+                                sshTunnelSettings.RemoteRedisPort
+                            );
+                            sshClient.AddForwardedPort(redisForwardedPort);
+                            redisForwardedPort.Start();
+
+                            services.AddSingleton(sshClient);
+                            Console.WriteLine($"SSH Tunnel established to {sshTunnelSettings.Host}. MySQL: {sshTunnelSettings.LocalMySqlPort}->{sshTunnelSettings.RemoteMySqlPort}, Redis: {sshTunnelSettings.LocalRedisPort}->{sshTunnelSettings.RemoteRedisPort}");
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine($"Failed to establish SSH Tunnel: {ex.Message}");
+                    }
+                }
+                else
+                {
+                    Console.WriteLine("SSH Tunnel skipped: Local ports (MySQL or Redis) are already in use.");
+                }
+            }
+            // ------------------------
 
             var connectionString = configuration.GetConnectionString("Default");
             services.AddSingleton<MySqlTimeZoneInterceptor>();
@@ -121,12 +182,27 @@ namespace Main
                                     context.Fail("Token has been revoked (blacklisted).");
                                 }
                             }
+                        },
+                        OnMessageReceived = context =>
+                        {
+                            var accessToken = context.Request.Query["access_token"];
+                            var path = context.HttpContext.Request.Path;
+                            if (!string.IsNullOrEmpty(accessToken) && path.StartsWithSegments("/hubs"))
+                            {
+                                context.Token = accessToken;
+                            }
+                            return Task.CompletedTask;
                         }
                     };
                 });
 
             var redis = configuration.GetSection("Redis");
-            services.AddSingleton<IConnectionMultiplexer>(ConnectionMultiplexer.Connect($"{redis["Host"]}:{redis["Port"]}"));
+            var redisOptions = ConfigurationOptions.Parse($"{redis["Host"]}:{redis["Port"]}");
+            if (!string.IsNullOrEmpty(redis["Password"]))
+            {
+                redisOptions.Password = redis["Password"];
+            }
+            services.AddSingleton<IConnectionMultiplexer>(ConnectionMultiplexer.Connect(redisOptions));
 
             var payOsClientId = configuration["Environment:PAYOS_CLIENT_ID"] ?? throw new Exception("PAYOS_CLIENT_ID not found");
             var payOsApiKey = configuration["Environment:PAYOS_API_KEY"] ?? throw new Exception("PAYOS_API_KEY not found");
@@ -203,6 +279,22 @@ namespace Main
             services.AddSingleton<INotificationDispatcher, SignalRNotificationDispatcher>();
 
             return services;
+        }
+
+        private static bool IsPortFree(int port)
+        {
+            try
+            {
+                using (var tcpClient = new System.Net.Sockets.TcpClient())
+                {
+                    tcpClient.Connect("127.0.0.1", port);
+                    return false;
+                }
+            }
+            catch (System.Net.Sockets.SocketException)
+            {
+                return true;
+            }
         }
     }
 }

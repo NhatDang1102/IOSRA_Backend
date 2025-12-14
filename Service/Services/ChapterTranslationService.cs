@@ -41,7 +41,7 @@ namespace Service.Services
         {
             if (request == null || string.IsNullOrWhiteSpace(request.TargetLanguageCode))
             {
-                throw new AppException("ValidationFailed", "Target language is required.", 400);
+                throw new AppException("ValidationFailed", "Cần chọn ngôn ngữ muốn dịch.", 400);
             }
 
             var chapter = await LoadPublishedChapterAsync(chapterId, ct);
@@ -54,18 +54,18 @@ namespace Service.Services
             var existingLocalization = await _chapterRepository.GetLocalizationAsync(chapter.chapter_id, targetLanguage.lang_id, ct);
             if (existingLocalization != null)
             {
-                throw new AppException("TranslationExists", "Translation for this language already exists.", 409);
+                throw new AppException("TranslationExists", "Đã có bản dịch cho ngôn ngữ này rồi.", 409);
             }
 
             if (string.IsNullOrWhiteSpace(chapter.content_url))
             {
-                throw new AppException("ChapterContentMissing", "Chapter content is missing.", 500);
+                throw new AppException("ChapterContentMissing", "nội dung chap bị trống.", 500);
             }
 
             var originalContent = await _contentStorage.DownloadAsync(chapter.content_url, ct);
             if (string.IsNullOrWhiteSpace(originalContent))
             {
-                throw new AppException("ChapterContentEmpty", "Chapter content is empty.", 400);
+                throw new AppException("ChapterContentEmpty", "nội dung chap bị trống.", 400);
             }
 
             var translated = await _translationService.TranslateAsync(
@@ -76,7 +76,7 @@ namespace Service.Services
 
             if (string.IsNullOrWhiteSpace(translated))
             {
-                throw new AppException("TranslationFailed", "Could not translate this chapter.", 500);
+                throw new AppException("TranslationFailed", "có lỗi trong quá trình dịch.", 500);
             }
 
             var wordCount = Math.Max(1, CountWords(translated));
@@ -100,7 +100,7 @@ namespace Service.Services
         {
             if (string.IsNullOrWhiteSpace(languageCode))
             {
-                throw new AppException("ValidationFailed", "Language code is required.", 400);
+                throw new AppException("ValidationFailed", "language code thiếu.", 400);
             }
 
             if (!viewerAccountId.HasValue)
@@ -170,11 +170,11 @@ namespace Service.Services
         private async Task<chapter> LoadPublishedChapterAsync(Guid chapterId, CancellationToken ct)
         {
             var chapter = await _chapterRepository.GetPublishedChapterByIdAsync(chapterId, ct)
-                          ?? throw new AppException("ChapterNotFound", "Chapter was not found or not available.", 404);
+                          ?? throw new AppException("ChapterNotFound", "chapter ko tồn tại.", 404);
 
             if (chapter.story == null)
             {
-                throw new AppException("StoryNotFound", "Story info missing.", 500);
+                throw new AppException("StoryNotFound", "chapter ko có story hợp lệ.", 500);
             }
 
             return chapter;
@@ -209,7 +209,7 @@ namespace Service.Services
         private async Task<language_list> GetLanguageOrThrowAsync(string languageCode, CancellationToken ct)
         {
             var language = await _chapterRepository.GetLanguageByCodeAsync(languageCode.Trim(), ct)
-                          ?? throw new AppException("LanguageNotFound", "Language is not supported.", 404);
+                          ?? throw new AppException("LanguageNotFound", "ngôn ngữ ko hỗ trợ.", 404);
             return language;
         }
 
@@ -218,7 +218,7 @@ namespace Service.Services
             var originalCode = chapter.language?.lang_code ?? string.Empty;
             if (string.Equals(originalCode, targetLanguage.lang_code, StringComparison.OrdinalIgnoreCase))
             {
-                throw new AppException("TranslationNotNeeded", "Chapter already uses this language.", 400);
+                throw new AppException("TranslationNotNeeded", "chapter có sẵn ngôn ngữ này rồi .", 400);
             }
         }
 
