@@ -6,6 +6,7 @@ using Contract.DTOs.Internal;
 using Contract.DTOs.Request.Follow;
 using Contract.DTOs.Response.Common;
 using Contract.DTOs.Response.Follow;
+using Microsoft.Extensions.Caching.Memory;
 using Repository.Entities;
 using Repository.Interfaces;
 using Repository.Utils;
@@ -23,17 +24,20 @@ namespace Service.Services
         private readonly IProfileRepository _profileRepository;
         private readonly IAuthorStoryRepository _authorStoryRepository;
         private readonly INotificationService _notificationService;
+        private readonly IMemoryCache _cache;
 
         public AuthorFollowService(
             IAuthorFollowRepository followRepository,
             IProfileRepository profileRepository,
             IAuthorStoryRepository authorStoryRepository,
-            INotificationService notificationService)
+            INotificationService notificationService,
+            IMemoryCache cache)
         {
             _followRepository = followRepository;
             _profileRepository = profileRepository;
             _authorStoryRepository = authorStoryRepository;
             _notificationService = notificationService;
+            _cache = cache;
         }
 
         public async Task<AuthorFollowStatusResponse> FollowAsync(Guid readerAccountId, Guid authorAccountId, AuthorFollowRequest request, CancellationToken ct = default)
@@ -61,6 +65,8 @@ namespace Service.Services
             var entity = await _followRepository.AddAsync(reader.account_id, author.account_id, notifications, ct);
             IncrementFollowerCount(author, +1);
             await _authorStoryRepository.SaveChangesAsync(ct);
+            
+            _cache.Remove($"profile:public:{author.account_id:N}");
 
             await _notificationService.CreateAsync(new NotificationCreateModel(
                 author.account_id,
@@ -87,6 +93,8 @@ namespace Service.Services
             await _followRepository.RemoveAsync(existing, ct);
             IncrementFollowerCount(author, -1);
             await _authorStoryRepository.SaveChangesAsync(ct);
+            
+            _cache.Remove($"profile:public:{author.account_id:N}");
         }
 
         public async Task<AuthorFollowStatusResponse> UpdateNotificationAsync(Guid readerAccountId, Guid authorAccountId, bool enableNotifications, CancellationToken ct = default)

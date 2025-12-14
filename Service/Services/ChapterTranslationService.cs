@@ -117,7 +117,7 @@ namespace Service.Services
             EnsureNotOriginalLanguage(chapter, targetLanguage);
 
             var localization = await _chapterRepository.GetLocalizationAsync(chapter.chapter_id, targetLanguage.lang_id, ct)
-                               ?? throw new AppException("TranslationNotFound", "Chapter has not been translated yet.", 404);
+                               ?? throw new AppException("TranslationNotFound", "Chapter chưa được dịch.", 404);
 
             return MapResponse(chapter, targetLanguage, localization, cached: true);
         }
