@@ -5,6 +5,7 @@ namespace Contract.DTOs.Request.Chapter
     public class ChapterCreateRequest
     {
         [Required(ErrorMessage = "Title is required.")]
+        [MinLength(20)]
         [StringLength(255, ErrorMessage = "Title must not exceed 255 characters.")]
         public string Title { get; set; } = null!;
 

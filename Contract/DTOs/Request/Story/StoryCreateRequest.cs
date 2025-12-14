@@ -8,10 +8,12 @@ namespace Contract.DTOs.Request.Story
     public class StoryCreateRequest
     {
         [Required]
+        [MinLength(20)]
         [StringLength(150)]
         public string Title { get; set; } = null!;
 
         [StringLength(5000)]
+        [MinLength(20)]
         public string? Description { get; set; }
 
         [Required]

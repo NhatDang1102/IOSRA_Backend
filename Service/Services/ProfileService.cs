@@ -140,7 +140,25 @@ namespace Service.Implementations
             {
                 throw new AppException("ValidationFailed", "Gender phải là M/F/other/unspecified.", 400);
             }
-                
+
+            if (req.Birthday.HasValue)
+            {
+                //Lấy ngày giờ hiện tại theo múi giờ Việt Nam
+                var nowVietnam = TimezoneConverter.VietnamNow;
+
+                //Tính toán ngày 5 năm trước (theo giờ VN)
+                var fiveYearsAgoDate = nowVietnam.AddYears(-5);
+
+                //chuyển đổi DateTime sang DateOnly để so sánh
+                var fiveYearsAgo = DateOnly.FromDateTime(fiveYearsAgoDate);
+
+                //so sánh: Nếu Birthday >= ngày 5 năm trước (tức là nằm trong 5 năm gần nhất)
+                if (req.Birthday.Value.CompareTo(fiveYearsAgo) >= 0)
+                {
+                    throw new AppException("ValidationFailed", "Birthday không được nằm trong 5 năm gần nhất.", 400);
+                }
+            }
+
             var dbGender = ToDbGender(req.Gender);
             await _profileRepo.UpdateReaderProfileAsync(accountId, req.Bio, dbGender, req.Birthday, ct);
 
