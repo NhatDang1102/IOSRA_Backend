@@ -82,6 +82,28 @@ namespace Repository.Repositories
         public Task<subscription_payment?> GetSubscriptionPaymentByOrderCodeAsync(string orderCode, CancellationToken ct = default)
             => _db.subscription_payments.FirstOrDefaultAsync(p => p.order_code == orderCode, ct);
 
+        // Admin Settings
+        public Task<topup_pricing?> GetTopupPricingByIdAsync(Guid pricingId, CancellationToken ct = default)
+            => _db.topup_pricings.FirstOrDefaultAsync(p => p.pricing_id == pricingId, ct);
+
+        public Task UpdateTopupPricingAsync(topup_pricing pricing, CancellationToken ct = default)
+        {
+            _db.topup_pricings.Update(pricing);
+            return Task.CompletedTask;
+        }
+
+        public Task<List<topup_pricing>> GetAllTopupPricingsAsync(CancellationToken ct = default)
+             => _db.topup_pricings.AsNoTracking().OrderBy(p => p.amount_vnd).ToListAsync(ct);
+
+        public Task<List<subscription_plan>> GetAllSubscriptionPlansAsync(CancellationToken ct = default)
+            => _db.subscription_plans.AsNoTracking().ToListAsync(ct);
+
+        public Task UpdateSubscriptionPlanAsync(subscription_plan plan, CancellationToken ct = default)
+        {
+            _db.subscription_plans.Update(plan);
+            return Task.CompletedTask;
+        }
+
         public Task SaveChangesAsync(CancellationToken ct = default)
             => _db.SaveChangesAsync(ct);
     }

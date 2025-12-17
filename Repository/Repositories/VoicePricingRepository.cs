@@ -25,5 +25,16 @@ namespace Repository.Repositories
                 .OrderBy(r => r.min_char_count)
                 .ToListAsync(ct);
         }
+
+        public Task<voice_price_rule?> GetRuleByIdAsync(Guid ruleId, CancellationToken ct = default)
+        {
+            return _db.voice_price_rules.FirstOrDefaultAsync(r => r.rule_id == ruleId, ct);
+        }
+
+        public async Task UpdateRuleAsync(voice_price_rule rule, CancellationToken ct = default)
+        {
+            _db.voice_price_rules.Update(rule);
+            await _db.SaveChangesAsync(ct);
+        }
     }
 }

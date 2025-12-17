@@ -88,6 +88,23 @@ namespace Service.Services
             return (int)rule.generation_dias;
         }
 
+        public async Task<IReadOnlyList<voice_price_rule>> GetRawRulesAsync(CancellationToken ct = default)
+        {
+            return await GetRulesAsync(ct);
+        }
+
+        public async Task UpdateRuleAsync(Contract.DTOs.Request.Admin.UpdateVoicePriceRuleRequest request, CancellationToken ct = default)
+        {
+            var existing = await _repository.GetRuleByIdAsync(request.RuleId, ct);
+            if (existing == null) throw new AppException("NotFound", "Rule not found", 404);
+
+            existing.dias_price = request.DiasPrice;
+            existing.generation_dias = request.GenerationDias;
+
+            await _repository.UpdateRuleAsync(existing, ct);
+            _cache.Remove(CacheKey);
+        }
+
         private async Task<IReadOnlyList<voice_price_rule>> GetRulesAsync(CancellationToken ct)
         {
             if (_cache.TryGetValue(CacheKey, out IReadOnlyList<voice_price_rule>? cached) && cached?.Count > 0)

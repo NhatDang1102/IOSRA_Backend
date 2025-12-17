@@ -21,6 +21,14 @@ namespace Repository.Interfaces
         Task AddSubscriptionPaymentAsync(subscription_payment payment, CancellationToken ct = default);
         Task<subscription_payment?> GetSubscriptionPaymentByOrderCodeAsync(string orderCode, CancellationToken ct = default);
 
+        // Admin Settings
+        Task<topup_pricing?> GetTopupPricingByIdAsync(Guid pricingId, CancellationToken ct = default);
+        Task UpdateTopupPricingAsync(topup_pricing pricing, CancellationToken ct = default);
+        Task<List<topup_pricing>> GetAllTopupPricingsAsync(CancellationToken ct = default); // Including inactive
+
+        Task<List<subscription_plan>> GetAllSubscriptionPlansAsync(CancellationToken ct = default);
+        Task UpdateSubscriptionPlanAsync(subscription_plan plan, CancellationToken ct = default);
+
         Task SaveChangesAsync(CancellationToken ct = default);
     }
 }

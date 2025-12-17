@@ -100,6 +100,7 @@ namespace Service
             services.AddScoped<IOperationModStatService, OperationModStatService>();
             services.AddScoped<IPaymentHistoryService, PaymentHistoryService>();
             services.AddScoped<IMoodMusicService, MoodMusicService>();
+            services.AddScoped<IAdminPricingService, AdminPricingService>();
             services.AddScoped<IAIChatService, AIChatService>();
             services.AddHostedService<StoryWeeklyViewSyncJob>();
             services.AddHostedService<SubscriptionReminderJob>();

@@ -20,11 +20,21 @@ namespace Repository.Repositories
 
         public async Task<IReadOnlyList<chapter_price_rule>> GetRulesAsync(CancellationToken ct = default)
         {
-            //lấy giá trong db (as no tracking để ef core ko cần theo dõi vì k có tác động gì thay đỏi data)
             return await _db.chapter_price_rules
                 .AsNoTracking()
                 .OrderBy(r => r.min_char_count)
                 .ToListAsync(ct);
+        }
+
+        public Task<chapter_price_rule?> GetRuleByIdAsync(Guid ruleId, CancellationToken ct = default)
+        {
+            return _db.chapter_price_rules.FirstOrDefaultAsync(r => r.rule_id == ruleId, ct);
+        }
+
+        public async Task UpdateRuleAsync(chapter_price_rule rule, CancellationToken ct = default)
+        {
+            _db.chapter_price_rules.Update(rule);
+            await _db.SaveChangesAsync(ct);
         }
     }
 }

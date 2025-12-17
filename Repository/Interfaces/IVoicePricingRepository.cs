@@ -8,5 +8,7 @@ namespace Repository.Interfaces
     public interface IVoicePricingRepository
     {
         Task<IReadOnlyList<voice_price_rule>> GetRulesAsync(CancellationToken ct = default);
+        Task<voice_price_rule?> GetRuleByIdAsync(Guid ruleId, CancellationToken ct = default);
+        Task UpdateRuleAsync(voice_price_rule rule, CancellationToken ct = default);
     }
 }

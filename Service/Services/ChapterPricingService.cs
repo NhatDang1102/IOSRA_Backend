@@ -53,6 +53,22 @@ namespace Service.Services
             return (int)rule.dias_price;
         }
 
+        public async Task<IReadOnlyList<chapter_price_rule>> GetAllRulesAsync(CancellationToken ct = default)
+        {
+            return await GetRulesAsync(ct);
+        }
+
+        public async Task UpdateRuleAsync(Contract.DTOs.Request.Admin.UpdateChapterPriceRuleRequest request, CancellationToken ct = default)
+        {
+            var existing = await _repository.GetRuleByIdAsync(request.RuleId, ct);
+            if (existing == null) throw new AppException("NotFound", "Rule not found", 404);
+
+            existing.dias_price = request.DiasPrice;
+
+            await _repository.UpdateRuleAsync(existing, ct);
+            _cache.Remove(CacheKey);
+        }
+
         private async Task<IReadOnlyList<chapter_price_rule>> GetRulesAsync(CancellationToken ct)
         {
             //check imemorycache coi có pricing trong đó ko để khỏi truy ván lại cho nhẹ 
