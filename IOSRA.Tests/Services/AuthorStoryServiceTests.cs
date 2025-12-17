@@ -951,7 +951,7 @@ namespace IOSRA.Tests.Services
                 SanitizedContent: "sanitized",
                 Explanation: "contains disallowed words");
 
-            _modAi.Setup(m => m.ModerateStoryAsync(s.title, s.desc, It.IsAny<CancellationToken>()))
+            _modAi.Setup(m => m.ModerateStoryAsync(s.title, s.desc, s.outline, It.IsAny<CancellationToken>()))
                   .ReturnsAsync(aiResult);
 
             _repo.Setup(r => r.UpdateAsync(s, It.IsAny<CancellationToken>()))
@@ -1019,7 +1019,7 @@ namespace IOSRA.Tests.Services
                 SanitizedContent: "ok",
                 Explanation: "safe");
 
-            _modAi.Setup(m => m.ModerateStoryAsync(baseStory.title, baseStory.desc, It.IsAny<CancellationToken>()))
+            _modAi.Setup(m => m.ModerateStoryAsync(baseStory.title, baseStory.desc, baseStory.outline, It.IsAny<CancellationToken>()))
                   .ReturnsAsync(aiResult);
 
             _repo.Setup(r => r.UpdateAsync(baseStory, It.IsAny<CancellationToken>()))
@@ -1097,7 +1097,7 @@ namespace IOSRA.Tests.Services
                 SanitizedContent: "borderline",
                 Explanation: "needs review");
 
-            _modAi.Setup(m => m.ModerateStoryAsync(baseStory.title, baseStory.desc, It.IsAny<CancellationToken>()))
+            _modAi.Setup(m => m.ModerateStoryAsync(baseStory.title, baseStory.desc, baseStory.outline, It.IsAny<CancellationToken>()))
                   .ReturnsAsync(aiResult);
 
             _repo.Setup(r => r.UpdateAsync(baseStory, It.IsAny<CancellationToken>()))

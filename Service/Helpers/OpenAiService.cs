@@ -144,12 +144,14 @@ namespace Service.Helpers
         private static readonly ModerationProfile StoryProfile = new(
             ContentType: "story",
             PrimaryLabel: "Title",
-            SecondaryLabel: "Description");
+            SecondaryLabel: "Description",
+            TertiaryLabel: "Outline");
 
         private static readonly ModerationProfile ChapterProfile = new(
             ContentType: "chapter",
             PrimaryLabel: "Title",
-            SecondaryLabel: "Body");
+            SecondaryLabel: "Body",
+            TertiaryLabel: null);
 
         public OpenAiService(HttpClient httpClient, IOptions<OpenAiSettings> options)
         {
@@ -163,19 +165,19 @@ namespace Service.Helpers
             };
         }
 
-        public Task<OpenAiModerationResult> ModerateStoryAsync(string title, string? description, CancellationToken ct = default)
-            => ModerateContentAsync(title, description, StoryProfile, ct);
+        public Task<OpenAiModerationResult> ModerateStoryAsync(string title, string? description, string outline, CancellationToken ct = default)
+            => ModerateContentAsync(title, description, outline, StoryProfile, ct);
 
         public Task<OpenAiModerationResult> ModerateChapterAsync(string title, string content, CancellationToken ct = default)
-            => ModerateContentAsync(title, content, ChapterProfile, ct);
+            => ModerateContentAsync(title, content, null, ChapterProfile, ct);
 
 
         //hàm quét AI kiểm duyệt 
-        private async Task<OpenAiModerationResult> ModerateContentAsync(string primary, string? secondary, ModerationProfile profile, CancellationToken ct)
+        private async Task<OpenAiModerationResult> ModerateContentAsync(string primary, string? secondary, string? tertiary, ModerationProfile profile, CancellationToken ct)
         {
 
             //gắn hết content vô 1 chuỗi để request cho openai 
-            var combined = ComposeContent(primary, secondary);
+            var combined = ComposeContent(primary, secondary, tertiary);
             var ai = await RequestModerationAsync(profile, combined, ct);
 
             // Calculate score from penalties to ensure accuracy
@@ -684,7 +686,7 @@ If no policy issue exists, state clearly that no deductions were applied.";
             }
         }
 
-        private static string ComposeContent(string title, string? description)
+        private static string ComposeContent(string title, string? description, string? outline)
         {
             var builder = new StringBuilder();
 
@@ -698,13 +700,19 @@ If no policy issue exists, state clearly that no deductions were applied.";
                 builder.AppendLine(description.Trim());
             }
 
+            if (!string.IsNullOrWhiteSpace(outline))
+            {
+                builder.AppendLine(outline.Trim());
+            }
+
             return builder.Length > 0 ? builder.ToString().Trim() : string.Empty;
         }
 
         private sealed record ModerationProfile(
             string ContentType,
             string PrimaryLabel,
-            string SecondaryLabel);
+            string SecondaryLabel,
+            string? TertiaryLabel);
 
         private sealed record ChatCompletionsRequest
         {

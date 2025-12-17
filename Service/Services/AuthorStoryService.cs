@@ -181,7 +181,7 @@ namespace Service.Services
             }
 
             //gọi bên OpenAIService để request title và desc cho AI 
-            var aiResult = await _openAiModerationService.ModerateStoryAsync(story.title, story.desc, ct);
+            var aiResult = await _openAiModerationService.ModerateStoryAsync(story.title, story.desc, story.outline, ct);
             //làm tròn điểm AI 
             var aiScore = (decimal)Math.Round(aiResult.Score, 2, MidpointRounding.AwayFromZero);
 
