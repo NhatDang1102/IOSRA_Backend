@@ -66,6 +66,51 @@ namespace Service.Services
             };
         }
 
+        public async Task<FileExportResponse> ExportRevenueStatsAsync(StatQueryRequest query, Guid userId, CancellationToken ct = default)
+        {
+            var data = await GetRevenueStatsAsync(query, ct);
+            var content = Helpers.ExcelHelper.GenerateRevenueExcel(data);
+            
+            await _repository.IncrementReportGeneratedCountAsync(userId, ct);
+
+            return new FileExportResponse
+            {
+                Content = content,
+                ContentType = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                FileName = $"revenue_stats_{DateTime.UtcNow:yyyyMMddHHmm}.xlsx"
+            };
+        }
+
+        public async Task<FileExportResponse> ExportRequestStatsAsync(string requestType, StatQueryRequest query, Guid userId, CancellationToken ct = default)
+        {
+            var data = await GetRequestStatsAsync(requestType, query, ct);
+            var content = Helpers.ExcelHelper.GenerateRequestStatsExcel(data);
+
+            await _repository.IncrementReportGeneratedCountAsync(userId, ct);
+
+            return new FileExportResponse
+            {
+                Content = content,
+                ContentType = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                FileName = $"request_stats_{requestType}_{DateTime.UtcNow:yyyyMMddHHmm}.xlsx"
+            };
+        }
+
+        public async Task<FileExportResponse> ExportAuthorRevenueStatsAsync(string metric, StatQueryRequest query, Guid userId, CancellationToken ct = default)
+        {
+            var data = await GetAuthorRevenueStatsAsync(metric, query, ct);
+            var content = Helpers.ExcelHelper.GenerateAuthorRevenueExcel(data);
+
+            await _repository.IncrementReportGeneratedCountAsync(userId, ct);
+
+            return new FileExportResponse
+            {
+                Content = content,
+                ContentType = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                FileName = $"author_revenue_{metric}_{DateTime.UtcNow:yyyyMMddHHmm}.xlsx"
+            };
+        }
+
         private static (string period, DateTime from, DateTime to) NormalizeQuery(StatQueryRequest query)
         {
             var period = string.IsNullOrWhiteSpace(query.Period) ? "month" : query.Period.Trim().ToLowerInvariant();

@@ -11,6 +11,7 @@ namespace Repository.Interfaces
         Task<OperationRevenueData> GetRevenueAsync(DateTime from, DateTime to, string period, CancellationToken ct = default);
         Task<List<StatPointData>> GetRequestStatsAsync(string requestType, DateTime from, DateTime to, string period, CancellationToken ct = default);
         Task<List<StatPointData>> GetAuthorRevenueStatsAsync(string metric, DateTime from, DateTime to, string period, CancellationToken ct = default);
+        Task IncrementReportGeneratedCountAsync(Guid userId, CancellationToken ct = default);
     }
 
     public class OperationRevenueData

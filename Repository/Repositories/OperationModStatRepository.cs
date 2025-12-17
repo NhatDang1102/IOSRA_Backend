@@ -93,6 +93,16 @@ namespace Repository.Repositories
             return GroupAsync(source, period, ct);
         }
 
+        public async Task IncrementReportGeneratedCountAsync(Guid userId, CancellationToken ct = default)
+        {
+            var omod = await _db.OperationMods.FirstOrDefaultAsync(o => o.account_id == userId, ct);
+            if (omod != null)
+            {
+                omod.reports_generated++;
+                await _db.SaveChangesAsync(ct);
+            }
+        }
+
         private async Task<List<StatPointData>> GroupAsync(IQueryable<StatPointSource> source, string period, CancellationToken ct)
         {
             var data = await source.ToListAsync(ct);

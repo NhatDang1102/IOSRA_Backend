@@ -21,6 +21,11 @@ namespace Main.Controllers
         [HttpGet("revenue")]
         public async Task<IActionResult> GetRevenue([FromQuery] StatQueryRequest query, CancellationToken ct)
         {
+            if (query.GenerateReport)
+            {
+                var file = await _statService.ExportRevenueStatsAsync(query, AccountId, ct);
+                return File(file.Content, file.ContentType, file.FileName);
+            }
             var result = await _statService.GetRevenueStatsAsync(query, ct);
             return Ok(result);
         }
@@ -28,6 +33,11 @@ namespace Main.Controllers
         [HttpGet("requests/{type}")]
         public async Task<IActionResult> GetRequestStats([FromRoute] string type, [FromQuery] StatQueryRequest query, CancellationToken ct)
         {
+            if (query.GenerateReport)
+            {
+                var file = await _statService.ExportRequestStatsAsync(type, query, AccountId, ct);
+                return File(file.Content, file.ContentType, file.FileName);
+            }
             var result = await _statService.GetRequestStatsAsync(type, query, ct);
             return Ok(result);
         }
@@ -35,6 +45,11 @@ namespace Main.Controllers
         [HttpGet("author-revenue/{metric}")]
         public async Task<IActionResult> GetAuthorRevenue([FromRoute] string metric, [FromQuery] StatQueryRequest query, CancellationToken ct)
         {
+             if (query.GenerateReport)
+            {
+                var file = await _statService.ExportAuthorRevenueStatsAsync(metric, query, AccountId, ct);
+                return File(file.Content, file.ContentType, file.FileName);
+            }
             var result = await _statService.GetAuthorRevenueStatsAsync(metric, query, ct);
             return Ok(result);
         }
