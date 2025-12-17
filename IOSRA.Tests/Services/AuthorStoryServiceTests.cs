@@ -968,7 +968,7 @@ namespace IOSRA.Tests.Services
             var act = () => _svc.SubmitForReviewAsync(accId, storyId, req, CancellationToken.None);
 
             var ex = await act.Should().ThrowAsync<AppException>();
-            ex.Which.Message.Should().Contain("Story was rejected by automated moderation");
+            ex.Which.Message.Should().Contain("Truyện bị trừ điểm bởi AI.");
 
             s.status.Should().Be("rejected");
             s.published_at.Should().BeNull();
@@ -1142,7 +1142,33 @@ namespace IOSRA.Tests.Services
             var act = () => _svc.CompleteAsync(accId, s.story_id, CancellationToken.None);
 
             await act.Should().ThrowAsync<AppException>()
-                     .WithMessage("*Only published stories can be marked as completed*");
+                     .WithMessage("*Chỉ hoàn thành được truyện nào đã phát hành.*");
+
+            _repo.VerifyAll();
+        }
+
+        // CASE: Complete – có chapter đang draft -> 400 StoryHasDraftChapters
+        [Fact]
+        public async Task CompleteAsync_Should_Throw_When_Story_Has_Draft_Chapters()
+        {
+            var accId = Guid.NewGuid();
+            var author = MakeAuthor(accId);
+            var s = MakeStory(Guid.NewGuid(), author, null);
+            s.status = "published";
+
+            _repo.Setup(r => r.GetAuthorAsync(accId, It.IsAny<CancellationToken>()))
+                 .ReturnsAsync(author);
+
+            _repo.Setup(r => r.GetByIdForAuthorAsync(s.story_id, author.account_id, It.IsAny<CancellationToken>()))
+                 .ReturnsAsync(s);
+
+            _repo.Setup(r => r.HasDraftChaptersAsync(s.story_id, It.IsAny<CancellationToken>()))
+                 .ReturnsAsync(true);
+
+            var act = () => _svc.CompleteAsync(accId, s.story_id, CancellationToken.None);
+
+            await act.Should().ThrowAsync<AppException>()
+                     .WithMessage("*Không thể hoàn thành truyện khi còn chương nháp.*");
 
             _repo.VerifyAll();
         }
@@ -1163,7 +1189,10 @@ namespace IOSRA.Tests.Services
             _repo.Setup(r => r.GetByIdForAuthorAsync(s.story_id, author.account_id, It.IsAny<CancellationToken>()))
                  .ReturnsAsync(s);
 
-            _repo.Setup(r => r.GetChapterCountAsync(s.story_id, It.IsAny<CancellationToken>()))
+            _repo.Setup(r => r.HasDraftChaptersAsync(s.story_id, It.IsAny<CancellationToken>()))
+                 .ReturnsAsync(false);
+
+            _repo.Setup(r => r.GetNonDraftChapterCountAsync(s.story_id, It.IsAny<CancellationToken>()))
                  .ReturnsAsync(0);
 
             var act = () => _svc.CompleteAsync(accId, s.story_id, CancellationToken.None);
@@ -1191,8 +1220,11 @@ namespace IOSRA.Tests.Services
             _repo.Setup(r => r.GetByIdForAuthorAsync(s.story_id, author.account_id, It.IsAny<CancellationToken>()))
                  .ReturnsAsync(s);
 
+            _repo.Setup(r => r.HasDraftChaptersAsync(s.story_id, It.IsAny<CancellationToken>()))
+                 .ReturnsAsync(false);
+
             // Đảm bảo qua được rule min chapter cho 'novel' (>= 21)
-            _repo.Setup(r => r.GetChapterCountAsync(s.story_id, It.IsAny<CancellationToken>()))
+            _repo.Setup(r => r.GetNonDraftChapterCountAsync(s.story_id, It.IsAny<CancellationToken>()))
                  .ReturnsAsync(21);
 
             // Service sẽ update status sang "completed"
@@ -1230,8 +1262,11 @@ namespace IOSRA.Tests.Services
             _repo.Setup(r => r.GetByIdForAuthorAsync(s.story_id, author.account_id, It.IsAny<CancellationToken>()))
                  .ReturnsAsync(s);
 
+            _repo.Setup(r => r.HasDraftChaptersAsync(s.story_id, It.IsAny<CancellationToken>()))
+                 .ReturnsAsync(false);
+
             // Đủ chapter cho 'novel'
-            _repo.Setup(r => r.GetChapterCountAsync(s.story_id, It.IsAny<CancellationToken>()))
+            _repo.Setup(r => r.GetNonDraftChapterCountAsync(s.story_id, It.IsAny<CancellationToken>()))
                  .ReturnsAsync(25);
 
             _repo.Setup(r => r.GetContentApprovalsForStoryAsync(s.story_id, It.IsAny<CancellationToken>()))

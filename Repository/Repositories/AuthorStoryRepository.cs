@@ -193,6 +193,12 @@ namespace Repository.Repositories
         public Task<int> GetChapterCountAsync(Guid storyId, CancellationToken ct = default)
             => _db.chapter.CountAsync(c => c.story_id == storyId, ct);
 
+        public Task<bool> HasDraftChaptersAsync(Guid storyId, CancellationToken ct = default)
+            => _db.chapter.AnyAsync(c => c.story_id == storyId && c.status == "draft", ct);
+
+        public Task<int> GetNonDraftChapterCountAsync(Guid storyId, CancellationToken ct = default)
+            => _db.chapter.CountAsync(c => c.story_id == storyId && c.status != "draft", ct);
+
         public Task<DateTime?> GetStoryPublishedAtAsync(Guid storyId, CancellationToken ct = default)
             => _db.stories
                   .Where(s => s.story_id == storyId)

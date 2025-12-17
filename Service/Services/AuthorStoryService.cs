@@ -207,7 +207,7 @@ namespace Service.Services
                 //update bảng story xong thì update bảng content_approve
                 var rejectionApproval = await UpsertStoryApprovalAsync(story.story_id, "rejected", aiScore, aiNote, ct);
                 //trả về response cho ng dùng đọc gồm score, nội dung nào bị gõ, tại sao gõ, mỗi cái gõ trừ mấy điểm
-                throw new AppException("StoryRejectedByAi", "Story was rejected by automated moderation.", 400, new
+                throw new AppException("StoryRejectedByAi", "Truyện bị trừ điểm bởi AI.", 422, new
                 {
                     reviewId = rejectionApproval.review_id,
                     score = Math.Round(aiResult.Score, 2),
@@ -298,11 +298,16 @@ namespace Service.Services
             //chỉ complete đc truyện đã thông qua duyệt và trong trạng thái published 
             if (story.status != "published")
             {
-                throw new AppException("StoryNotPublished", "Only published stories can be marked as completed.", 400);
+                throw new AppException("StoryNotPublished", "Chỉ hoàn thành được truyện nào đã phát hành.", 400);
+            }
+
+            if (await _storyRepository.HasDraftChaptersAsync(story.story_id, ct))
+            {
+                throw new AppException("StoryHasDraftChapters", "Không thể hoàn thành truyện khi còn chương nháp.", 400);
             }
 
             //đếm chapter trong story này để cbi validation length plan ở dưới 
-            var chapterCount = await _storyRepository.GetChapterCountAsync(story.story_id, ct);
+            var chapterCount = await _storyRepository.GetNonDraftChapterCountAsync(story.story_id, ct);
             var plan = story.length_plan ?? "super_short";
 
             //check chapter của story đáp ứng đc mốc định ra ở đầu service k (1,6,21)
@@ -644,7 +649,7 @@ namespace Service.Services
         {
             if (string.IsNullOrWhiteSpace(plan))
             {
-                throw new AppException("LengthPlanRequired", "Length plan is required.", 400);
+                throw new AppException("LengthPlanRequired", "Không được bỏ trống độ dài dự kiến.", 400);
             }
 
             var normalized = plan.Trim().ToLowerInvariant();
