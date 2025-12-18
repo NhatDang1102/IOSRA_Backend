@@ -72,7 +72,7 @@ namespace Service.Helpers
                 category = "Spam / gibberish",
                 labels = new[] { "spam_repetition" },
                 penalties = new[] { "-1.5 heavy spam or nonsense", "-0.5 short bursts" },
-                note = "Use when chapter lacks meaningful prose."
+                note = "Use when chapter lacks meaningful prose or contains random keyboard smashing (e.g. 'xyzba abznx', 'asdfgh')."
             }, 
             new
             {
@@ -115,6 +115,13 @@ namespace Service.Helpers
                 labels = new[] { "grammar_spelling", "poor_formatting", "weak_prose" },
                 penalties = new[] { "-0.5 frequent typos/grammar errors", "-0.5 poor formatting (wall of text, capitalization)", "-0.25 basic/repetitive prose" },
                 note = "Penalize amateur writing styles even if content is safe."
+            },
+            new
+            {
+                category = "Inconsistent Content",
+                labels = new[] { "inconsistent_content" },
+                penalties = new[] { "-3.0 title, description, and outline are unrelated" },
+                note = "Apply only when title, description, and outline are provided but do not match conceptually."
             }
         };
 
@@ -184,6 +191,8 @@ namespace Service.Helpers
             var totalDeduction = ai?.Violations?.Sum(v => Math.Abs(v.Penalty ?? 0)) ?? 0;
             var rawScore = 10.0 - totalDeduction;
             
+            if (rawScore > 9.5) rawScore = 9.5;
+
             var score = Math.Clamp(Math.Round(rawScore, 2, MidpointRounding.AwayFromZero), 0.0, 10.0);
             var normalizedDecision = ai?.Decision?.ToLowerInvariant();
 
@@ -252,9 +261,11 @@ namespace Service.Helpers
 Start from base score = 10.00 and subtract penalties exactly as defined in ""deductions"". Every time you subtract points you MUST add a violation entry (label must match the table), set the ""penalty"" field to the positive number of points deducted (e.g. 1.5), and quote the offending snippet inside ""evidence"".
 Rules that must always be enforced:
 - Any URL, external link, or redirect CTA (http, https, www, .com, bit.ly, telegram, discord.gg, invite codes, etc.) => label ""url_redirect"" and subtract at least 1.5 points per link.
-- Spam, nonsense, or repeated tokens (""up up up"", ""aaaaaaaa"", ""test test"", placeholder text) => label ""spam_repetition"" and subtract at least 1.0 point.
+- Spam, nonsense, or repeated tokens (""up up up"", ""aaaaaaaa"", ""test test"", placeholder text) OR random keyboard smashing/gibberish (e.g., ""xyzba abznx"", ""asdfghjkl"") => label ""spam_repetition"" and subtract at least 1.5 points.
+- If the content is a story (contains title, description, and outline), check for consistency. If they are unrelated or contradictory => label ""inconsistent_content"" and subtract 3.0 points.
 - Explicit sexual content, violence, hate speech, self-harm, illegal instructions, personal data, and irrelevant ads must follow the deduction table. Protected-class hate or sexual content with minors should reduce the score below 5 and typically be rejected.
 - If ANY violation exists, the violation must be listed with its penalty. Never return 10.00 when a deduction was applied.
+- Even if no violations are found, the maximum score allowed is 9.5. Never return a perfect 10.00.
 - Decision mapping: score >= 7 and no forced rejection => auto_approved; 5 <= score < 7 => pending_manual_review; score < 5 or forced labels => rejected.
 Explanation requirements:
 - Always provide both English and Vietnamese summaries.
