@@ -263,13 +263,17 @@ namespace Main
             {
                 options.InvalidModelStateResponseFactory = context =>
                 {
-                    var errors = context.ModelState
-                        .Where(x => x.Value?.Errors.Count > 0)
-                        .ToDictionary(
-                            kvp => kvp.Key,
-                            kvp => kvp.Value!.Errors.Select(error => error.ErrorMessage).ToArray());
+                    // Lấy lỗi đầu tiên từ ModelState
+                    var firstError = context.ModelState
+                        .SelectMany(x => x.Value!.Errors)
+                        .FirstOrDefault()?.ErrorMessage;
 
-                    var response = ErrorResponse.From("VALIDATION_FAILED", "Dữ liệu đầu vào không hợp lệ.", errors);
+                    // Nếu có lỗi, sử dụng lỗi đó làm message chính
+                    var errorMessage = !string.IsNullOrEmpty(firstError) 
+                        ? firstError 
+                        : "Dữ liệu đầu vào không hợp lệ."; // Fallback message
+
+                    var response = ErrorResponse.From("VALIDATION_FAILED", errorMessage, null); // details = null
                     return new BadRequestObjectResult(response);
                 };
             });
