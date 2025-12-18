@@ -187,7 +187,7 @@ namespace Service.Helpers
             var combined = ComposeContent(primary, secondary, tertiary);
             var ai = await RequestModerationAsync(profile, combined, ct);
 
-            // Calculate score from penalties to ensure accuracy
+            //tính điểm trực tiếp (ko để AI tính vì tính sai)
             var totalDeduction = ai?.Violations?.Sum(v => Math.Abs(v.Penalty ?? 0)) ?? 0;
             var rawScore = 10.0 - totalDeduction;
             

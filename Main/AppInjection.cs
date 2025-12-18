@@ -269,7 +269,7 @@ namespace Main
                             kvp => kvp.Key,
                             kvp => kvp.Value!.Errors.Select(error => error.ErrorMessage).ToArray());
 
-                    var response = ErrorResponse.From("VALIDATION_FAILED", "Validation failed.", errors);
+                    var response = ErrorResponse.From("VALIDATION_FAILED", "Dữ liệu đầu vào không hợp lệ.", errors);
                     return new BadRequestObjectResult(response);
                 };
             });

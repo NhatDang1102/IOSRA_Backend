@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using Microsoft.AspNetCore.Http;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
@@ -8,16 +8,16 @@ namespace Contract.DTOs.Request.Story
     public class StoryCreateRequest
     {
         [Required]
-        [MinLength(20)]
+        [MinLength(20, ErrorMessage = "Tiêu đề phải có ít nhất 20 kí tự.")]
         [StringLength(150)]
         public string Title { get; set; } = null!;
 
         [StringLength(5000)]
-        [MinLength(20)]
+        [MinLength(20, ErrorMessage = "Mô tả phải có ít nhất 20 kí tự.")]
         public string? Description { get; set; }
 
         [Required]
-        [MinLength(1, ErrorMessage = "At least one tag is required.")]
+        [MinLength(1, ErrorMessage = "Phải chọn ít nhất 1 thể loại.")]
         public List<Guid> TagIds { get; set; } = new();
 
         [Required]
