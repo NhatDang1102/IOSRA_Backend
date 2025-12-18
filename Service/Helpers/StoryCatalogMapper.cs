@@ -26,6 +26,7 @@ namespace Service.Helpers
                 AuthorUsername = entity.author.account.username,
                 CoverUrl = entity.cover_url,
                 IsPremium = entity.is_premium,
+                Status = entity.status,
                 TotalChapters = chapterCount,
                 PublishedAt = entity.published_at,
                 LengthPlan = entity.length_plan,

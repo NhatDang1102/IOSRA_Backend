@@ -131,6 +131,7 @@ namespace Service.Services
                 AuthorUsername = story.author.account.username,
                 CoverUrl = story.cover_url,
                 IsPremium = story.is_premium,
+                Status = story.status,
                 Description = story.desc,
                 TotalChapters = totalChapters,
                 PublishedAt = story.published_at,

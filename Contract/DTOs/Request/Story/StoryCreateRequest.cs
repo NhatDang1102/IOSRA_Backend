@@ -8,12 +8,10 @@ namespace Contract.DTOs.Request.Story
     public class StoryCreateRequest
     {
         [Required]
-        [MinLength(20, ErrorMessage = "Tiêu đề phải có ít nhất 20 kí tự.")]
-        [StringLength(150)]
+        [StringLength(50, MinimumLength = 20, ErrorMessage = "Tiêu đề phải có ít nhất 20 kí tự.")]
         public string Title { get; set; } = null!;
 
-        [StringLength(5000)]
-        [MinLength(20, ErrorMessage = "Mô tả phải có ít nhất 20 kí tự.")]
+        [StringLength(1000, MinimumLength = 6, ErrorMessage = "Mô tả phải có ít nhất 20 kí tự.")]
         public string? Description { get; set; }
 
         [Required]
@@ -25,8 +23,7 @@ namespace Contract.DTOs.Request.Story
         public string CoverMode { get; set; } = null!;
 
         [Required]
-        [MinLength(20)]
-        [StringLength(10000)]
+        [StringLength(1000, MinimumLength = 20, ErrorMessage = "Dàn ý phải có ít nhất 20 kí tự.")]
         public string Outline { get; set; } = null!;
 
         [Required]

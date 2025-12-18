@@ -11,6 +11,7 @@ namespace Contract.DTOs.Response.Story
         public string AuthorUsername { get; set; } = null!;
         public string? CoverUrl { get; set; }
         public bool IsPremium { get; set; }
+        public string Status { get; set; } = null!;
         public int TotalChapters { get; set; }
         public DateTime? PublishedAt { get; set; }
         public string? ShortDescription { get; set; }

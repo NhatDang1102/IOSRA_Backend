@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using Microsoft.AspNetCore.Http;
@@ -7,13 +7,13 @@ namespace Contract.DTOs.Request.Story
 {
     public class StoryUpdateRequest
     {
-        [StringLength(150)]
+        [StringLength(50, MinimumLength = 20, ErrorMessage = "Tiêu đề phải có ít nhất 20 kí tự.")]
         public string? Title { get; set; }
 
-        [StringLength(5000)]
+        [StringLength(1000, MinimumLength = 6, ErrorMessage = "Mô tả phải có ít nhất 20 kí tự.")]
         public string? Description { get; set; }
 
-        [StringLength(10000)]
+        [StringLength(1000, MinimumLength = 20, ErrorMessage = "Dàn ý phải có ít nhất 20 kí tự.")]
         public string? Outline { get; set; }
 
         [RegularExpression("novel|short|super_short", ErrorMessage = "LengthPlan must be novel, short, or super_short.")]
