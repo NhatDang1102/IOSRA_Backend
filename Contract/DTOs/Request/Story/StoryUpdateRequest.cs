@@ -7,13 +7,13 @@ namespace Contract.DTOs.Request.Story
 {
     public class StoryUpdateRequest
     {
-        [StringLength(50, MinimumLength = 20, ErrorMessage = "Tiêu đề phải có ít nhất 20 kí tự.")]
+        [StringLength(50, MinimumLength = 20, ErrorMessage = "Tiêu đề phải từ 20-50 kí tự.")]
         public string? Title { get; set; }
 
-        [StringLength(1000, MinimumLength = 6, ErrorMessage = "Mô tả phải có ít nhất 20 kí tự.")]
+        [StringLength(1000, MinimumLength = 6, ErrorMessage = "Mô tả phải từ 6-1000 kí tự.")]
         public string? Description { get; set; }
 
-        [StringLength(1000, MinimumLength = 20, ErrorMessage = "Dàn ý phải có ít nhất 20 kí tự.")]
+        [StringLength(1000, MinimumLength = 20, ErrorMessage = "Dàn ý phải từ 20-1000 kí tự.")]
         public string? Outline { get; set; }
 
         [RegularExpression("novel|short|super_short", ErrorMessage = "LengthPlan must be novel, short, or super_short.")]
