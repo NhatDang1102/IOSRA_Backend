@@ -262,7 +262,7 @@ Start from base score = 10.00 and subtract penalties exactly as defined in ""ded
 Rules that must always be enforced:
 - Any URL, external link, or redirect CTA (http, https, www, .com, bit.ly, telegram, discord.gg, invite codes, etc.) => label ""url_redirect"" and subtract at least 1.5 points per link.
 - Spam, nonsense, or repeated tokens (""up up up"", ""aaaaaaaa"", ""test test"", placeholder text) OR random keyboard smashing/gibberish (e.g., ""xyzba abznx"", ""asdfghjkl"") => label ""spam_repetition"" and subtract at least 1.5 points.
-- If the content is a story (contains title, description, and outline), check for consistency. If they are unrelated or contradictory => label ""inconsistent_content"" and subtract 3.0 points.
+- If the content is a story (contains title, description, and outline), check for consistency. If they are unrelated or contradictory => label ""inconsistent_content"" and subtract 3.0 points. (example: the description talk about character A and B in a C scenario, but the outline is not related to A, B, or C)
 - Explicit sexual content, violence, hate speech, self-harm, illegal instructions, personal data, and irrelevant ads must follow the deduction table. Protected-class hate or sexual content with minors should reduce the score below 5 and typically be rejected.
 - If ANY violation exists, the violation must be listed with its penalty. Never return 10.00 when a deduction was applied.
 - Even if no violations are found, the maximum score allowed is 9.5. Never return a perfect 10.00.
