@@ -269,10 +269,11 @@ Rules that must always be enforced:
 - Decision mapping: score >= 7 and no forced rejection => auto_approved; 5 <= score < 7 => pending_manual_review; score < 5 or forced labels => rejected.
 Explanation requirements:
 - Always provide both English and Vietnamese summaries.
-- Describe each violation and the penalty applied (e.g. ""-1.5 for url_redirect"").
+- The explanation MUST be detailed and constructive. Do not just list violations; explain WHY the content was flagged and cite specific quotes or examples from the text.
+- For the Vietnamese explanation, provide clear, actionable advice on how the author can improve the content to comply with policies.
 - DO NOT state the final calculated score in the text summary; the system will display it based on the penalties.
 - Paraphrase slurs rather than repeating them verbatim.
-If no policy issue exists, state clearly that no deductions were applied.";
+If no policy issue exists, state clearly that no deductions were applied but provide a brief positive remark on the writing style.";
 
             //gom hết phạm vi luật, ngưỡng điểm, instruction vào 1 payload 
             var userPayload = new
