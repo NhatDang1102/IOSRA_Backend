@@ -99,17 +99,17 @@ namespace Service.Services
             var content = (request.Content ?? string.Empty).Trim();
             if (content.Length < MinContentLength)
             {
-                throw new AppException("ChapterContentTooShort", $"Chapter content must contain at least {MinContentLength} characters.", 400);
+                throw new AppException("ChapterContentTooShort", $"Nội dung chương phải có ít nhất  {MinContentLength} kí tự.", 400);
             }
             if (content.Length > MaxContentLength)
             {
-                throw new AppException("ChapterContentTooLong", $"Chapter content must not exceed {MaxContentLength} characters.", 400);
+                throw new AppException("ChapterContentTooLong", $"Nội dung chương tối đa {MaxContentLength} kí tự.", 400);
             }
             //đếm số TỪ (số từ ko phải số kí tự)  
             var wordCount = CountWords(content);
             if (wordCount <= 0)
             {
-                throw new AppException("ChapterContentEmpty", "Chapter content must include words.", 400);
+                throw new AppException("ChapterContentEmpty", "Không được để trống nội dung.", 400);
             }
             //đếm số KÍ TỰ
             var charCount = content.Length;
@@ -211,29 +211,29 @@ namespace Service.Services
             //nghiệp vụ hiện tại: hidden cho đăng draft mới NHƯNG không submit được 
             if (string.Equals(story.status, "hidden", StringComparison.OrdinalIgnoreCase))
             {
-                throw new AppException("StoryHidden", "Story is hidden. Please restore it before submitting chapters.", 400);
+                throw new AppException("StoryHidden", "Truyện đang bị ẩn, không thể submit chương mới.", 400);
             }
             //chỉ đc 1 truyện pending cùng 1 lúc 
             if (await _chapterRepository.HasPendingChapterAsync(story.story_id, ct) &&
                 !string.Equals(chapter.status, "pending", StringComparison.OrdinalIgnoreCase))
             {
-                throw new AppException("ChapterPendingExists", "Another chapter is already awaiting moderation.", 400);
+                throw new AppException("ChapterPendingExists", "Đang có chương khác đang ở trạng thái đang chờ, hãy submit chương đó trước.", 400);
             }
 
             if (!string.Equals(chapter.status, "draft", StringComparison.OrdinalIgnoreCase))
             {
-                throw new AppException("InvalidChapterState", "Only draft chapters can be submitted. Create a new chapter if the previous one was rejected.", 400);
+                throw new AppException("InvalidChapterState", "Chỉ có chương nháp mới có thể submit.", 400);
             }
             //phải submit theo đúng thứ tự draft 
             var hasEarlierDraft = await _chapterRepository.HasDraftChapterBeforeAsync(story.story_id, chapter.created_at, chapter.chapter_id, ct);
             if (hasEarlierDraft)
             {
-                throw new AppException("ChapterSubmissionOrder", "Please submit your draft chapters in the order they were created.", 400);
+                throw new AppException("ChapterSubmissionOrder", "Vui lòng submit theo thứ tự.", 400);
             }
 
             if (string.IsNullOrWhiteSpace(chapter.content_url))
             {
-                throw new InvalidOperationException("Chapter content is missing.");
+                throw new InvalidOperationException("Nội dung trống.");
             }
 
             //lấy content trên cloud xuống rồi đổi lại sang string 
@@ -262,7 +262,7 @@ namespace Service.Services
 
                 var rejectionApproval = await UpsertChapterApprovalAsync(chapter, "rejected", aiScoreDecimal, moderation.Explanation, ct);
 
-                throw new AppException("ChapterRejectedByAi", "Chapter was rejected by automated moderation.", 400, new
+                throw new AppException("ChapterRejectedByAi", "Chapter đã bị từ chối bởi AI.", 429, new
                 {
                     reviewId = rejectionApproval.review_id,
                     score = Math.Round(moderation.Score, 2),
@@ -321,7 +321,7 @@ namespace Service.Services
 
             if (!string.Equals(chapter.status, "rejected", StringComparison.OrdinalIgnoreCase))
             {
-                throw new AppException("WithdrawNotAllowed", "Only rejected chapters can be withdrawn.", 400);
+                throw new AppException("WithdrawNotAllowed", "Chỉ rút được những chương bị từ chối.", 400);
             }
 
             chapter.status = "draft";
@@ -347,7 +347,7 @@ namespace Service.Services
 
             if (!string.Equals(chapter.status, "draft", StringComparison.OrdinalIgnoreCase))
             {
-                throw new AppException("ChapterUpdateNotAllowed", "Only draft chapters can be edited before submission.", 400);
+                throw new AppException("ChapterUpdateNotAllowed", "Chỉ những chương nháp mới có thể sửa trước khi nộp.", 400);
             }
 
             var updated = false;
@@ -357,7 +357,7 @@ namespace Service.Services
                 var title = request.Title.Trim();
                 if (string.IsNullOrWhiteSpace(title))
                 {
-                    throw new AppException("InvalidChapterTitle", "Chapter title must not be empty.", 400);
+                    throw new AppException("InvalidChapterTitle", "Tiêu đề không được trống.", 400);
                 }
 
                 chapter.title = title;
@@ -384,17 +384,17 @@ namespace Service.Services
                 var content = request.Content.Trim();
                 if (content.Length < MinContentLength)
                 {
-                    throw new AppException("ChapterContentTooShort", $"Chapter content must contain at least {MinContentLength} characters.", 400);
+                    throw new AppException("ChapterContentTooShort", $"Nội dung chương ít nhất {MinContentLength} kí tự.", 400);
                 }
                 if (content.Length > MaxContentLength)
                 {
-                    throw new AppException("ChapterContentTooLong", $"Chapter content must not exceed {MaxContentLength} characters.", 400);
+                    throw new AppException("ChapterContentTooLong", $"Nội dung chương tối đa {MaxContentLength} kí tự.", 400);
                 }
 
                 var wordCount = CountWords(content);
                 if (wordCount <= 0)
                 {
-                    throw new AppException("ChapterContentEmpty", "Chapter content must include words.", 400);
+                    throw new AppException("ChapterContentEmpty", "Nội dung chương không được trống.", 400);
                 }
 
                 var charCount = content.Length;
@@ -440,7 +440,7 @@ namespace Service.Services
                 var canLockChapters = CanAuthorLockChapters(author, story);
                 if (string.Equals(normalizedAccessType, "dias", StringComparison.OrdinalIgnoreCase) && !canLockChapters)
                 {
-                    throw new AppException("AccessTypeNotAllowed", "Only higher-ranked authors can lock chapters.", 400);
+                    throw new AppException("AccessTypeNotAllowed", "Chỉ những tác giả Sponsored mới có thể đăng chương trả phí.", 400);
                 }
 
                 if (!string.Equals(chapter.access_type, normalizedAccessType, StringComparison.OrdinalIgnoreCase))
@@ -521,7 +521,7 @@ namespace Service.Services
 
             if (string.Equals(requestedAccessType, "dias", StringComparison.OrdinalIgnoreCase) && !canLockChapters)
             {
-                throw new AppException("AccessTypeNotAllowed", "Only higher-ranked authors can lock chapters.", 400);
+                throw new AppException("AccessTypeNotAllowed", "Chỉ những tác giả Sponsored mới có thể đăng chương trả phí.", 400);
             }
 
             return requestedAccessType;

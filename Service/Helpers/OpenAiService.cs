@@ -273,6 +273,7 @@ Explanation requirements:
 - For the Vietnamese explanation, provide clear, actionable advice on how the author can improve the content to comply with policies.
 - DO NOT state the final calculated score in the text summary; the system will display it based on the penalties.
 - Paraphrase slurs rather than repeating them verbatim.
+- For inconsistent_content, specifically point out the names or details that do not match.;
 If no policy issue exists, state clearly that no deductions were applied but provide a brief positive remark on the writing style.";
 
             //gom hết phạm vi luật, ngưỡng điểm, instruction vào 1 payload 
