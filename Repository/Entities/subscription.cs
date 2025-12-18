@@ -6,10 +6,10 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Repository.Entities;
 
-[Table("subcription")]
+[Table("subscription")]
 [Index("plan_code", Name = "ix_sub_plan")]
 [Index("user_id", Name = "ix_sub_user")]
-public partial class subcription
+public partial class subscription
 {
     [Key]
     
@@ -32,10 +32,10 @@ public partial class subcription
     public bool claimed_today { get; set; }
 
     [ForeignKey("plan_code")]
-    [InverseProperty("subcriptions")]
+    [InverseProperty("subscriptions")]
     public virtual subscription_plan plan_codeNavigation { get; set; } = null!;
 
     [ForeignKey("user_id")]
-    [InverseProperty("subcriptions")]
+    [InverseProperty("subscriptions")]
     public virtual account user { get; set; } = null!;
 }

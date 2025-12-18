@@ -26,7 +26,7 @@ public partial class subscription_plan
     public uint daily_dias { get; set; }
 
     [InverseProperty("plan_codeNavigation")]
-    public virtual ICollection<subcription> subcriptions { get; set; } = new List<subcription>();
+    public virtual ICollection<subscription> subscriptions { get; set; } = new List<subscription>();
 
     [InverseProperty("plan")]
     public virtual ICollection<subscription_payment> subscription_payments { get; set; } = new List<subscription_payment>();

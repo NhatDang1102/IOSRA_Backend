@@ -70,7 +70,7 @@ public partial class account
     public virtual ICollection<report> reports { get; set; } = new List<report>();
 
     [InverseProperty("user")]
-    public virtual ICollection<subcription> subcriptions { get; set; } = new List<subcription>();
+    public virtual ICollection<subscription> subscriptions { get; set; } = new List<subscription>();
 
     public virtual ICollection<op_request> op_requests_as_requester { get; set; } = new List<op_request>();
 

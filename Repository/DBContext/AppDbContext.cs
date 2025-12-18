@@ -47,7 +47,7 @@ namespace Repository.DBContext
         public virtual DbSet<story_tag> story_tag { get; set; } = null!;
         public virtual DbSet<story_rating> story_ratings { get; set; } = null!;
         public virtual DbSet<story_weekly_view> story_weekly_view { get; set; } = null!;
-        public virtual DbSet<subcription> subcription { get; set; } = null!;
+        public virtual DbSet<subscription> subscription { get; set; } = null!;
         public virtual DbSet<subscription_plan> subscription_plans { get; set; } = null!;
         public virtual DbSet<subscription_payment> subscription_payments { get; set; } = null!;
         public virtual DbSet<tag> tag { get; set; } = null!;
@@ -477,16 +477,16 @@ namespace Repository.DBContext
                     .HasConstraintName("fk_story_week_story");
             });
 
-            modelBuilder.Entity<subcription>(entity =>
+            modelBuilder.Entity<subscription>(entity =>
             {
                 entity.HasKey(e => e.sub_id).HasName("PRIMARY");
                 entity.Property(e => e.sub_id).ValueGeneratedNever();
 
-                entity.HasOne(d => d.plan_codeNavigation).WithMany(p => p.subcriptions)
+                entity.HasOne(d => d.plan_codeNavigation).WithMany(p => p.subscriptions)
                     .OnDelete(DeleteBehavior.ClientSetNull)
                     .HasConstraintName("fk_sub_plan");
 
-                entity.HasOne(d => d.user).WithMany(p => p.subcriptions).HasConstraintName("fk_sub_user");
+                entity.HasOne(d => d.user).WithMany(p => p.subscriptions).HasConstraintName("fk_sub_user");
             });
 
             modelBuilder.Entity<subscription_plan>(entity =>

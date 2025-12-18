@@ -143,7 +143,7 @@ namespace Service.Services
 
             if (subscription == null)
             {
-                subscription = new subcription
+                subscription = new subscription
                 {
                     sub_id = Guid.NewGuid(),
                     user_id = accountId,

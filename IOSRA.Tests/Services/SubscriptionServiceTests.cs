@@ -47,7 +47,7 @@ namespace IOSRA.Tests.Services
         public async Task GetStatusAsync_Should_Return_False_When_No_Sub()
         {
             _repoMock.Setup(x => x.GetLatestActiveAsync(_userId, It.IsAny<DateTime>(), It.IsAny<CancellationToken>()))
-                .ReturnsAsync((subcription?)null);
+                .ReturnsAsync((subscription?)null);
 
             var res = await _service.GetStatusAsync(_userId);
             res.HasActiveSubscription.Should().BeFalse();
@@ -57,7 +57,7 @@ namespace IOSRA.Tests.Services
         public async Task ClaimDailyAsync_Should_Fail_If_No_Sub()
         {
             _repoMock.Setup(x => x.GetLatestActiveAsync(_userId, It.IsAny<DateTime>(), It.IsAny<CancellationToken>()))
-                .ReturnsAsync((subcription?)null);
+                .ReturnsAsync((subscription?)null);
 
             await Assert.ThrowsAsync<AppException>(() => _service.ClaimDailyAsync(_userId));
         }

@@ -667,7 +667,7 @@ CREATE TABLE subscription_plan (
   PRIMARY KEY (plan_code)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
-CREATE TABLE subcription (
+CREATE TABLE subscription (
   sub_id        CHAR(36) NOT NULL,
   user_id       CHAR(36) NOT NULL,
   plan_code     VARCHAR(32) NOT NULL,
