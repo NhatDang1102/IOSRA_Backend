@@ -37,7 +37,7 @@ namespace Service.Services
         {
             if (request == null || string.IsNullOrWhiteSpace(request.Message))
             {
-                throw new AppException("ValidationFailed", "Message is required.", 400);
+                throw new AppException("ValidationFailed", "Tin nhắn là bắt buộc.", 400);
             }
 
             await EnsurePremiumSubscriptionAsync(accountId, ct);

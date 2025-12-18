@@ -35,11 +35,11 @@ namespace Service.Services
             }
 
             var story = await _storyRepository.GetPublishedStoryByIdAsync(storyId, ct)
-                        ?? throw new AppException("StoryNotFound", "Story was not found or unavailable.", 404);
+                        ?? throw new AppException("StoryNotFound", "Không tìm thấy truyện hoặc truyện không khả dụng.", 404);
 
             if (story.author_id == readerId)
             {
-                throw new AppException("CannotFavoriteOwnStory", "You cannot add your own story to favorites.", 400);
+                throw new AppException("CannotFavoriteOwnStory", "Bạn không thể thêm truyện của chính mình vào danh sách yêu thích.", 400);
             }
 
             var entity = new favorite_story
@@ -59,7 +59,7 @@ namespace Service.Services
         public async Task RemoveAsync(Guid readerId, Guid storyId, CancellationToken ct = default)
         {
             var existing = await _favoriteRepository.GetAsync(readerId, storyId, ct)
-                           ?? throw new AppException("FavoriteNotFound", "Story is not in your favorite list.", 404);
+                           ?? throw new AppException("FavoriteNotFound", "Truyện không có trong danh sách yêu thích của bạn.", 404);
 
             await _favoriteRepository.RemoveAsync(existing, ct);
             await _favoriteRepository.SaveChangesAsync(ct);
@@ -68,7 +68,7 @@ namespace Service.Services
         public async Task<FavoriteStoryResponse> ToggleNotificationAsync(Guid readerId, Guid storyId, FavoriteStoryNotificationRequest request, CancellationToken ct = default)
         {
             var existing = await _favoriteRepository.GetAsync(readerId, storyId, ct)
-                           ?? throw new AppException("FavoriteNotFound", "Story is not in your favorite list.", 404);
+                           ?? throw new AppException("FavoriteNotFound", "Truyện không có trong danh sách yêu thích của bạn.", 404);
 
             existing.noti_new_chapter = request?.Enabled ?? false;
             await _favoriteRepository.SaveChangesAsync(ct);
@@ -79,7 +79,7 @@ namespace Service.Services
         {
             if (page < 1 || pageSize < 1)
             {
-                throw new AppException("ValidationFailed", "Page and PageSize must be positive integers.", 400);
+                throw new AppException("ValidationFailed", "Page và PageSize phải là số nguyên dương.", 400);
             }
 
             var (items, total) = await _favoriteRepository.ListAsync(readerId, page, pageSize, ct);
@@ -96,7 +96,7 @@ namespace Service.Services
 
         private static FavoriteStoryResponse Map(favorite_story entity, story? storyOverride = null)
         {
-            var story = storyOverride ?? entity.story ?? throw new AppException("StoryNotLoaded", "Story info missing.", 500);
+            var story = storyOverride ?? entity.story ?? throw new AppException("StoryNotLoaded", "Thông tin truyện bị thiếu.", 500);
             var authorAccount = story.author?.account;
 
             return new FavoriteStoryResponse

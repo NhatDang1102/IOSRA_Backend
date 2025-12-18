@@ -1,4 +1,4 @@
-﻿using Contract.DTOs.Request.Author;
+using Contract.DTOs.Request.Author;
 using Contract.DTOs.Response.Author;
 using Contract.DTOs.Response.OperationMod;
 using Repository.Interfaces;
@@ -28,19 +28,19 @@ namespace Service.Implementations
         public async Task<AuthorUpgradeResponse> SubmitAsync(Guid accountId, SubmitAuthorUpgradeRequest req, CancellationToken ct = default)
         {
             _ = await _profileRepo.GetAccountByIdAsync(accountId, ct)
-                ?? throw new AppException("AccountNotFound", "Account was not found.", 404);
+                ?? throw new AppException("AccountNotFound", "Không tìm thấy tài khoản.", 404);
 
             _ = await _profileRepo.GetReaderByIdAsync(accountId, ct)
-                ?? throw new AppException("ReaderProfileMissing", "Reader profile was not found.", 404);
+                ?? throw new AppException("ReaderProfileMissing", "Không tìm thấy hồ sơ người đọc.", 404);
 
             if (await _opRepo.AuthorIsUnrestrictedAsync(accountId, ct))
             {
-                throw new AppException("AlreadyAuthor", "Account is already an author.", 409);
+                throw new AppException("AlreadyAuthor", "Tài khoản đã là tác giả.", 409);
             }
 
             if (await _opRepo.HasPendingAsync(accountId, ct))
             {
-                throw new AppException("AlreadyPending", "You already have a pending upgrade request.", 409);
+                throw new AppException("AlreadyPending", "Bạn đã có một yêu cầu nâng cấp đang chờ xử lý.", 409);
             }
             //check cooldown, 7 ngày mới đc submit 1 lần từ lúc bị reject để chống spam liên tục 
             var lastRejectedAt = await _opRepo.GetLastRejectedAtAsync(accountId, ct);
@@ -54,7 +54,7 @@ namespace Service.Implementations
                     var message = remain.TotalHours >= 1
                         ? $"You can submit again in {Math.Ceiling(remain.TotalHours)} hour(s)."
                         : $"You can submit again in {Math.Ceiling(remain.TotalMinutes)} minute(s).";
-                    throw new AppException("Cooldown", $"The previous request was rejected. Please wait 7 days before submitting again. {message}", 429);
+                    throw new AppException("Cooldown", $"Yêu cầu trước đó đã bị từ chối. Vui lòng đợi 7 ngày trước khi gửi lại. {message}", 429);
                 }
             }
 
@@ -75,7 +75,7 @@ namespace Service.Implementations
         public async Task<List<OpRequestItemResponse>> ListMyRequestsAsync(Guid accountId, CancellationToken ct = default)
         {
             _ = await _profileRepo.GetAccountByIdAsync(accountId, ct)
-                ?? throw new AppException("AccountNotFound", "Account was not found.", 404);
+                ?? throw new AppException("AccountNotFound", "Không tìm thấy tài khoản.", 404);
 
             var data = await _opRepo.ListRequestsOfRequesterAsync(accountId, ct);
             return data.Select(x => new OpRequestItemResponse
@@ -97,15 +97,15 @@ namespace Service.Implementations
         {
             //check author profile lấy rank hiện tại 
             _ = await _profileRepo.GetAccountByIdAsync(accountId, ct)
-                ?? throw new AppException("AccountNotFound", "Account was not found.", 404);
+                ?? throw new AppException("AccountNotFound", "Không tìm thấy tài khoản.", 404);
 
             var author = await _opRepo.GetAuthorWithRankAsync(accountId, ct)
-                         ?? throw new AppException("AuthorProfileMissing", "Author profile was not found.", 404);
+                         ?? throw new AppException("AuthorProfileMissing", "Không tìm thấy hồ sơ tác giả.", 404);
 
             var ranks = await _opRepo.GetAllAuthorRanksAsync(ct);
             if (ranks == null || ranks.Count == 0)
             {
-                throw new AppException("RankSeedMissing", "Author ranks have not been configured.", 500);
+                throw new AppException("RankSeedMissing", "Hạng tác giả chưa được định cấu hình.", 500);
             }
             //get tất cả bậc rank sort từ dưới lên theo min follower
             var ordered = ranks.OrderBy(r => r.min_followers).ToList();

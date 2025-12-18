@@ -58,7 +58,7 @@ namespace Service.Services
         {
             if (request == null)
             {
-                throw new AppException("ValidationFailed", "Request body is required.", 400);
+                throw new AppException("ValidationFailed", "Nội dung yêu cầu là bắt buộc.", 400);
             }
 
             var normalizedStatus = NormalizeStatus(request.Status);
@@ -88,7 +88,7 @@ namespace Service.Services
         {
             if (request == null)
             {
-                throw new AppException("ValidationFailed", "Request body is required.", 400);
+                throw new AppException("ValidationFailed", "Nội dung yêu cầu là bắt buộc.", 400);
             }
 
             var (email, username, password, phone) = NormalizeModeratorRequest(request);
@@ -126,7 +126,7 @@ namespace Service.Services
             await _repository.SaveChangesAsync(ct);
 
             var projection = await _repository.GetAccountAsync(accountId, ct)
-                              ?? throw new AppException("AccountNotFound", "Account was not found after creation.", 404);
+                              ?? throw new AppException("AccountNotFound", "Không tìm thấy tài khoản sau khi tạo.", 404);
             return Map(projection);
         }
 
@@ -140,7 +140,7 @@ namespace Service.Services
             var normalized = value.Trim().ToLowerInvariant();
             if (!AllowedStatuses.Contains(normalized))
             {
-                throw new AppException("InvalidStatus", $"Unsupported status '{value}'.", 400);
+                throw new AppException("InvalidStatus", $"Trạng thái '{value}' không được hỗ trợ.", 400);
             }
 
             return normalized;
@@ -150,13 +150,13 @@ namespace Service.Services
         {
             if (string.IsNullOrWhiteSpace(value))
             {
-                throw new AppException("InvalidStatus", "Status is required.", 400);
+                throw new AppException("InvalidStatus", "Trạng thái là bắt buộc.", 400);
             }
 
             var normalized = value.Trim().ToLowerInvariant();
             if (!AllowedStatuses.Contains(normalized))
             {
-                throw new AppException("InvalidStatus", $"Unsupported status '{value}'.", 400);
+                throw new AppException("InvalidStatus", $"Trạng thái '{value}' không được hỗ trợ.", 400);
             }
 
             return normalized;
@@ -172,7 +172,7 @@ namespace Service.Services
             var normalized = value.Trim().ToLowerInvariant();
             if (!FilterableRoles.Contains(normalized))
             {
-                throw new AppException("InvalidRole", $"Unsupported role '{value}'.", 400);
+                throw new AppException("InvalidRole", $"Vai trò '{value}' không được hỗ trợ.", 400);
             }
 
             return normalized;

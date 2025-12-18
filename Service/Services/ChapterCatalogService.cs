@@ -41,12 +41,12 @@ namespace Service.Services
         {
             if (query.Page < 1 || query.PageSize < 1)
             {
-                throw new AppException("ValidationFailed", "Page and PageSize must be positive integers.", 400);
+                throw new AppException("ValidationFailed", "Page và PageSize phải là số nguyên dương.", 400);
             }
 
             // Ensure story exists and is visible
             var story = await _storyRepository.GetPublishedStoryByIdAsync(query.StoryId, ct)
-                        ?? throw new AppException("StoryNotFound", "Story was not found or not available.", 404);
+                        ?? throw new AppException("StoryNotFound", "Không tìm thấy truyện hoặc truyện không khả dụng.", 404);
 
             var (chapters, total) = await _chapterRepository.GetPublishedChaptersByStoryAsync(query.StoryId, query.Page, query.PageSize, ct);
 
@@ -99,7 +99,7 @@ namespace Service.Services
         public async Task<ChapterCatalogDetailResponse> GetChapterAsync(Guid chapterId, CancellationToken ct = default, Guid? viewerAccountId = null)
         {
             var chapter = await _chapterRepository.GetPublishedChapterByIdAsync(chapterId, ct)
-                           ?? throw new AppException("ChapterNotFound", "Chapter was not found or not available.", 404);
+                           ?? throw new AppException("ChapterNotFound", "Không tìm thấy chương hoặc chương không khả dụng.", 404);
 
             var isLocked = !string.Equals(chapter.access_type, "free", StringComparison.OrdinalIgnoreCase);
             var isOwned = false;
@@ -116,19 +116,19 @@ namespace Service.Services
                     var hasPurchased = await _chapterRepository.HasReaderPurchasedChapterAsync(chapterId, viewerAccountId.Value, ct);
                     if (!hasPurchased)
                     {
-                        throw new AppException("ChapterLocked", "This chapter requires purchase to view.", 403);
+                        throw new AppException("ChapterLocked", "Chương này yêu cầu mua để xem.", 403);
                     }
                     isOwned = true;
                 }
             }
             else if (isLocked)
             {
-                throw new AppException("ChapterLocked", "This chapter requires purchase to view.", 403);
+                throw new AppException("ChapterLocked", "Chương này yêu cầu mua để xem.", 403);
             }
 
             if (string.IsNullOrWhiteSpace(chapter.content_url))
             {
-                throw new AppException("ChapterContentMissing", "Chapter content is not available.", 500);
+                throw new AppException("ChapterContentMissing", "Nội dung chương không khả dụng.", 500);
             }
 
             var voices = Array.Empty<PurchasedVoiceResponse>();
@@ -186,7 +186,7 @@ namespace Service.Services
         public async Task<IReadOnlyList<ChapterCatalogVoiceResponse>> GetChapterVoicesAsync(Guid chapterId, Guid? viewerAccountId, CancellationToken ct = default)
         {
             var chapter = await _chapterRepository.GetPublishedChapterWithVoicesAsync(chapterId, ct)
-                           ?? throw new AppException("ChapterNotFound", "Chapter was not found or not available.", 404);
+                           ?? throw new AppException("ChapterNotFound", "Không tìm thấy chương hoặc chương không khả dụng.", 404);
 
             var ownedVoiceIds = Array.Empty<Guid>();
             if (viewerAccountId.HasValue)
@@ -222,7 +222,7 @@ namespace Service.Services
         public async Task<ChapterCatalogVoiceResponse> GetChapterVoiceAsync(Guid chapterId, Guid voiceId, Guid? viewerAccountId, CancellationToken ct = default)
         {
             var voice = await _chapterRepository.GetChapterVoiceAsync(chapterId, voiceId, ct)
-                       ?? throw new AppException("VoiceNotFound", "Voice was not found for this chapter.", 404);
+                       ?? throw new AppException("VoiceNotFound", "Không tìm thấy giọng đọc cho chương này.", 404);
 
             var owned = false;
             if (viewerAccountId.HasValue)

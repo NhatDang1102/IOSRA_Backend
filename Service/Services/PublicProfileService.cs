@@ -28,7 +28,7 @@ namespace Service.Services
         {
             if (targetAccountId == Guid.Empty)
             {
-                throw new AppException("ValidationFailed", "Target account id is required.", 400);
+                throw new AppException("ValidationFailed", "ID tài khoản mục tiêu là bắt buộc.", 400);
             }
 
             var projection = await GetProjectionAsync(targetAccountId, ct);
@@ -62,11 +62,11 @@ namespace Service.Services
             }
 
             var projection = await _publicProfileRepository.GetPublicProfileAsync(targetAccountId, ct)
-                             ?? throw new AppException("AccountNotFound", "Account was not found.", 404);
+                             ?? throw new AppException("AccountNotFound", "Không tìm thấy tài khoản.", 404);
 
             if (string.Equals(projection.Status, "banned", StringComparison.OrdinalIgnoreCase))
             {
-                throw new AppException("AccountUnavailable", "Account is not available.", 404);
+                throw new AppException("AccountUnavailable", "Tài khoản không khả dụng.", 404);
             }
 
             _cache.Set(cacheKey, projection, CacheDuration);
@@ -118,4 +118,3 @@ namespace Service.Services
         }
     }
 }
-

@@ -48,7 +48,7 @@ namespace Service.Services
             var targetContext = await GetTargetContextAsync(normalizedTargetType, request.TargetId, ct);
 
             var ownerAccount = targetContext.TargetAccount
-                               ?? throw new AppException("TargetOwnerNotFound", "Owner of the reported content was not found.", 404);
+                               ?? throw new AppException("TargetOwnerNotFound", "Không tìm thấy chủ sở hữu nội dung báo cáo.", 404);
             if (ownerAccount.account_id == reporterAccountId)
             {
                 throw new AppException("CannotReportOwnContent", "Bạn không thể report nội dung của chính mình.", 400);
@@ -57,7 +57,7 @@ namespace Service.Services
             var alreadyPending = await _reportRepository.HasPendingReportAsync(reporterAccountId, normalizedTargetType, request.TargetId, ct);
             if (alreadyPending)
             {
-                throw new AppException("ReportAlreadyExists", "You already have a pending report for this target.", 400);
+                throw new AppException("ReportAlreadyExists", "Bạn đã có báo cáo đang chờ xử lý cho mục tiêu này.", 400);
             }
 
             var now = TimezoneConverter.VietnamNow;
@@ -108,7 +108,7 @@ namespace Service.Services
         public async Task<ReportResponse> GetAsync(Guid reportId, CancellationToken ct = default)
         {
             var entity = await _reportRepository.GetByIdAsync(reportId, ct)
-                         ?? throw new AppException("ReportNotFound", "Report was not found.", 404);
+                         ?? throw new AppException("ReportNotFound", "Không tìm thấy báo cáo.", 404);
             var response = Map(entity);
             await AttachTargetDetailsAsync(response, entity.target_type, entity.target_id, ct);
             return response;
@@ -118,7 +118,7 @@ namespace Service.Services
         {
             var normalizedStatus = NormalizeStatus(request.Status);
             var report = await _reportRepository.GetByIdAsync(reportId, ct)
-                         ?? throw new AppException("ReportNotFound", "Report was not found.", 404);
+                         ?? throw new AppException("ReportNotFound", "Không tìm thấy báo cáo.", 404);
 
             var previousStatus = report.status;
             report.status = normalizedStatus;
@@ -171,11 +171,11 @@ namespace Service.Services
         public async Task<ReportResponse> GetMyReportAsync(Guid reporterAccountId, Guid reportId, CancellationToken ct = default)
         {
             var entity = await _reportRepository.GetByIdAsync(reportId, ct)
-                         ?? throw new AppException("ReportNotFound", "Report was not found.", 404);
+                         ?? throw new AppException("ReportNotFound", "Không tìm thấy báo cáo.", 404);
 
             if (entity.reporter_id != reporterAccountId)
             {
-                throw new AppException("ReportNotFound", "Report was not found.", 404);
+                throw new AppException("ReportNotFound", "Không tìm thấy báo cáo.", 404);
             }
 
             var response = Map(entity);
@@ -191,23 +191,23 @@ namespace Service.Services
                 case ReportTargetTypes.Story:
                     {
                         var story = await _moderationRepository.GetStoryAsync(targetId, ct)
-                                    ?? throw new AppException("StoryNotFound", "Story was not found.", 404);
+                                    ?? throw new AppException("StoryNotFound", "Không tìm thấy truyện.", 404);
                         return new TargetContext { Story = story };
                     }
                 case ReportTargetTypes.Chapter:
                     {
                         var chapter = await _moderationRepository.GetChapterAsync(targetId, ct)
-                                      ?? throw new AppException("ChapterNotFound", "Chapter was not found.", 404);
+                                      ?? throw new AppException("ChapterNotFound", "Không tìm thấy chương.", 404);
                         return new TargetContext { Chapter = chapter };
                     }
                 case ReportTargetTypes.Comment:
                     {
                         var comment = await _moderationRepository.GetCommentAsync(targetId, ct)
-                                      ?? throw new AppException("CommentNotFound", "Comment was not found.", 404);
+                                      ?? throw new AppException("CommentNotFound", "Không tìm thấy bình luận.", 404);
                         return new TargetContext { Comment = comment };
                     }
                 default:
-                    throw new AppException("UnsupportedTarget", $"Target type '{targetType}' is not supported.", 400);
+                    throw new AppException("UnsupportedTarget", $"Loại mục tiêu '{targetType}' không được hỗ trợ.", 400);
             }
         }
 
@@ -217,11 +217,11 @@ namespace Service.Services
             var owner = context.TargetAccount;
             if (owner == null)
             {
-                throw new AppException("TargetOwnerNotFound", "Owner of the reported content was not found.", 404);
+                throw new AppException("TargetOwnerNotFound", "Không tìm thấy chủ sở hữu nội dung báo cáo.", 404);
             }
 
             var account = await _profileRepository.GetAccountByIdAsync(owner.account_id, ct)
-                          ?? throw new AppException("TargetOwnerNotFound", "Account of the reported content owner was not found.", 404);
+                          ?? throw new AppException("TargetOwnerNotFound", "Không tìm thấy tài khoản của chủ sở hữu nội dung báo cáo.", 404);
             return account;
         }
 
@@ -396,13 +396,13 @@ namespace Service.Services
         {
             if (string.IsNullOrWhiteSpace(value))
             {
-                throw new AppException("InvalidTargetType", "Target type is required.", 400);
+                throw new AppException("InvalidTargetType", "Loại mục tiêu là bắt buộc.", 400);
             }
 
             var normalized = value.Trim().ToLowerInvariant();
             if (!ReportTargetTypes.Allowed.Contains(normalized, StringComparer.OrdinalIgnoreCase))
             {
-                throw new AppException("InvalidTargetType", $"Unsupported target type '{value}'.", 400);
+                throw new AppException("InvalidTargetType", $"Loại mục tiêu '{value}' không được hỗ trợ.", 400);
             }
 
             return normalized;
@@ -416,20 +416,20 @@ namespace Service.Services
             }
             return ReportTargetTypes.Allowed.Contains(value.Trim().ToLowerInvariant(), StringComparer.OrdinalIgnoreCase)
                 ? value.Trim().ToLowerInvariant()
-                : throw new AppException("InvalidTargetType", $"Unsupported target type '{value}'.", 400);
+                : throw new AppException("InvalidTargetType", $"Loại mục tiêu '{value}' không được hỗ trợ.", 400);
         }
 
         private static string NormalizeReason(string? value)
         {
             if (string.IsNullOrWhiteSpace(value))
             {
-                throw new AppException("InvalidReason", "Reason is required.", 400);
+                throw new AppException("InvalidReason", "Lý do là bắt buộc.", 400);
             }
 
             var normalized = value.Trim().ToLowerInvariant();
             if (!ReportReasonCodes.Allowed.Contains(normalized, StringComparer.OrdinalIgnoreCase))
             {
-                throw new AppException("InvalidReason", $"Unsupported reason '{value}'.", 400);
+                throw new AppException("InvalidReason", $"Lý do không hợp lệ '{value}'.", 400);
             }
 
             return normalized;
@@ -439,13 +439,13 @@ namespace Service.Services
         {
             if (string.IsNullOrWhiteSpace(value))
             {
-                throw new AppException("InvalidStatus", "Status is required.", 400);
+                throw new AppException("InvalidStatus", "Trạng thái là bắt buộc.", 400);
             }
 
             var normalized = value.Trim().ToLowerInvariant();
             if (!ReportStatuses.Allowed.Contains(normalized, StringComparer.OrdinalIgnoreCase))
             {
-                throw new AppException("InvalidStatus", $"Unsupported status '{value}'.", 400);
+                throw new AppException("InvalidStatus", $"Trạng thái không hợp lệ '{value}'.", 400);
             }
 
             return normalized;
@@ -461,7 +461,7 @@ namespace Service.Services
             var normalized = value.Trim().ToLowerInvariant();
             if (!ReportStatuses.Allowed.Contains(normalized, StringComparer.OrdinalIgnoreCase))
             {
-                throw new AppException("InvalidStatus", $"Unsupported status '{value}'.", 400);
+                throw new AppException("InvalidStatus", $"Trạng thái không hợp lệ '{value}'.", 400);
             }
             return normalized;
         }

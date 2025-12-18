@@ -41,17 +41,17 @@ namespace Service.Services
         {
             if (query == null)
             {
-                throw new AppException("ValidationFailed", "Request is required.", 400);
+                throw new AppException("ValidationFailed", "Yêu cầu là bắt buộc.", 400);
             }
 
             if (query.Page < 1)
             {
-                throw new AppException("ValidationFailed", "Page must be at least 1.", 400);
+                throw new AppException("ValidationFailed", "Page phải lớn hơn hoặc bằng 1.", 400);
             }
 
             if (query.PageSize < 1 || query.PageSize > 200)
             {
-                throw new AppException("ValidationFailed", "PageSize must be between 1 and 200.", 400);
+                throw new AppException("ValidationFailed", "PageSize phải nằm trong khoảng từ 1 đến 200.", 400);
             }
 
             ValidateDateRange(query.From, query.To);
@@ -101,7 +101,7 @@ namespace Service.Services
             }
 
             var normalized = type.Trim().ToLowerInvariant();
-            return AllowedTypes.Contains(normalized) ? normalized : throw new AppException("ValidationFailed", $"Unsupported type '{type}'.", 400);
+            return AllowedTypes.Contains(normalized) ? normalized : throw new AppException("ValidationFailed", $"Loại '{type}' không được hỗ trợ.", 400);
         }
 
         private static string? NormalizeStatus(string? status)
@@ -112,14 +112,14 @@ namespace Service.Services
             }
 
             var normalized = status.Trim().ToLowerInvariant();
-            return AllowedStatuses.Contains(normalized) ? normalized : throw new AppException("ValidationFailed", $"Unsupported status '{status}'.", 400);
+            return AllowedStatuses.Contains(normalized) ? normalized : throw new AppException("ValidationFailed", $"Trạng thái '{status}' không được hỗ trợ.", 400);
         }
 
         private static void ValidateDateRange(DateTime? from, DateTime? to)
         {
             if (from.HasValue && to.HasValue && from > to)
             {
-                throw new AppException("ValidationFailed", "From must be earlier than To.", 400);
+                throw new AppException("ValidationFailed", "Ngày bắt đầu phải sớm hơn ngày kết thúc.", 400);
             }
         }
     }

@@ -60,19 +60,19 @@ namespace Service.Implementations
         {
             //bóc request ra từ db 
             var request = await _opRepo.GetRequestAsync(requestId, ct)
-                          ?? throw new AppException("RequestNotFound", "Upgrade request was not found.", 404);
+                          ?? throw new AppException("RequestNotFound", "Không tìm thấy yêu cầu nâng cấp.", 404);
 
             //chỉ approve đc pending request 
             if (!string.Equals(request.status, "pending", StringComparison.OrdinalIgnoreCase))
             {
-                throw new AppException("InvalidState", "Only pending requests can be approved.", 400);
+                throw new AppException("InvalidState", "Chỉ yêu cầu đang chờ mới có thể được duyệt.", 400);
             }
 
             //bóc rank id trong bảng author_rank ra 
             var casualRankId = await _opRepo.GetRankIdByNameAsync("Casual", ct);
             if (casualRankId is null || casualRankId == Guid.Empty)
             {
-                throw new AppException("SeedMissing", "Author rank 'Casual' has not been seeded.", 500);
+                throw new AppException("SeedMissing", "Hạng tác giả 'Casual' chưa được khởi tạo.", 500);
             }
 
             //bước nghiệp vụ qtr nhất của method này: update từ reader sang author, gán bảng author rank Casual
@@ -82,7 +82,7 @@ namespace Service.Implementations
             var authorRoleId = await _opRepo.GetRoleIdByCodeAsync("author", ct);
             if (authorRoleId is null || authorRoleId == Guid.Empty)
             {
-                throw new AppException("SeedMissing", "Role 'author' has not been seeded.", 500);
+                throw new AppException("SeedMissing", "Vai trò 'author' chưa được khởi tạo.", 500);
             }
 
             //thêm vô acocunt_role
@@ -105,11 +105,11 @@ namespace Service.Implementations
         public async Task RejectAsync(Guid requestId, Guid omodAccountId, RejectAuthorUpgradeRequest req, CancellationToken ct = default)
         {
             var entity = await _opRepo.GetRequestAsync(requestId, ct)
-                         ?? throw new AppException("RequestNotFound", "Upgrade request was not found.", 404);
+                         ?? throw new AppException("RequestNotFound", "Không tìm thấy yêu cầu nâng cấp.", 404);
 
             if (!string.Equals(entity.status, "pending", StringComparison.OrdinalIgnoreCase))
             {
-                throw new AppException("InvalidState", "Only pending requests can be rejected.", 400);
+                throw new AppException("InvalidState", "Chỉ yêu cầu đang chờ mới có thể bị từ chối.", 400);
             }
             //rejected
             await _opRepo.SetRequestRejectedAsync(requestId, omodAccountId, req.Reason, ct);
@@ -139,20 +139,20 @@ namespace Service.Implementations
         public async Task ApproveWithdrawAsync(Guid requestId, Guid omodAccountId, ApproveWithdrawRequest request, CancellationToken ct = default)
         {
             var entity = await _opRepo.GetWithdrawRequestAsync(requestId, ct)
-                         ?? throw new AppException("WithdrawRequestNotFound", "Withdraw request was not found.", 404);
+                         ?? throw new AppException("WithdrawRequestNotFound", "Không tìm thấy yêu cầu rút tiền.", 404);
 
             if (!string.Equals(entity.status, "pending", StringComparison.OrdinalIgnoreCase))
             {
-                throw new AppException("InvalidState", "Only pending withdraw requests can be approved.", 400);
+                throw new AppException("InvalidState", "Chỉ yêu cầu đang chờ mới có thể được duyệt.", 400);
             }
 
             if (!entity.withdraw_amount.HasValue)
             {
-                throw new AppException("InvalidWithdrawAmount", "Withdraw amount was not specified.", 400);
+                throw new AppException("InvalidWithdrawAmount", "Số tiền rút không được chỉ định.", 400);
             }
 
             var author = await _authorRevenueRepository.GetAuthorAsync(entity.requester_id, ct)
-                         ?? throw new AppException("AuthorProfileMissing", "Author profile was not found.", 404);
+                         ?? throw new AppException("AuthorProfileMissing", "Không tìm thấy hồ sơ tác giả.", 404);
 
             
             var amount = (long)entity.withdraw_amount.Value;
@@ -197,25 +197,25 @@ namespace Service.Implementations
         public async Task RejectWithdrawAsync(Guid requestId, Guid omodAccountId, RejectWithdrawRequest request, CancellationToken ct = default)
         {
             var entity = await _opRepo.GetWithdrawRequestAsync(requestId, ct)
-                         ?? throw new AppException("WithdrawRequestNotFound", "Withdraw request was not found.", 404);
+                         ?? throw new AppException("WithdrawRequestNotFound", "Không tìm thấy yêu cầu rút tiền.", 404);
 
             if (!string.Equals(entity.status, "pending", StringComparison.OrdinalIgnoreCase))
             {
-                throw new AppException("InvalidState", "Only pending withdraw requests can be rejected.", 400);
+                throw new AppException("InvalidState", "Chỉ yêu cầu đang chờ mới có thể bị từ chối.", 400);
             }
 
             if (!entity.withdraw_amount.HasValue)
             {
-                throw new AppException("InvalidWithdrawAmount", "Withdraw amount was not specified.", 400);
+                throw new AppException("InvalidWithdrawAmount", "Số tiền rút không được chỉ định.", 400);
             }
 
             if (string.IsNullOrWhiteSpace(request?.Note))
             {
-                throw new AppException("ReasonRequired", "Rejection reason is required.", 400);
+                throw new AppException("ReasonRequired", "Lý do từ chối là bắt buộc.", 400);
             }
 
             var author = await _authorRevenueRepository.GetAuthorAsync(entity.requester_id, ct)
-                         ?? throw new AppException("AuthorProfileMissing", "Author profile was not found.", 404);
+                         ?? throw new AppException("AuthorProfileMissing", "Không tìm thấy hồ sơ tác giả.", 404);
 
             var amount = (long)entity.withdraw_amount.Value;
             var reason = request!.Note!.Trim();

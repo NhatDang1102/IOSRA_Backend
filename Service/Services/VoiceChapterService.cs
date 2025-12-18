@@ -59,13 +59,13 @@ namespace Service.Services
             var chapter = await LoadAuthorChapterAsync(chapterId, authorAccountId, includeVoices: false, ct);
             if (string.IsNullOrWhiteSpace(chapter.content_url))
             {
-                throw new AppException("ChapterContentMissing", "Chapter content is missing from storage.", 400);
+                throw new AppException("ChapterContentMissing", "Nội dung chương bị thiếu trong kho lưu trữ.", 400);
             }
 
             var content = (await _contentStorage.DownloadAsync(chapter.content_url, ct)).Trim();
             if (content.Length == 0)
             {
-                throw new AppException("ChapterContentEmpty", "Chapter content is empty.", 400);
+                throw new AppException("ChapterContentEmpty", "Nội dung chương bị trống.", 400);
             }
 
             return new VoiceChapterCharCountResponse
@@ -100,7 +100,7 @@ namespace Service.Services
         {
             if (request?.VoiceIds == null || request.VoiceIds.Count == 0)
             {
-                throw new AppException("VoiceSelectionRequired", "Please select at least one voice preset.", 400);
+                throw new AppException("VoiceSelectionRequired", "Vui lòng chọn ít nhất một giọng đọc.", 400);
             }
 
             var requestedVoiceIds = request.VoiceIds
@@ -110,19 +110,19 @@ namespace Service.Services
 
             if (requestedVoiceIds.Count == 0)
             {
-                throw new AppException("VoiceSelectionRequired", "Invalid voice presets selected.", 400);
+                throw new AppException("VoiceSelectionRequired", "Các giọng đọc được chọn không hợp lệ.", 400);
             }
 
             var chapter = await LoadAuthorChapterAsync(chapterId, authorAccountId, includeVoices: true, ct);
             EnsureVoiceEligibleChapter(chapter);
             if (!string.Equals(chapter.status, "published", StringComparison.OrdinalIgnoreCase))
             {
-                throw new AppException("ChapterNotPublished", "Only published chapters can be converted to audio.", 400);
+                throw new AppException("ChapterNotPublished", "Chỉ các chương đã xuất bản mới có thể chuyển đổi thành âm thanh.", 400);
             }
 
             if (string.IsNullOrWhiteSpace(chapter.content_url))
             {
-                throw new AppException("ChapterContentMissing", "Chapter content is missing from storage.", 400);
+                throw new AppException("ChapterContentMissing", "Nội dung chương bị thiếu trong kho lưu trữ.", 400);
             }
 
             var presets = await _db.voice_lists
@@ -131,20 +131,20 @@ namespace Service.Services
 
             if (presets.Count != requestedVoiceIds.Count)
             {
-                throw new AppException("VoicePresetNotFound", "One or more requested voices are not available.", 404);
+                throw new AppException("VoicePresetNotFound", "Một hoặc nhiều giọng đọc được yêu cầu không khả dụng.", 404);
             }
 
             var existingVoices = new HashSet<Guid>(chapter.chapter_voices.Select(v => v.voice_id));
             var newPresets = presets.Where(v => !existingVoices.Contains(v.voice_id)).ToList();
             if (newPresets.Count == 0)
             {
-                throw new AppException("VoiceAlreadyGenerated", "All requested voices have already been generated.", 400);
+                throw new AppException("VoiceAlreadyGenerated", "Tất cả các giọng đọc được yêu cầu đã được tạo.", 400);
             }
 
             var content = (await _contentStorage.DownloadAsync(chapter.content_url, ct)).Trim();
             if (content.Length == 0)
             {
-                throw new AppException("ChapterContentEmpty", "Chapter content is empty.", 400);
+                throw new AppException("ChapterContentEmpty", "Nội dung chương bị trống.", 400);
             }
 
             var charPerVoice = content.Length;
@@ -156,12 +156,12 @@ namespace Service.Services
 
             // Lấy author entity để trừ tiền
             var author = await _db.authors.Include(a => a.account).FirstOrDefaultAsync(a => a.account_id == authorAccountId, ct)
-                         ?? throw new AppException("AuthorNotFound", "Author profile not found.", 404);
+                         ?? throw new AppException("AuthorNotFound", "Không tìm thấy hồ sơ tác giả.", 404);
 
             // Kiểm tra và trừ từ revenue_balance
             if (author.revenue_balance < totalGenerationCost)
             {
-                throw new AppException("InsufficientRevenue", "Not enough revenue balance to generate voice. Please earn more Dias.", 400, new
+                throw new AppException("InsufficientRevenue", "Số dư doanh thu không đủ để tạo giọng đọc. Vui lòng kiếm thêm Dias.", 400, new
                 {
                     required = totalGenerationCost,
                     available = author.revenue_balance
@@ -255,11 +255,11 @@ namespace Service.Services
             }
 
             var chapter = await query.FirstOrDefaultAsync(c => c.chapter_id == chapterId, ct)
-                          ?? throw new AppException("ChapterNotFound", "Chapter not found.", 404);
+                          ?? throw new AppException("ChapterNotFound", "Không tìm thấy chương.", 404);
 
             if (chapter.story.author_id != authorAccountId)
             {
-                throw new AppException("ChapterAccessDenied", "You are not allowed to modify this chapter.", 403);
+                throw new AppException("ChapterAccessDenied", "Bạn không được phép sửa đổi chương này.", 403);
             }
 
             return chapter;

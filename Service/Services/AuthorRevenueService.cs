@@ -39,7 +39,7 @@ namespace Service.Services
         public async Task<AuthorRevenueSummaryResponse> GetSummaryAsync(Guid authorAccountId, CancellationToken ct = default)
         {
             var author = await _repository.GetAuthorAsync(authorAccountId, ct)
-                         ?? throw new AppException("AuthorProfileMissing", "Author profile was not found.", 404);
+                         ?? throw new AppException("AuthorProfileMissing", "Không tìm thấy hồ sơ tác giả.", 404);
 
             var balance = author.revenue_balance;
             var pending = author.revenue_pending;
@@ -60,19 +60,19 @@ namespace Service.Services
         {
             if (query.Page < 1)
             {
-                throw new AppException("ValidationFailed", "Page must be greater than zero.", 400);
+                throw new AppException("ValidationFailed", "Page phải lớn hơn 0.", 400);
             }
 
             if (query.PageSize < 1 || query.PageSize > 200)
             {
-                throw new AppException("ValidationFailed", "PageSize must be between 1 and 200.", 400);
+                throw new AppException("ValidationFailed", "PageSize phải nằm trong khoảng từ 1 đến 200.", 400);
             }
 
             var type = NormalizeType(query.Type);
             ValidateDateRange(query.From, query.To);
 
             _ = await _repository.GetAuthorAsync(authorAccountId, ct)
-                ?? throw new AppException("AuthorProfileMissing", "Author profile was not found.", 404);
+                ?? throw new AppException("AuthorProfileMissing", "Không tìm thấy hồ sơ tác giả.", 404);
 
             var (items, total) = await _repository.GetTransactionsAsync(authorAccountId, query.Page, query.PageSize, type, query.From, query.To, ct);
 
@@ -115,26 +115,26 @@ namespace Service.Services
         {
             if (request == null)
             {
-                throw new AppException("ValidationFailed", "Request body is required.", 400);
+                throw new AppException("ValidationFailed", "Nội dung yêu cầu là bắt buộc.", 400);
             }
 
             var amount = request.Amount;
             if (amount < 1000)
             {
-                throw new AppException("AmountTooSmall", "Minimum withdraw amount is 1000 units.", 400);
+                throw new AppException("AmountTooSmall", "Số tiền rút tối thiểu là 1000 đơn vị.", 400);
             }
 
             var author = await _repository.GetAuthorAsync(authorAccountId, ct)
-                         ?? throw new AppException("AuthorProfileMissing", "Author profile was not found.", 404);
+                         ?? throw new AppException("AuthorProfileMissing", "Không tìm thấy hồ sơ tác giả.", 404);
 
             if (author.revenue_balance < amount)
             {
-                throw new AppException("InsufficientRevenue", "Not enough revenue balance to withdraw.", 400);
+                throw new AppException("InsufficientRevenue", "Số dư doanh thu không đủ để rút.", 400);
             }
 
             if (await _opRequestRepository.HasPendingWithdrawRequestAsync(authorAccountId, ct))
             {
-                throw new AppException("WithdrawPending", "You already have a pending withdraw request.", 409);
+                throw new AppException("WithdrawPending", "Bạn đang có một yêu cầu rút tiền đang chờ xử lý.", 409);
             }
 
             var payload = new AuthorWithdrawPayload
@@ -179,16 +179,16 @@ namespace Service.Services
         public async Task ConfirmReceiptAsync(Guid authorAccountId, Guid requestId, CancellationToken ct = default)
         {
             var request = await _opRequestRepository.GetWithdrawRequestAsync(requestId, ct)
-                          ?? throw new AppException("RequestNotFound", "Withdraw request was not found.", 404);
+                          ?? throw new AppException("RequestNotFound", "Không tìm thấy yêu cầu rút tiền.", 404);
 
             if (request.requester_id != authorAccountId)
             {
-                throw new AppException("RequestNotFound", "Withdraw request was not found.", 404);
+                throw new AppException("RequestNotFound", "Không tìm thấy yêu cầu rút tiền.", 404);
             }
 
             if (!string.Equals(request.status, "approved", StringComparison.OrdinalIgnoreCase))
             {
-                throw new AppException("InvalidState", "Only approved requests can be confirmed.", 400);
+                throw new AppException("InvalidState", "Chỉ yêu cầu đã được duyệt mới có thể xác nhận.", 400);
             }
 
             request.status = "confirmed";
@@ -213,7 +213,7 @@ namespace Service.Services
             var normalized = type.Trim().ToLowerInvariant();
             if (!AllowedTypes.Contains(normalized, StringComparer.OrdinalIgnoreCase))
             {
-                throw new AppException("ValidationFailed", $"Unsupported type '{type}'. Allowed values: {string.Join(", ", AllowedTypes)}", 400);
+                throw new AppException("ValidationFailed", $"Loại '{type}' không được hỗ trợ. Các giá trị cho phép: {string.Join(", ", AllowedTypes)}", 400);
             }
 
             return normalized;
@@ -223,7 +223,7 @@ namespace Service.Services
         {
             if (from.HasValue && to.HasValue && from > to)
             {
-                throw new AppException("ValidationFailed", "From date must be earlier than To date.", 400);
+                throw new AppException("ValidationFailed", "Ngày bắt đầu phải sớm hơn ngày kết thúc.", 400);
             }
         }
 

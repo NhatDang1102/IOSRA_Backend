@@ -82,7 +82,7 @@ namespace Service.Services
             }
 
             var reader = await _profileRepository.GetReaderByIdAsync(readerAccountId, ct)
-                         ?? throw new AppException("ReaderProfileMissing", "Reader profile is not registered.", 404);
+                         ?? throw new AppException("ReaderProfileMissing", "Hồ sơ người đọc chưa được đăng ký.", 404);
 
             var rating = await _ratingRepository.GetAsync(story.story_id, reader.account_id, ct);
             var now = TimezoneConverter.VietnamNow;
@@ -116,7 +116,7 @@ namespace Service.Services
         {
             await RequirePublishedStoryAsync(storyId, ct);
             var rating = await _ratingRepository.GetAsync(storyId, readerAccountId, ct)
-                         ?? throw new AppException("RatingNotFound", "Rating was not found.", 404);
+                         ?? throw new AppException("RatingNotFound", "Không tìm thấy đánh giá.", 404);
             await _ratingRepository.DeleteAsync(rating, ct);
         }
 
@@ -141,7 +141,7 @@ namespace Service.Services
             var story = await _storyCatalogRepository.GetPublishedStoryByIdAsync(storyId, ct);
             if (story == null)
             {
-                throw new AppException("StoryNotFound", "Story was not found or cannot be rated.", 404);
+                throw new AppException("StoryNotFound", "Không tìm thấy truyện hoặc không thể đánh giá.", 404);
             }
             return story;
         }

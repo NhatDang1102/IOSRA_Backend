@@ -49,37 +49,37 @@ namespace Service.Services
             await using var tx = await _chapterPurchaseRepository.BeginTransactionAsync(ct);
 
             var chapter = await _chapterPurchaseRepository.GetChapterForPurchaseAsync(chapterId, ct)
-                ?? throw new AppException("ChapterNotFound", "Chapter was not found.", 404);
+                ?? throw new AppException("ChapterNotFound", "Không tìm thấy chương.", 404);
 
             if (!string.Equals(chapter.status, "published", StringComparison.OrdinalIgnoreCase))
             {
-                throw new AppException("ChapterNotAvailable", "Chapter is not available for purchase.", 400);
+                throw new AppException("ChapterNotAvailable", "Chương không có sẵn để mua.", 400);
             }
 
             var story = chapter.story
-                       ?? throw new AppException("StoryNotFound", "Story information is missing.", 404);
+                       ?? throw new AppException("StoryNotFound", "Thông tin truyện bị thiếu.", 404);
 
             var storyIsPublic = string.Equals(story.status, "published", StringComparison.OrdinalIgnoreCase)
                                 || string.Equals(story.status, "completed", StringComparison.OrdinalIgnoreCase);
             if (!storyIsPublic)
             {
-                throw new AppException("StoryNotPublished", "Story must be published before chapters can be purchased.", 400);
+                throw new AppException("StoryNotPublished", "Truyện phải được xuất bản trước khi có thể mua chương.", 400);
             }
 
             if (story.author_id == readerAccountId)
             {
-                throw new AppException("AuthorCannotPurchase", "Authors already own their chapters.", 400);
+                throw new AppException("AuthorCannotPurchase", "Tác giả đã sở hữu chương của họ.", 400);
             }
 
             if (!string.Equals(chapter.access_type, "dias", StringComparison.OrdinalIgnoreCase))
             {
-                throw new AppException("ChapterFree", "This chapter does not require a purchase.", 400);
+                throw new AppException("ChapterFree", "Chương này không yêu cầu mua.", 400);
             }
 
             var alreadyPurchased = await _chapterPurchaseRepository.HasReaderPurchasedChapterAsync(chapterId, readerAccountId, ct);
             if (alreadyPurchased)
             {
-                throw new AppException("ChapterPurchased", "You already own this chapter.", 409);
+                throw new AppException("ChapterPurchased", "Bạn đã sở hữu chương này.", 409);
             }
 
             var wallet = await _billingRepository.GetOrCreateDiaWalletAsync(readerAccountId, ct);
@@ -87,12 +87,12 @@ namespace Service.Services
             var priceDias = (long)chapter.dias_price;
             if (priceDias <= 0)
             {
-                throw new AppException("InvalidPrice", "Chapter price is not configured.", 400);
+                throw new AppException("InvalidPrice", "Giá chương chưa được định cấu hình.", 400);
             }
 
             if (wallet.balance_dias < priceDias)
             {
-                throw new AppException("InsufficientBalance", "Not enough dias in wallet.", 400);
+                throw new AppException("InsufficientBalance", "Không đủ dias trong ví.", 400);
             }
 
             var now = TimezoneConverter.VietnamNow;
@@ -121,7 +121,7 @@ namespace Service.Services
             }, ct);
 
             var author = story.author
-                         ?? throw new AppException("AuthorNotFound", "Author profile is missing.", 404);
+                         ?? throw new AppException("AuthorNotFound", "Hồ sơ tác giả bị thiếu.", 404);
 
             //đổi format: 1 Dia mua = 1 Dia revenue (đơn vị Dias).
             //author ăn hết số Dias bán được. Việc chia sẻ doanh thu (RewardRate) sẽ tính khi Rút tiền.
@@ -169,7 +169,7 @@ namespace Service.Services
         {
             if (request?.VoiceIds == null || request.VoiceIds.Count == 0)
             {
-                throw new AppException("VoiceSelectionRequired", "Please select at least one voice.", 400);
+                throw new AppException("VoiceSelectionRequired", "Vui lòng chọn ít nhất một giọng đọc.", 400);
             }
 
             var requestedVoiceIds = request.VoiceIds
@@ -179,32 +179,32 @@ namespace Service.Services
 
             if (requestedVoiceIds.Count == 0)
             {
-                throw new AppException("VoiceSelectionRequired", "Invalid voice selection.", 400);
+                throw new AppException("VoiceSelectionRequired", "Lựa chọn giọng đọc không hợp lệ.", 400);
             }
 
             await using var tx = await _chapterPurchaseRepository.BeginTransactionAsync(ct);
 
             var chapter = await _chapterPurchaseRepository.GetChapterWithVoicesAsync(chapterId, ct)
-                ?? throw new AppException("ChapterNotFound", "Chapter was not found.", 404);
+                ?? throw new AppException("ChapterNotFound", "Không tìm thấy chương.", 404);
 
             if (!string.Equals(chapter.status, "published", StringComparison.OrdinalIgnoreCase))
             {
-                throw new AppException("ChapterNotAvailable", "Chapter is not available.", 400);
+                throw new AppException("ChapterNotAvailable", "Chương không có sẵn.", 400);
             }
 
             var story = chapter.story
-                       ?? throw new AppException("StoryNotFound", "Story information is missing.", 404);
+                       ?? throw new AppException("StoryNotFound", "Thông tin truyện bị thiếu.", 404);
 
             var storyIsPublic = string.Equals(story.status, "published", StringComparison.OrdinalIgnoreCase)
                                 || string.Equals(story.status, "completed", StringComparison.OrdinalIgnoreCase);
             if (!storyIsPublic)
             {
-                throw new AppException("StoryNotPublished", "Story must be published.", 400);
+                throw new AppException("StoryNotPublished", "Truyện phải được xuất bản.", 400);
             }
 
             if (story.author_id == readerAccountId)
             {
-                throw new AppException("AuthorCannotPurchase", "Authors already own their chapter voices.", 400);
+                throw new AppException("AuthorCannotPurchase", "Tác giả đã sở hữu giọng đọc chương của họ.", 400);
             }
 
             if (string.Equals(chapter.access_type, "dias", StringComparison.OrdinalIgnoreCase))
@@ -212,7 +212,7 @@ namespace Service.Services
                 var hasChapter = await _chapterPurchaseRepository.HasReaderPurchasedChapterAsync(chapterId, readerAccountId, ct);
                 if (!hasChapter)
                 {
-                    throw new AppException("ChapterNotPurchased", "You must buy this chapter before buying voice.", 403);
+                    throw new AppException("ChapterNotPurchased", "Bạn phải mua chương này trước khi mua giọng đọc.", 403);
                 }
             }
 
@@ -223,7 +223,7 @@ namespace Service.Services
 
             if (readyVoices.Count != requestedVoiceIds.Count)
             {
-                throw new AppException("VoiceUnavailable", "One or more requested voices are unavailable.", 400);
+                throw new AppException("VoiceUnavailable", "Một hoặc nhiều giọng đọc được yêu cầu không khả dụng.", 400);
             }
 
             var purchasedVoiceIds = await _chapterPurchaseRepository.GetPurchasedVoiceIdsAsync(chapterId, readerAccountId, ct);
@@ -233,19 +233,19 @@ namespace Service.Services
 
             if (newVoices.Count == 0)
             {
-                throw new AppException("VoiceAlreadyOwned", "You already purchased the selected voices.", 409);
+                throw new AppException("VoiceAlreadyOwned", "Bạn đã mua các giọng đọc được chọn.", 409);
             }
 
             var totalDias = newVoices.Sum(v => (long)v.dias_price);
             if (totalDias <= 0)
             {
-                throw new AppException("InvalidVoicePrice", "Voice price is not configured.", 500);
+                throw new AppException("InvalidVoicePrice", "Giá giọng đọc chưa được định cấu hình.", 500);
             }
 
             var wallet = await _billingRepository.GetOrCreateDiaWalletAsync(readerAccountId, ct);
             if (wallet.balance_dias < totalDias)
             {
-                throw new AppException("InsufficientBalance", "Not enough dias in wallet.", 400);
+                throw new AppException("InsufficientBalance", "Không đủ dias trong ví.", 400);
             }
 
             var now = TimezoneConverter.VietnamNow;
@@ -299,7 +299,7 @@ namespace Service.Services
             }, ct);
 
             var author = story.author
-                         ?? throw new AppException("AuthorNotFound", "Author profile is missing.", 404);
+                         ?? throw new AppException("AuthorNotFound", "Hồ sơ tác giả bị thiếu.", 404);
 
             // Logic mới: 1 Dia mua = 1 Dia revenue.
             var authorShare = totalDias;

@@ -53,25 +53,25 @@ namespace Service.Services
         {
             //check author profile 
             var author = await _storyRepository.GetAuthorAsync(authorAccountId, ct)
-                         ?? throw new AppException("AuthorNotFound", "Author profile is not registered.", 404);
+                         ?? throw new AppException("AuthorNotFound", "Hồ sơ tác giả chưa được đăng ký.", 404);
 
 
             //restricted thi ko đc upload chapter mới 
             await AccountRestrictionHelper.EnsureCanPublishAsync(author.account, _profileRepository, ct);
 
             var story = await _storyRepository.GetByIdForAuthorAsync(storyId, author.account_id, ct)
-                        ?? throw new AppException("StoryNotFound", "Story was not found.", 404);
+                        ?? throw new AppException("StoryNotFound", "Không tìm thấy truyện.", 404);
 
             if (!string.Equals(story.status, "published", StringComparison.OrdinalIgnoreCase) &&
                 !string.Equals(story.status, "hidden", StringComparison.OrdinalIgnoreCase))
             {
-                throw new AppException("StoryNotPublished", "Chapters can only be created when the story is published or hidden.", 400);
+                throw new AppException("StoryNotPublished", "Chương chỉ có thể được tạo khi truyện đã xuất bản hoặc bị ẩn.", 400);
             }
 
             var lastRejectedAt = await _chapterRepository.GetLastAuthorChapterRejectedAtAsync(author.account_id, ct);
             //if (lastRejectedAt.HasValue && lastRejectedAt.Value > TimezoneConverter.VietnamNow.AddHours(-24))
             //{
-            //    throw new AppException("ChapterCreationCooldown", "You must wait 24 hours after a chapter rejection before creating a new chapter.", 400, new
+            //    throw new AppException("ChapterCreationCooldown", "Bạn phải đợi 24 giờ sau khi chương bị từ chối trước khi tạo chương mới.", 400, new
             //    {
             //        availableAtUtc = lastRejectedAt.Value.AddHours(24)
             //    });
@@ -79,23 +79,23 @@ namespace Service.Services
 
             //if (await _chapterRepository.HasPendingChapterAsync(story.story_id, ct))
             //{
-            //    throw new AppException("ChapterPendingExists", "A chapter is already awaiting moderation for this story.", 400);
+            //    throw new AppException("ChapterPendingExists", "Một chương đang chờ kiểm duyệt cho truyện này.", 400);
             //}
 
             var title = (request.Title ?? string.Empty).Trim();
             if (string.IsNullOrWhiteSpace(title))
             {
-                throw new AppException("InvalidChapterTitle", "Chapter title must not be empty.", 400);
+                throw new AppException("InvalidChapterTitle", "Tiêu đề chương không được để trống.", 400);
             }
 
             var languageCode = (request.LanguageCode ?? string.Empty).Trim();
             if (string.IsNullOrWhiteSpace(languageCode))
             {
-                throw new AppException("LanguageCodeRequired", "Language code must not be empty.", 400);
+                throw new AppException("LanguageCodeRequired", "Mã ngôn ngữ không được để trống.", 400);
             }
             //gọi repo lấy language líst để đảm bảo language cho phép phải có trong db và đúng code 
             var language = await _chapterRepository.GetLanguageByCodeAsync(languageCode, ct)
-                          ?? throw new AppException("LanguageNotSupported", $"Language '{languageCode}' is not supported.", 400);
+                          ?? throw new AppException("LanguageNotSupported", $"Ngôn ngữ '{languageCode}' không được hỗ trợ.", 400);
             var content = (request.Content ?? string.Empty).Trim();
             if (content.Length < MinContentLength)
             {
@@ -171,10 +171,10 @@ namespace Service.Services
         public async Task<IReadOnlyList<ChapterListItemResponse>> GetAllAsync(Guid authorAccountId, Guid storyId, string? status, CancellationToken ct = default)
         {
             var author = await _storyRepository.GetAuthorAsync(authorAccountId, ct)
-                         ?? throw new AppException("AuthorNotFound", "Author profile is not registered.", 404);
+                         ?? throw new AppException("AuthorNotFound", "Hồ sơ tác giả chưa được đăng ký.", 404);
 
             var story = await _storyRepository.GetByIdForAuthorAsync(storyId, author.account_id, ct)
-                        ?? throw new AppException("StoryNotFound", "Story was not found.", 404);
+                        ?? throw new AppException("StoryNotFound", "Không tìm thấy truyện.", 404);
 
             var filterStatuses = NormalizeChapterStatuses(status);
             var chapters = await _chapterRepository.GetAllByStoryAsync(story.story_id, filterStatuses, ct);
@@ -184,10 +184,10 @@ namespace Service.Services
         public async Task<ChapterResponse> GetByIdAsync(Guid authorAccountId, Guid storyId, Guid chapterId, CancellationToken ct = default)
         {
             var author = await _storyRepository.GetAuthorAsync(authorAccountId, ct)
-                         ?? throw new AppException("AuthorNotFound", "Author profile is not registered.", 404);
+                         ?? throw new AppException("AuthorNotFound", "Hồ sơ tác giả chưa được đăng ký.", 404);
 
             var chapter = await _chapterRepository.GetByIdForAuthorAsync(storyId, chapterId, author.account_id, ct)
-                          ?? throw new AppException("ChapterNotFound", "Chapter was not found.", 404);
+                          ?? throw new AppException("ChapterNotFound", "Không tìm thấy chương.", 404);
 
             var approvals = await _chapterRepository.GetContentApprovalsForChapterAsync(chapter.chapter_id, ct);
             return MapChapter(chapter, approvals);
@@ -196,16 +196,16 @@ namespace Service.Services
         public async Task<ChapterResponse> SubmitAsync(Guid authorAccountId, Guid chapterId, ChapterSubmitRequest request, CancellationToken ct = default)
         {
             var author = await _storyRepository.GetAuthorAsync(authorAccountId, ct)
-                         ?? throw new AppException("AuthorNotFound", "Author profile is not registered.", 404);
+                         ?? throw new AppException("AuthorNotFound", "Hồ sơ tác giả chưa được đăng ký.", 404);
 
             var chapter = await _chapterRepository.GetByIdAsync(chapterId, ct)
-                          ?? throw new AppException("ChapterNotFound", "Chapter was not found.", 404);
+                          ?? throw new AppException("ChapterNotFound", "Không tìm thấy chương.", 404);
 
             //báo lỗi nếu k lấy info story 
             var story = chapter.story ?? throw new InvalidOperationException("Chapter story navigation was not loaded.");
             if (story.author_id != author.account_id)
             {
-                throw new AppException("ChapterNotFound", "Chapter was not found.", 404);
+                throw new AppException("ChapterNotFound", "Không tìm thấy chương.", 404);
             }
 
             //nghiệp vụ hiện tại: hidden cho đăng draft mới NHƯNG không submit được 
@@ -311,13 +311,13 @@ namespace Service.Services
         {
             
             var author = await _storyRepository.GetAuthorAsync(authorAccountId, ct)
-                         ?? throw new AppException("AuthorNotFound", "Author profile is not registered.", 404);
+                         ?? throw new AppException("AuthorNotFound", "Hồ sơ tác giả chưa được đăng ký.", 404);
 
             var chapter = await _chapterRepository.GetByIdAsync(chapterId, ct)
-                          ?? throw new AppException("ChapterNotFound", "Chapter was not found.", 404);
+                          ?? throw new AppException("ChapterNotFound", "Không tìm thấy chương.", 404);
 
             _ = await _storyRepository.GetByIdForAuthorAsync(chapter.story_id, author.account_id, ct)
-                ?? throw new AppException("StoryNotFound", "Story was not found.", 404);
+                ?? throw new AppException("StoryNotFound", "Không tìm thấy truyện.", 404);
 
             if (!string.Equals(chapter.status, "rejected", StringComparison.OrdinalIgnoreCase))
             {
@@ -337,13 +337,13 @@ namespace Service.Services
         public async Task<ChapterResponse> UpdateDraftAsync(Guid authorAccountId, Guid storyId, Guid chapterId, ChapterUpdateRequest request, CancellationToken ct = default)
         {
             var author = await _storyRepository.GetAuthorAsync(authorAccountId, ct)
-                         ?? throw new AppException("AuthorNotFound", "Author profile is not registered.", 404);
+                         ?? throw new AppException("AuthorNotFound", "Hồ sơ tác giả chưa được đăng ký.", 404);
 
             var story = await _storyRepository.GetByIdForAuthorAsync(storyId, author.account_id, ct)
-                        ?? throw new AppException("StoryNotFound", "Story was not found.", 404);
+                        ?? throw new AppException("StoryNotFound", "Không tìm thấy truyện.", 404);
 
             var chapter = await _chapterRepository.GetByIdForAuthorAsync(story.story_id, chapterId, author.account_id, ct)
-                         ?? throw new AppException("ChapterNotFound", "Chapter was not found.", 404);
+                         ?? throw new AppException("ChapterNotFound", "Không tìm thấy chương.", 404);
 
             if (!string.Equals(chapter.status, "draft", StringComparison.OrdinalIgnoreCase))
             {
@@ -369,11 +369,11 @@ namespace Service.Services
                 var languageCode = request.LanguageCode.Trim();
                 if (string.IsNullOrWhiteSpace(languageCode))
                 {
-                    throw new AppException("LanguageCodeRequired", "Language code must not be empty.", 400);
+                    throw new AppException("LanguageCodeRequired", "Mã ngôn ngữ không được để trống.", 400);
                 }
 
                 var language = await _chapterRepository.GetLanguageByCodeAsync(languageCode, ct)
-                              ?? throw new AppException("LanguageNotSupported", $"Language '{languageCode}' is not supported.", 400);
+                              ?? throw new AppException("LanguageNotSupported", $"Ngôn ngữ '{languageCode}' không được hỗ trợ.", 400);
                 chapter.language_id = language.lang_id;
                 chapter.language = language;
                 updated = true;
@@ -435,7 +435,7 @@ namespace Service.Services
             if (request.AccessType != null)
             {
                 var normalizedAccessType = NormalizeOptionalChapterAccessType(request.AccessType)
-                                           ?? throw new AppException("InvalidAccessType", "Access type is required when provided.", 400);
+                                           ?? throw new AppException("InvalidAccessType", "Loại truy cập là bắt buộc khi được cung cấp.", 400);
 
                 var canLockChapters = CanAuthorLockChapters(author, story);
                 if (string.Equals(normalizedAccessType, "dias", StringComparison.OrdinalIgnoreCase) && !canLockChapters)
@@ -452,7 +452,7 @@ namespace Service.Services
 
             if (!updated)
             {
-                throw new AppException("NoChanges", "No changes were provided.", 400);
+                throw new AppException("NoChanges", "Không có thay đổi nào được cung cấp.", 400);
             }
 
             chapter.updated_at = TimezoneConverter.VietnamNow;
@@ -472,7 +472,7 @@ namespace Service.Services
             var normalized = status.Trim();
             if (!AuthorChapterAllowedStatuses.Contains(normalized, StringComparer.OrdinalIgnoreCase))
             {
-                throw new AppException("InvalidStatus", $"Unsupported status '{status}'. Allowed values are: {string.Join(", ", AuthorChapterAllowedStatuses)}.", 400);
+                throw new AppException("InvalidStatus", $"Trạng thái '{status}' không được hỗ trợ. Các giá trị cho phép là: {string.Join(", ", AuthorChapterAllowedStatuses)}.", 400);
             }
 
             return new[] { normalized.ToLowerInvariant() };
@@ -488,12 +488,12 @@ namespace Service.Services
             var normalized = accessType.Trim().ToLowerInvariant();
             if (normalized.Length == 0)
             {
-                throw new AppException("InvalidAccessType", "Access type must be 'free' or 'dias'.", 400);
+                throw new AppException("InvalidAccessType", "Loại truy cập phải là 'free' hoặc 'dias'.", 400);
             }
 
             if (!ChapterAccessTypes.Contains(normalized, StringComparer.OrdinalIgnoreCase))
             {
-                throw new AppException("InvalidAccessType", $"Access type '{accessType}' is not supported. Allowed values are: {string.Join(", ", ChapterAccessTypes)}.", 400);
+                throw new AppException("InvalidAccessType", $"Loại truy cập '{accessType}' không được hỗ trợ. Các giá trị cho phép là: {string.Join(", ", ChapterAccessTypes)}.", 400);
             }
 
             return normalized;
@@ -719,4 +719,3 @@ namespace Service.Services
         }
     }
 }
-

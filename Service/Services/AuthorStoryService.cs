@@ -1,4 +1,4 @@
-﻿using Contract.DTOs.Request.Story;
+using Contract.DTOs.Request.Story;
 using Repository.Entities;
 using Repository.Interfaces;
 using Repository.Utils;
@@ -69,7 +69,7 @@ namespace Service.Services
 
             if (author.restricted)
             {
-                throw new AppException("AuthorRestricted", "Your author account is restricted.", 403);
+                throw new AppException("AuthorRestricted", "Tài khoản tác giả của bạn đang bị hạn chế.", 403);
             }
 
             var lastRejectedAt = await _storyRepository.GetLastAuthorStoryRejectedAtAsync(author.account_id, ct);
@@ -85,19 +85,19 @@ namespace Service.Services
             //1 author chỉ đc có 1 truyện pending 1 thời điểm
             if (await _storyRepository.AuthorHasPendingStoryAsync(author.account_id, null, ct))
             {
-                throw new AppException("PendingStoryLimit", "You already have a story waiting for moderation.", 400);
+                throw new AppException("PendingStoryLimit", "Bạn đã có một truyện đang chờ kiểm duyệt.", 400);
             }
 
             //1 author chỉ đc có 1 truyện published 1 thời điểm
             if (await _storyRepository.AuthorHasUncompletedPublishedStoryAsync(author.account_id, ct))
             {
-                throw new AppException("PublishedStoryIncomplete", "Please complete your published story before creating a new one.", 400);
+                throw new AppException("PublishedStoryIncomplete", "Vui lòng hoàn thành truyện đã xuất bản của bạn trước khi tạo truyện mới.", 400);
             }
 
             //cover mode mà ko giống khai báo đầu service thì trả lỗi
             if (!AllowedCoverModes.Contains(request.CoverMode, StringComparer.OrdinalIgnoreCase))
             {
-                throw new AppException("InvalidCoverMode", "CoverMode must be either 'upload' or 'generate'.", 400);
+                throw new AppException("InvalidCoverMode", "Chế độ ảnh bìa phải là 'upload' hoặc 'generate'.", 400);
             }
 
             //lấy list tag riêng biệt để check tag 
@@ -105,7 +105,7 @@ namespace Service.Services
             var outline = (request.Outline ?? string.Empty).Trim();
             if (string.IsNullOrWhiteSpace(outline))
             {
-                throw new AppException("OutlineRequired", "Story outline is required.", 400);
+                throw new AppException("OutlineRequired", "Cốt truyện là bắt buộc.", 400);
             }
 
             var lengthPlan = NormalizeLengthPlan(request.LengthPlan);
@@ -114,7 +114,7 @@ namespace Service.Services
             var tags = await _storyRepository.GetTagsByIdsAsync(tagIds, ct);
             if (tags.Count != tagIds.Length)
             {
-                throw new AppException("InvalidTag", "One or more tags do not exist.", 400);
+                throw new AppException("InvalidTag", "Một hoặc nhiều thẻ không tồn tại.", 400);
             }
 
             var coverUrl = await ResolveCoverUrlAsync(request.CoverMode, request.CoverFile, request.CoverPrompt, ct);
@@ -147,37 +147,37 @@ namespace Service.Services
             var author = await RequireAuthorAsync(authorAccountId, ct);
             if (author.restricted)
             {
-                throw new AppException("AuthorRestricted", "Your author account is restricted.", 403);
+                throw new AppException("AuthorRestricted", "Tài khoản tác giả của bạn đang bị hạn chế.", 403);
             }
 
 
             //check story có tồn tại ko và check các validation 
             var story = await _storyRepository.GetByIdForAuthorAsync(storyId, author.account_id, ct)
-                        ?? throw new AppException("StoryNotFound", "Story was not found.", 404);
+                        ?? throw new AppException("StoryNotFound", "Không tìm thấy truyện.", 404);
 
             if (story.status == "pending")
             {
-                throw new AppException("StoryPending", "Story is already pending moderation.", 400);
+                throw new AppException("StoryPending", "Truyện đang chờ kiểm duyệt.", 400);
             }
 
             if (story.status == "published")
             {
-                throw new AppException("StoryPublished", "Published stories cannot be resubmitted.", 400);
+                throw new AppException("StoryPublished", "Truyện đã xuất bản không thể gửi lại.", 400);
             }
 
             if (story.status == "rejected")
             {
-                throw new AppException("StoryRejectedLocked", "Rejected stories cannot be resubmitted. Please create a new story.", 400);
+                throw new AppException("StoryRejectedLocked", "Truyện bị từ chối không thể gửi lại. Vui lòng tạo truyện mới.", 400);
             }
 
             if (await _storyRepository.AuthorHasPendingStoryAsync(author.account_id, story.story_id, ct))
             {
-                throw new AppException("PendingStoryLimit", "You already have another story waiting for moderation.", 400);
+                throw new AppException("PendingStoryLimit", "Bạn đã có một truyện khác đang chờ kiểm duyệt.", 400);
             }
 
             if (await _storyRepository.AuthorHasUncompletedPublishedStoryAsync(author.account_id, ct))
             {
-                throw new AppException("PublishedStoryIncomplete", "Please complete your published story before submitting a new one.", 400);
+                throw new AppException("PublishedStoryIncomplete", "Vui lòng hoàn thành truyện đã xuất bản của bạn trước khi gửi truyện mới.", 400);
             }
 
             //gọi bên OpenAIService để request title và desc cho AI 
@@ -281,7 +281,7 @@ namespace Service.Services
         {
             var author = await RequireAuthorAsync(authorAccountId, ct);
             var story = await _storyRepository.GetByIdForAuthorAsync(storyId, author.account_id, ct)
-                        ?? throw new AppException("StoryNotFound", "Story was not found.", 404);
+                        ?? throw new AppException("StoryNotFound", "Không tìm thấy truyện.", 404);
 
             var approvals = await _storyRepository.GetContentApprovalsForStoryAsync(story.story_id, ct);
             return MapStory(story, approvals);
@@ -293,7 +293,7 @@ namespace Service.Services
 
             //đảm bảo story id này tồn tại 
             var story = await _storyRepository.GetByIdForAuthorAsync(storyId, author.account_id, ct)
-                        ?? throw new AppException("StoryNotFound", "Story was not found.", 404);
+                        ?? throw new AppException("StoryNotFound", "Không tìm thấy truyện.", 404);
 
             //chỉ complete đc truyện đã thông qua duyệt và trong trạng thái published 
             if (story.status != "published")
@@ -317,7 +317,7 @@ namespace Service.Services
             } //trả lỗi khi ko đủ số chap yêu cầu 
             if (chapterCount < requiredChapters)
             {
-                throw new AppException("StoryInsufficientChapters", $"Stories with length plan '{plan}' require at least {requiredChapters} chapters before completion.", 400);
+                throw new AppException("StoryInsufficientChapters", $"Truyện với kế hoạch độ dài '{plan}' yêu cầu ít nhất {requiredChapters} chương trước khi hoàn thành.", 400);
             }
             
             var publishedAt = story.published_at ?? await _storyRepository.GetStoryPublishedAtAsync(story.story_id, ct);
@@ -352,16 +352,16 @@ namespace Service.Services
             var author = await RequireAuthorAsync(authorAccountId, ct);
             if (author.restricted)
             {
-                throw new AppException("AuthorRestricted", "Your author account is restricted.", 403);
+                throw new AppException("AuthorRestricted", "Tài khoản tác giả của bạn đang bị hạn chế.", 403);
             }
 
             var story = await _storyRepository.GetByIdForAuthorAsync(storyId, author.account_id, ct)
-                        ?? throw new AppException("StoryNotFound", "Story was not found.", 404);
+                        ?? throw new AppException("StoryNotFound", "Không tìm thấy truyện.", 404);
 
             //check coi có đang draft ko (đúng như tên method chỉ update đc story đang draft)
             if (!string.Equals(story.status, "draft", StringComparison.OrdinalIgnoreCase))
             {
-                throw new AppException("StoryUpdateNotAllowed", "Only draft stories can be edited before submission.", 400);
+                throw new AppException("StoryUpdateNotAllowed", "Chỉ những truyện nháp mới có thể chỉnh sửa trước khi gửi.", 400);
             }
 
             var updated = false;
@@ -383,7 +383,7 @@ namespace Service.Services
                 var outline = request.Outline.Trim();
                 if (string.IsNullOrWhiteSpace(outline))
                 {
-                    throw new AppException("OutlineRequired", "Story outline must not be empty.", 400);
+                    throw new AppException("OutlineRequired", "Cốt truyện không được để trống.", 400);
                 }
                 story.outline = outline;
                 updated = true;
@@ -401,7 +401,7 @@ namespace Service.Services
                 var tags = await _storyRepository.GetTagsByIdsAsync(tagIds, ct);
                 if (tags.Count != tagIds.Length)
                 {
-                    throw new AppException("InvalidTag", "One or more tags do not exist.", 400);
+                    throw new AppException("InvalidTag", "Một hoặc nhiều thẻ không tồn tại.", 400);
                 }
 
                 await _storyRepository.ReplaceStoryTagsAsync(story.story_id, tagIds, ct);
@@ -413,7 +413,7 @@ namespace Service.Services
                 var coverMode = request.CoverMode.Trim().ToLowerInvariant();
                 if (!string.Equals(coverMode, "upload", StringComparison.OrdinalIgnoreCase))
                 {
-                    throw new AppException("CoverRegenerationNotAllowed", "AI cover generation is not available while editing an existing draft. Please upload a new image instead.", 400);
+                    throw new AppException("CoverRegenerationNotAllowed", "Tính năng tạo ảnh bìa AI không khả dụng khi chỉnh sửa bản nháp hiện có. Vui lòng tải lên ảnh mới thay thế.", 400);
                 }
 
                 var coverUrl = await ResolveCoverUrlAsync("upload", request.CoverFile, null, ct);
@@ -423,7 +423,7 @@ namespace Service.Services
 
             if (!updated)
             {
-                throw new AppException("NoChanges", "No changes were provided.", 400);
+                throw new AppException("NoChanges", "Không có thay đổi nào được cung cấp.", 400);
             }
 
             story.updated_at = TimezoneConverter.VietnamNow;
@@ -444,7 +444,7 @@ namespace Service.Services
                     //đã chọn upload thì phải có file trong form 
                     if (coverFile == null || coverFile.Length == 0)
                     {
-                        throw new AppException("CoverRequired", "CoverFile must be provided when CoverMode is 'upload'.", 400);
+                        throw new AppException("CoverRequired", "File ảnh bìa phải được cung cấp khi chế độ là 'upload'.", 400);
                     }
 
                     await using (var stream = coverFile.OpenReadStream())
@@ -456,7 +456,7 @@ namespace Service.Services
                 case "generate":
                     if (string.IsNullOrWhiteSpace(coverPrompt))
                     {
-                        throw new AppException("CoverPromptRequired", "CoverPrompt must be provided when CoverMode is 'generate'.", 400);
+                        throw new AppException("CoverPromptRequired", "Prompt ảnh bìa phải được cung cấp khi chế độ là 'generate'.", 400);
                     }
 
                     var image = await _openAiImageService.GenerateCoverAsync(coverPrompt, ct);
@@ -470,7 +470,7 @@ namespace Service.Services
                     }
 
                 default:
-                    throw new AppException("InvalidCoverMode", "CoverMode must be either 'upload' or 'generate'.", 400);
+                    throw new AppException("InvalidCoverMode", "Chế độ ảnh bìa phải là 'upload' hoặc 'generate'.", 400);
             }
         }
 
@@ -484,7 +484,7 @@ namespace Service.Services
             var normalized = status.Trim();
             if (!AuthorListAllowedStatuses.Contains(normalized, StringComparer.OrdinalIgnoreCase))
             {
-                throw new AppException("InvalidStatus", $"Unsupported status '{status}'. Allowed values are: {string.Join(", ", AuthorListAllowedStatuses)}.", 400);
+                throw new AppException("InvalidStatus", $"Trạng thái '{status}' không được hỗ trợ. Các giá trị cho phép là: {string.Join(", ", AuthorListAllowedStatuses)}.", 400);
             }
 
             return new[] { normalized.ToLowerInvariant() };
@@ -495,7 +495,7 @@ namespace Service.Services
             var author = await _storyRepository.GetAuthorAsync(accountId, ct);
             if (author == null)
             {
-                throw new AppException("AuthorNotFound", "Author profile is not registered.", 404);
+                throw new AppException("AuthorNotFound", "Hồ sơ tác giả chưa được đăng ký.", 404);
             }
             return author;
         }
@@ -655,13 +655,9 @@ namespace Service.Services
             var normalized = plan.Trim().ToLowerInvariant();
             if (!AllowedLengthPlans.Contains(normalized))
             {
-                throw new AppException("InvalidLengthPlan", "Length plan must be novel, short, or super_short.", 400);
+                throw new AppException("InvalidLengthPlan", "Kế hoạch độ dài phải là novel, short, hoặc super_short.", 400);
             }
             return normalized;
         }
     }
 }
-
-
-
-

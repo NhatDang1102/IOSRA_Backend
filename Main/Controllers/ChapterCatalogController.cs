@@ -29,7 +29,7 @@ namespace Main.Controllers
         {
             if (query.StoryId == Guid.Empty)
             {
-                throw new AppException("ValidationFailed", "storyId is required.", 400);
+                throw new AppException("ValidationFailed", "storyId là bắt buộc.", 400);
             }
 
             query.ViewerAccountId = TryGetAccountId();

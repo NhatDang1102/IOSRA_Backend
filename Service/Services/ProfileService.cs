@@ -1,4 +1,4 @@
-﻿using Contract.DTOs.Request.Profile;
+using Contract.DTOs.Request.Profile;
 using Contract.DTOs.Response.Subscription;
 using Microsoft.AspNetCore.Http;
 using Repository.Interfaces;
@@ -178,7 +178,7 @@ namespace Service.Implementations
         public async Task SendChangeEmailOtpAsync(Guid accountId, ChangeEmailRequest req, CancellationToken ct = default)
         {
             var acc = await _profileRepo.GetAccountByIdAsync(accountId, ct)
-                      ?? throw new AppException("AccountNotFound", "Account was not found.", 404);
+                      ?? throw new AppException("AccountNotFound", "Không tìm thấy tài khoản.", 404);
 
             if (string.Equals(acc.email, req.NewEmail, StringComparison.OrdinalIgnoreCase))
             {
@@ -187,12 +187,12 @@ namespace Service.Implementations
 
             if (await _profileRepo.ExistsByEmailAsync(req.NewEmail, ct))
             {
-                throw new AppException("AccountExists", "Email is already in use.", 409);
+                throw new AppException("AccountExists", "Email đã được sử dụng.", 409);
             }
 
             if (!await _otpStore.CanSendAsync(req.NewEmail))
             {
-                throw new AppException("OtpRateLimit", "OTP request rate limit exceeded.", 429);
+                throw new AppException("OtpRateLimit", "Đã vượt quá giới hạn yêu cầu OTP.", 429);
             }
 
             var otp = Random.Shared.Next(100000, 1000000).ToString();
@@ -203,23 +203,23 @@ namespace Service.Implementations
         public async Task VerifyChangeEmailAsync(Guid accountId, VerifyChangeEmailRequest req, CancellationToken ct = default)
         {
             var acc = await _profileRepo.GetAccountByIdAsync(accountId, ct)
-                      ?? throw new AppException("AccountNotFound", "Account was not found.", 404);
+                      ?? throw new AppException("AccountNotFound", "Không tìm thấy tài khoản.", 404);
 
             var entry = await _otpStore.GetEmailChangeAsync(accountId);
             if (entry is null)
             {
-                throw new AppException("InvalidOtp", "OTP is invalid or expired.", 400);
+                throw new AppException("InvalidOtp", "OTP không hợp lệ hoặc đã hết hạn.", 400);
             }
 
             var (newEmail, otp) = entry.Value;
             if (!string.Equals(req.Otp, otp, StringComparison.Ordinal))
             {
-                throw new AppException("InvalidOtp", "OTP is invalid or expired.", 400);
+                throw new AppException("InvalidOtp", "OTP không hợp lệ hoặc đã hết hạn.", 400);
             }
 
             if (await _profileRepo.ExistsByEmailAsync(newEmail, ct))
             {
-                throw new AppException("AccountExists", "Email is already in use.", 409);
+                throw new AppException("AccountExists", "Email đã được sử dụng.", 409);
             }
 
             var oldEmail = acc.email;
@@ -257,8 +257,3 @@ namespace Service.Implementations
         }
     }
 }
-
-
-
-
-

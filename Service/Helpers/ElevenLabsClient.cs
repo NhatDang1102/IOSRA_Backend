@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Net.Http;
 using System.Net.Http.Json;
 using System.Text.Json;
@@ -46,7 +46,7 @@ namespace Service.Helpers
                 {
                     var body = await response.Content.ReadAsStringAsync(ct);
                     _logger.LogError("ElevenLabs synthesis failed: {Status} - {Body}", response.StatusCode, body);
-                    throw new AppException("VoiceSynthesisFailed", "Failed to generate voice audio.", (int)response.StatusCode);
+                    throw new AppException("VoiceSynthesisFailed", "Không thể tạo âm thanh giọng nói.", (int)response.StatusCode);
                 }
 
                 return await response.Content.ReadAsByteArrayAsync(ct);
@@ -58,7 +58,7 @@ namespace Service.Helpers
             catch (Exception ex)
             {
                 _logger.LogError(ex, "ElevenLabs synthesis threw an exception");
-                throw new AppException("VoiceSynthesisError", "Voice synthesis service is unavailable. Please try again later.", 502);
+                throw new AppException("VoiceSynthesisError", "Dịch vụ tổng hợp giọng nói không khả dụng. Vui lòng thử lại sau.", 502);
             }
         }
 
@@ -84,7 +84,7 @@ namespace Service.Helpers
                 {
                     var body = await response.Content.ReadAsStringAsync(ct);
                     _logger.LogError("ElevenLabs music compose failed: {Status} - {Body}", response.StatusCode, body);
-                    throw new AppException("MusicGenerationFailed", "Failed to generate mood music.", (int)response.StatusCode);
+                    throw new AppException("MusicGenerationFailed", "Không thể tạo nhạc tâm trạng.", (int)response.StatusCode);
                 }
 
                 return await response.Content.ReadAsByteArrayAsync(ct);
@@ -96,7 +96,7 @@ namespace Service.Helpers
             catch (Exception ex)
             {
                 _logger.LogError(ex, "ElevenLabs music compose threw an exception");
-                throw new AppException("MusicGenerationError", "Music generation service is unavailable. Please try again later.", 502);
+                throw new AppException("MusicGenerationError", "Dịch vụ tạo nhạc không khả dụng. Vui lòng thử lại sau.", 502);
             }
         }
     }

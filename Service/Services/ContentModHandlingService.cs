@@ -50,7 +50,7 @@ namespace Service.Services
         {
             var normalizedStatus = NormalizeStatus(request.Status, StoryAllowedStatuses, "Story");
             var story = await _moderationRepository.GetStoryAsync(storyId, ct)
-                        ?? throw new AppException("StoryNotFound", "Story was not found.", 404);
+                        ?? throw new AppException("StoryNotFound", "Không tìm thấy truyện.", 404);
 
             story.status = normalizedStatus;
             story.updated_at = TimezoneConverter.VietnamNow;
@@ -63,7 +63,7 @@ namespace Service.Services
         {
             var normalizedStatus = NormalizeStatus(request.Status, ChapterAllowedStatuses, "Chapter");
             var chapter = await _moderationRepository.GetChapterAsync(chapterId, ct)
-                         ?? throw new AppException("ChapterNotFound", "Chapter was not found.", 404);
+                         ?? throw new AppException("ChapterNotFound", "Không tìm thấy chương.", 404);
 
             chapter.status = normalizedStatus;
             chapter.updated_at = TimezoneConverter.VietnamNow;
@@ -76,7 +76,7 @@ namespace Service.Services
         {
             var normalizedStatus = NormalizeStatus(request.Status, CommentAllowedStatuses, "Comment");
             var comment = await _moderationRepository.GetCommentAsync(commentId, ct)
-                         ?? throw new AppException("CommentNotFound", "Comment was not found.", 404);
+                         ?? throw new AppException("CommentNotFound", "Không tìm thấy bình luận.", 404);
 
             comment.status = normalizedStatus;
             comment.updated_at = TimezoneConverter.VietnamNow;
@@ -89,11 +89,11 @@ namespace Service.Services
         {
             if (!StrikeDurations.TryGetValue(request.Level, out var duration))
             {
-                throw new AppException("InvalidStrikeLevel", "Strike level must be between 1 and 4.", 400);
+                throw new AppException("InvalidStrikeLevel", "Mức cảnh cáo phải từ 1 đến 4.", 400);
             }
 
             var account = await _profileRepository.GetAccountByIdAsync(targetAccountId, ct)
-                          ?? throw new AppException("AccountNotFound", "Account was not found.", 404);
+                          ?? throw new AppException("AccountNotFound", "Không tìm thấy tài khoản.", 404);
 
             var now = TimezoneConverter.VietnamNow;
             var baseStart = account.strike_restricted_until.HasValue && account.strike_restricted_until > now
@@ -123,13 +123,13 @@ namespace Service.Services
         {
             if (string.IsNullOrWhiteSpace(value))
             {
-                throw new AppException("InvalidStatus", $"{label} status is required.", 400);
+                throw new AppException("InvalidStatus", $"Trạng thái {label} là bắt buộc.", 400);
             }
 
             var normalized = value.Trim().ToLowerInvariant();
             if (!allowed.Contains(normalized, StringComparer.OrdinalIgnoreCase))
             {
-                throw new AppException("InvalidStatus", $"{label} status '{value}' is not supported.", 400);
+                throw new AppException("InvalidStatus", $"Trạng thái {label} '{value}' không được hỗ trợ.", 400);
             }
 
             return normalized;

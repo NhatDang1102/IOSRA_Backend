@@ -42,7 +42,7 @@ namespace Service.Services
         {
             if (charCount <= 0)
             {
-                throw new AppException("InvalidCharCount", "Character count must be positive.", 400);
+                throw new AppException("InvalidCharCount", "Số lượng ký tự phải là số dương.", 400);
             }
 
             var rules = await GetRulesAsync(ct);
@@ -57,7 +57,7 @@ namespace Service.Services
 
             if (rule == null)
             {
-                throw new AppException("VoicePricingMissing", "Voice pricing rules are not configured.", 500);
+                throw new AppException("VoicePricingMissing", "Quy tắc định giá giọng đọc chưa được định cấu hình.", 500);
             }
 
             return (int)rule.dias_price;
@@ -67,7 +67,7 @@ namespace Service.Services
         {
             if (charCount <= 0)
             {
-                throw new AppException("InvalidCharCount", "Character count must be positive.", 400);
+                throw new AppException("InvalidCharCount", "Số lượng ký tự phải là số dương.", 400);
             }
 
             var rules = await GetRulesAsync(ct);
@@ -82,7 +82,7 @@ namespace Service.Services
 
             if (rule == null)
             {
-                throw new AppException("VoicePricingMissing", "Voice pricing rules are not configured.", 500);
+                throw new AppException("VoicePricingMissing", "Quy tắc định giá giọng đọc chưa được định cấu hình.", 500);
             }
 
             return (int)rule.generation_dias;
@@ -96,7 +96,7 @@ namespace Service.Services
         public async Task UpdateRuleAsync(Contract.DTOs.Request.Admin.UpdateVoicePriceRuleRequest request, CancellationToken ct = default)
         {
             var existing = await _repository.GetRuleByIdAsync(request.RuleId, ct);
-            if (existing == null) throw new AppException("NotFound", "Rule not found", 404);
+            if (existing == null) throw new AppException("NotFound", "Không tìm thấy quy tắc", 404);
 
             existing.dias_price = request.DiasPrice;
             existing.generation_dias = request.GenerationDias;

@@ -1,4 +1,4 @@
-﻿using Contract.DTOs.Request.Story;
+using Contract.DTOs.Request.Story;
 using Contract.DTOs.Response.Story;
 using Repository.Entities;
 using Repository.Interfaces;
@@ -65,11 +65,11 @@ namespace Service.Services
         public async Task<StoryModerationQueueItem> GetAsync(Guid reviewId, CancellationToken ct = default)
         {
             var approval = await _storyRepository.GetContentApprovalByIdAsync(reviewId, ct)
-                           ?? throw new AppException("ModerationRequestNotFound", "Moderation request was not found.", 404);
+                           ?? throw new AppException("ModerationRequestNotFound", "Không tìm thấy yêu cầu kiểm duyệt.", 404);
 
             if (!string.Equals(approval.approve_type, "story", StringComparison.OrdinalIgnoreCase))
             {
-                throw new AppException("InvalidModerationType", "Moderation request is not associated with a story.", 400);
+                throw new AppException("InvalidModerationType", "Yêu cầu kiểm duyệt không liên quan đến truyện.", 400);
             }
 
             var story = approval.story ?? throw new InvalidOperationException("Story navigation was not loaded for moderation entry.");
@@ -79,22 +79,22 @@ namespace Service.Services
         public async Task ModerateAsync(Guid moderatorAccountId, Guid reviewId, StoryModerationDecisionRequest request, CancellationToken ct = default)
         {
             var approval = await _storyRepository.GetContentApprovalByIdAsync(reviewId, ct)
-                           ?? throw new AppException("ModerationRequestNotFound", "Moderation request was not found.", 404);
+                           ?? throw new AppException("ModerationRequestNotFound", "Không tìm thấy yêu cầu kiểm duyệt.", 404);
 
             if (!string.Equals(approval.approve_type, "story", StringComparison.OrdinalIgnoreCase))
             {
-                throw new AppException("InvalidModerationType", "Moderation request is not associated with a story.", 400);
+                throw new AppException("InvalidModerationType", "Yêu cầu kiểm duyệt không liên quan đến truyện.", 400);
             }
 
             if (!string.Equals(approval.status, "pending", StringComparison.OrdinalIgnoreCase))
             {
-                throw new AppException("ModerationAlreadyHandled", "This moderation request has already been processed.", 400);
+                throw new AppException("ModerationAlreadyHandled", "Yêu cầu kiểm duyệt này đã được xử lý.", 400);
             }
 
             var story = approval.story ?? throw new InvalidOperationException("Story navigation was not loaded for moderation entry.");
             if (story.status != "pending")
             {
-                throw new AppException("StoryNotPending", "Story is not awaiting moderation.", 400);
+                throw new AppException("StoryNotPending", "Truyện không ở trạng thái chờ kiểm duyệt.", 400);
             }
 
             var wasPublished = string.Equals(story.status, "published", StringComparison.OrdinalIgnoreCase);
@@ -181,7 +181,7 @@ namespace Service.Services
             var normalized = status.Trim();
             if (!AllowedStatuses.Contains(normalized, StringComparer.OrdinalIgnoreCase))
             {
-                throw new AppException("InvalidStatus", $"Unsupported status '{status}'. Allowed values are: {string.Join(", ", AllowedStatuses)}.", 400);
+                throw new AppException("InvalidStatus", $"Trạng thái '{status}' không được hỗ trợ. Các giá trị cho phép là: {string.Join(", ", AllowedStatuses)}.", 400);
             }
 
             return new[] { normalized.ToLowerInvariant() };
@@ -245,16 +245,3 @@ namespace Service.Services
         }
     }
 }
-
-
-
-
-
-
-
-
-
-
-
-
-

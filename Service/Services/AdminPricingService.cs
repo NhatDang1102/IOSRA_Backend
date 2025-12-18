@@ -27,7 +27,7 @@ namespace Service.Services
         public async Task UpdateTopupPricingAsync(UpdateTopupPricingRequest request, CancellationToken ct = default)
         {
             var existing = await _billingRepository.GetTopupPricingByIdAsync(request.PricingId, ct);
-            if (existing == null) throw new AppException("NotFound", "Pricing not found", 404);
+            if (existing == null) throw new AppException("NotFound", "Không tìm thấy bảng giá", 404);
 
             existing.diamond_granted = request.DiamondGranted;
 
@@ -43,7 +43,7 @@ namespace Service.Services
         public async Task UpdateSubscriptionPlanAsync(UpdateSubscriptionPlanRequest request, CancellationToken ct = default)
         {
             var existing = await _billingRepository.GetSubscriptionPlanAsync(request.PlanCode, ct);
-            if (existing == null) throw new AppException("NotFound", "Subscription plan not found", 404);
+            if (existing == null) throw new AppException("NotFound", "Không tìm thấy gói đăng ký", 404);
 
             existing.price_vnd = request.PriceVnd;
             existing.daily_dias = request.DailyDias;

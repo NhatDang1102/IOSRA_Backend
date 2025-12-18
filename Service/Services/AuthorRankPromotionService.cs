@@ -38,55 +38,55 @@ namespace Service.Services
         {
             if (request == null)
             {
-                throw new AppException("InvalidRequest", "Request body is required.", 400);
+                throw new AppException("InvalidRequest", "Nội dung yêu cầu là bắt buộc.", 400);
             }
 
             var commitment = request.Commitment?.Trim();
             if (string.IsNullOrWhiteSpace(commitment))
             {
-                throw new AppException("CommitmentRequired", "Commitment content is required.", 400);
+                throw new AppException("CommitmentRequired", "Nội dung cam kết là bắt buộc.", 400);
             }
 
             var author = await _opRequestRepository.GetAuthorWithRankAsync(authorAccountId, ct)
-                         ?? throw new AppException("AuthorProfileMissing", "Author profile was not found.", 404);
+                         ?? throw new AppException("AuthorProfileMissing", "Không tìm thấy hồ sơ tác giả.", 404);
 
             if (author.rank_id == null)
             {
-                throw new AppException("RankMissing", "Author rank is not assigned. Please contact support.", 409);
+                throw new AppException("RankMissing", "Chưa được phân hạng tác giả. Vui lòng liên hệ hỗ trợ.", 409);
             }
 
             if (!await _opRequestRepository.AuthorHasPublishedStoryAsync(authorAccountId, ct))
             {
-                throw new AppException("StoryRequirement", "You must have at least one published story to request a promotion.", 400);
+                throw new AppException("StoryRequirement", "Bạn phải có ít nhất một truyện đã xuất bản để yêu cầu thăng hạng.", 400);
             }
 
             if (await _opRequestRepository.HasPendingRankPromotionRequestAsync(authorAccountId, ct))
             {
-                throw new AppException("PendingExists", "You already have a pending rank promotion request.", 409);
+                throw new AppException("PendingExists", "Bạn đang có một yêu cầu thăng hạng đang chờ xử lý.", 409);
             }
 
             var ranks = await _opRequestRepository.GetAllAuthorRanksAsync(ct);
             if (ranks.Count == 0)
             {
-                throw new AppException("RankSeedMissing", "Author ranks have not been seeded.", 500);
+                throw new AppException("RankSeedMissing", "Hạng tác giả chưa được khởi tạo.", 500);
             }
 
             var orderedRanks = ranks.OrderBy(r => r.min_followers).ToList();
             var currentIndex = orderedRanks.FindIndex(r => r.rank_id == author.rank_id);
             if (currentIndex < 0)
             {
-                throw new AppException("RankUnknown", "Current rank is not recognized.", 500);
+                throw new AppException("RankUnknown", "Hạng hiện tại không hợp lệ.", 500);
             }
 
             if (currentIndex >= orderedRanks.Count - 1)
             {
-                throw new AppException("HighestRank", "You already reached the highest rank.", 400);
+                throw new AppException("HighestRank", "Bạn đã đạt hạng cao nhất.", 400);
             }
 
             var nextRank = orderedRanks[currentIndex + 1];
             if (author.total_follower < nextRank.min_followers)
             {
-                throw new AppException("FollowerRequirement", $"You need at least {nextRank.min_followers} followers to request {nextRank.rank_name}.", 400);
+                throw new AppException("FollowerRequirement", $"Bạn cần ít nhất {nextRank.min_followers} người theo dõi để yêu cầu thăng hạng {nextRank.rank_name}.", 400);
             }
 
             var payload = new RankPromotionPayload
@@ -126,11 +126,11 @@ namespace Service.Services
         public async Task ApproveAsync(Guid requestId, Guid omodAccountId, string? note, CancellationToken ct = default)
         {
             var request = await _opRequestRepository.GetRankPromotionRequestAsync(requestId, ct)
-                          ?? throw new AppException("RankRequestNotFound", "Rank promotion request was not found.", 404);
+                          ?? throw new AppException("RankRequestNotFound", "Không tìm thấy yêu cầu thăng hạng.", 404);
 
             if (!string.Equals(request.status, "pending", StringComparison.OrdinalIgnoreCase))
             {
-                throw new AppException("InvalidState", "Only pending requests can be approved.", 400);
+                throw new AppException("InvalidState", "Chỉ yêu cầu đang chờ mới có thể được duyệt.", 400);
             }
 
             var payload = ParsePayload(request);
@@ -160,17 +160,17 @@ namespace Service.Services
         public async Task RejectAsync(Guid requestId, Guid omodAccountId, RankPromotionRejectRequest request, CancellationToken ct = default)
         {
             var entity = await _opRequestRepository.GetRankPromotionRequestAsync(requestId, ct)
-                         ?? throw new AppException("RankRequestNotFound", "Rank promotion request was not found.", 404);
+                         ?? throw new AppException("RankRequestNotFound", "Không tìm thấy yêu cầu thăng hạng.", 404);
 
             if (!string.Equals(entity.status, "pending", StringComparison.OrdinalIgnoreCase))
             {
-                throw new AppException("InvalidState", "Only pending requests can be rejected.", 400);
+                throw new AppException("InvalidState", "Chỉ yêu cầu đang chờ mới có thể bị từ chối.", 400);
             }
 
             var reason = request?.Reason?.Trim();
             if (string.IsNullOrWhiteSpace(reason))
             {
-                throw new AppException("ReasonRequired", "Rejection reason is required.", 400);
+                throw new AppException("ReasonRequired", "Lý do từ chối là bắt buộc.", 400);
             }
 
             entity.status = "rejected";
@@ -228,7 +228,7 @@ namespace Service.Services
         {
             if (string.IsNullOrWhiteSpace(request.request_content))
             {
-                throw new AppException("CorruptedRequestPayload", "Rank promotion request payload is invalid.", 500);
+                throw new AppException("CorruptedRequestPayload", "Dữ liệu yêu cầu thăng hạng không hợp lệ.", 500);
             }
 
             try
@@ -238,7 +238,7 @@ namespace Service.Services
             }
             catch (Exception ex)
             {
-                throw new AppException("CorruptedRequestPayload", "Rank promotion request payload is invalid.", 500, ex);
+                throw new AppException("CorruptedRequestPayload", "Dữ liệu yêu cầu thăng hạng không hợp lệ.", 500, ex);
             }
         }
 

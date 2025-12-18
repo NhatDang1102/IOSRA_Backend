@@ -32,7 +32,7 @@ namespace Service.Helpers
                 return;
             }
 
-            throw new AppException("AccountRestricted", $"Your account is restricted from posting until {accountEntity.strike_restricted_until.Value:O}.", 403);
+            throw new AppException("AccountRestricted", $"Tài khoản của bạn bị hạn chế đăng bài cho đến {accountEntity.strike_restricted_until.Value:O}.", 403);
         }
     }
 }

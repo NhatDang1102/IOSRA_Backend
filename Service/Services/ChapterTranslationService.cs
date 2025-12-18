@@ -100,7 +100,7 @@ namespace Service.Services
         {
             if (string.IsNullOrWhiteSpace(languageCode))
             {
-                throw new AppException("ValidationFailed", "language code thiếu.", 400);
+                throw new AppException("ValidationFailed", "Thiếu mã ngôn ngữ.", 400);
             }
 
             if (!viewerAccountId.HasValue)
@@ -170,11 +170,11 @@ namespace Service.Services
         private async Task<chapter> LoadPublishedChapterAsync(Guid chapterId, CancellationToken ct)
         {
             var chapter = await _chapterRepository.GetPublishedChapterByIdAsync(chapterId, ct)
-                          ?? throw new AppException("ChapterNotFound", "chapter ko tồn tại.", 404);
+                          ?? throw new AppException("ChapterNotFound", "Chương không tồn tại.", 404);
 
             if (chapter.story == null)
             {
-                throw new AppException("StoryNotFound", "chapter ko có story hợp lệ.", 500);
+                throw new AppException("StoryNotFound", "Chương không có truyện hợp lệ.", 500);
             }
 
             return chapter;
@@ -209,7 +209,7 @@ namespace Service.Services
         private async Task<language_list> GetLanguageOrThrowAsync(string languageCode, CancellationToken ct)
         {
             var language = await _chapterRepository.GetLanguageByCodeAsync(languageCode.Trim(), ct)
-                          ?? throw new AppException("LanguageNotFound", "ngôn ngữ ko hỗ trợ.", 404);
+                          ?? throw new AppException("LanguageNotFound", "Ngôn ngữ không được hỗ trợ.", 404);
             return language;
         }
 
@@ -218,7 +218,7 @@ namespace Service.Services
             var originalCode = chapter.language?.lang_code ?? string.Empty;
             if (string.Equals(originalCode, targetLanguage.lang_code, StringComparison.OrdinalIgnoreCase))
             {
-                throw new AppException("TranslationNotNeeded", "chapter có sẵn ngôn ngữ này rồi .", 400);
+                throw new AppException("TranslationNotNeeded", "Chương đã có sẵn ngôn ngữ này.", 400);
             }
         }
 

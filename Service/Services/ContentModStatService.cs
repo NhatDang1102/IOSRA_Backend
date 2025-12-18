@@ -117,7 +117,7 @@ namespace Service.Services
             var period = string.IsNullOrWhiteSpace(query.Period) ? "month" : query.Period.Trim().ToLowerInvariant();
             if (period != "day" && period != "week" && period != "month" && period != "year")
             {
-                throw new AppException("ValidationFailed", "Period must be day, week, month, or year.", 400);
+                throw new AppException("ValidationFailed", "Kỳ hạn phải là day, week, month hoặc year.", 400);
             }
 
             var to = query.To ?? TimezoneConverter.VietnamNow;
@@ -131,7 +131,7 @@ namespace Service.Services
 
             if (from > to)
             {
-                throw new AppException("ValidationFailed", "From date must be earlier than To date.", 400);
+                throw new AppException("ValidationFailed", "Ngày bắt đầu phải sớm hơn ngày kết thúc.", 400);
             }
 
             return (period, from, to);
@@ -150,7 +150,7 @@ namespace Service.Services
                 "approved" => "approved",
                 "rejected" => "rejected",
                 "pending" => "pending",
-                _ => throw new AppException("ValidationFailed", "Unsupported status value.", 400)
+                _ => throw new AppException("ValidationFailed", "Giá trị trạng thái không được hỗ trợ.", 400)
             };
         }
 
@@ -167,7 +167,7 @@ namespace Service.Services
                 "pending" => "pending",
                 "resolved" => "resolved",
                 "rejected" => "rejected",
-                _ => throw new AppException("ValidationFailed", "Unsupported status value.", 400)
+                _ => throw new AppException("ValidationFailed", "Giá trị trạng thái không được hỗ trợ.", 400)
             };
         }
 
@@ -183,7 +183,7 @@ namespace Service.Services
             {
                 "approved" => "resolved",
                 "rejected" => "rejected",
-                _ => throw new AppException("ValidationFailed", "Unsupported status value.", 400)
+                _ => throw new AppException("ValidationFailed", "Giá trị trạng thái không được hỗ trợ.", 400)
             };
         }
 

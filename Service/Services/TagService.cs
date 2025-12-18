@@ -38,7 +38,7 @@ namespace Service.Implementations
 
             if (await _tagRepo.ExistsByNameAsync(name, null, ct))
             {
-                throw new AppException("TagAlreadyExists", "Tag already exists.", 409);
+                throw new AppException("TagAlreadyExists", "Thẻ đã tồn tại.", 409);
             }
 
             var entity = await _tagRepo.CreateAsync(name, ct);
@@ -52,7 +52,7 @@ namespace Service.Implementations
         public async Task<TagResponse> UpdateAsync(Guid tagId, TagUpdateRequest req, CancellationToken ct = default)
         {
             var entity = await _tagRepo.GetByIdAsync(tagId, ct)
-                         ?? throw new AppException("TagNotFound", "Tag was not found.", 404);
+                         ?? throw new AppException("TagNotFound", "Không tìm thấy thẻ.", 404);
 
             var name = NormalizeName(req.Name);
             ValidateName(name);
@@ -61,7 +61,7 @@ namespace Service.Implementations
             {
                 if (await _tagRepo.ExistsByNameAsync(name, tagId, ct))
                 {
-                    throw new AppException("TagAlreadyExists", "Tag already exists.", 409);
+                    throw new AppException("TagAlreadyExists", "Thẻ đã tồn tại.", 409);
                 }
 
                 entity.tag_name = name;
@@ -78,11 +78,11 @@ namespace Service.Implementations
         public async Task DeleteAsync(Guid tagId, CancellationToken ct = default)
         {
             var entity = await _tagRepo.GetByIdAsync(tagId, ct)
-                         ?? throw new AppException("TagNotFound", "Tag was not found.", 404);
+                         ?? throw new AppException("TagNotFound", "Không tìm thấy thẻ.", 404);
 
             if (await _tagRepo.HasStoriesAsync(tagId, ct))
             {
-                throw new AppException("TagInUse", "Tag cannot be deleted because it is in use.", 409);
+                throw new AppException("TagInUse", "Không thể xóa thẻ vì đang được sử dụng.", 409);
             }
 
             await _tagRepo.DeleteAsync(entity, ct);
@@ -97,12 +97,12 @@ namespace Service.Implementations
         {
             if (string.IsNullOrEmpty(name))
             {
-                throw new AppException("ValidationFailed", "Tag name must not be empty.", 400);
+                throw new AppException("ValidationFailed", "Tên thẻ không được để trống.", 400);
             }
 
             if (name.Length > MaxNameLength)
             {
-                throw new AppException("ValidationFailed", $"Tag name must not exceed {MaxNameLength} characters.", 400);
+                throw new AppException("ValidationFailed", $"Tên thẻ không được vượt quá {MaxNameLength} ký tự.", 400);
             }
         }
 
@@ -159,5 +159,3 @@ namespace Service.Implementations
         }
     }
 }
-
-

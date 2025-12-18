@@ -44,7 +44,7 @@ namespace Service.Services
         {
             if (readerAccountId == authorAccountId)
             {
-                throw new AppException("FollowSelfNotAllowed", "You cannot follow yourself.", 400);
+                throw new AppException("FollowSelfNotAllowed", "Bạn không thể tự theo dõi chính mình.", 400);
             }
 
             var reader = await RequireReaderAsync(readerAccountId, ct);
@@ -88,7 +88,7 @@ namespace Service.Services
             var author = await RequireAuthorAsync(authorAccountId, ct);
 
             var existing = await _followRepository.GetAsync(reader.account_id, author.account_id, ct)
-                          ?? throw new AppException("FollowNotFound", "You are not following this author.", 404);
+                          ?? throw new AppException("FollowNotFound", "Bạn chưa theo dõi tác giả này.", 404);
 
             await _followRepository.RemoveAsync(existing, ct);
             IncrementFollowerCount(author, -1);
@@ -103,7 +103,7 @@ namespace Service.Services
             var author = await RequireAuthorAsync(authorAccountId, ct);
 
             var existing = await _followRepository.GetAsync(reader.account_id, author.account_id, ct)
-                          ?? throw new AppException("FollowNotFound", "You are not following this author.", 404);
+                          ?? throw new AppException("FollowNotFound", "Bạn chưa theo dõi tác giả này.", 404);
 
             if ((existing.noti_new_story ?? true) == enableNotifications)
             {
@@ -155,7 +155,7 @@ namespace Service.Services
             var reader = await _profileRepository.GetReaderByIdAsync(accountId, ct);
             if (reader == null)
             {
-                throw new AppException("ReaderProfileMissing", "Reader profile is not registered.", 404);
+                throw new AppException("ReaderProfileMissing", "Hồ sơ người đọc chưa được đăng ký.", 404);
             }
             return reader;
         }
@@ -165,11 +165,11 @@ namespace Service.Services
             var author = await _authorStoryRepository.GetAuthorAsync(accountId, ct);
             if (author == null)
             {
-                throw new AppException("AuthorNotFound", "Author profile was not found.", 404);
+                throw new AppException("AuthorNotFound", "Không tìm thấy hồ sơ tác giả.", 404);
             }
             if (author.restricted)
             {
-                throw new AppException("AuthorRestricted", "This author is currently restricted.", 403);
+                throw new AppException("AuthorRestricted", "Tác giả này hiện đang bị hạn chế.", 403);
             }
             return author;
         }

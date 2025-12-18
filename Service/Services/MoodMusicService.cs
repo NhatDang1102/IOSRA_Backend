@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
@@ -55,17 +55,17 @@ namespace Service.Services
         {
             if (request == null)
             {
-                throw new AppException("InvalidRequest", "Request body is required.", 400);
+                throw new AppException("InvalidRequest", "Nội dung yêu cầu là bắt buộc.", 400);
             }
 
             var moodCode = request.MoodCode.Trim().ToLowerInvariant();
             var mood = await _repository.GetMoodAsync(moodCode, ct)
-                       ?? throw new AppException("MoodNotFound", "Mood code is not supported.", 404);
+                       ?? throw new AppException("MoodNotFound", "Mã tâm trạng không được hỗ trợ.", 404);
 
             var prompt = request.Prompt.Trim();
             if (prompt.Length < 20)
             {
-                throw new AppException("PromptTooShort", "Prompt must be at least 20 characters.", 400);
+                throw new AppException("PromptTooShort", "Prompt phải có ít nhất 20 ký tự.", 400);
             }
 
             var audio = await _elevenLabsClient.ComposeMusicAsync(prompt, ct: ct);
@@ -95,11 +95,11 @@ namespace Service.Services
         {
             if (request == null)
             {
-                throw new AppException("InvalidRequest", "Request body is required.", 400);
+                throw new AppException("InvalidRequest", "Nội dung yêu cầu là bắt buộc.", 400);
             }
 
             var track = await _repository.GetTrackAsync(trackId, ct)
-                        ?? throw new AppException("TrackNotFound", "Mood track not found.", 404);
+                        ?? throw new AppException("TrackNotFound", "Không tìm thấy bản nhạc tâm trạng.", 404);
 
             if (request.Title != null)
             {
@@ -126,7 +126,7 @@ namespace Service.Services
         public async Task DeleteAsync(Guid trackId, CancellationToken ct = default)
         {
             var track = await _repository.GetTrackAsync(trackId, ct)
-                        ?? throw new AppException("TrackNotFound", "Mood track not found.", 404);
+                        ?? throw new AppException("TrackNotFound", "Không tìm thấy bản nhạc tâm trạng.", 404);
 
             if (!string.IsNullOrWhiteSpace(track.storage_path))
             {
