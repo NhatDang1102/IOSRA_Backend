@@ -28,14 +28,15 @@ namespace Service.Services
             _repository = repository;
         }
 
-        public async Task<PagedResult<AdminAccountResponse>> GetAccountsAsync(string? status, string? role, int page, int pageSize, CancellationToken ct = default)
+        public async Task<PagedResult<AdminAccountResponse>> GetAccountsAsync(string? status, string? role, string? search, int page, int pageSize, CancellationToken ct = default)
         {
             var normalizedPage = page <= 0 ? 1 : page;
             var normalizedPageSize = pageSize <= 0 ? 20 : Math.Min(pageSize, 100);
             var normalizedStatus = NormalizeStatusFilter(status);
             var normalizedRole = NormalizeRoleFilter(role);
+            var normalizedSearch = search?.Trim();
 
-            var (items, total) = await _repository.GetAccountsAsync(normalizedStatus, normalizedRole, normalizedPage, normalizedPageSize, ct);
+            var (items, total) = await _repository.GetAccountsAsync(normalizedStatus, normalizedRole, normalizedSearch, normalizedPage, normalizedPageSize, ct);
             var responses = items.Select(Map).ToArray();
 
             return new PagedResult<AdminAccountResponse>

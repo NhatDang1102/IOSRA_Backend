@@ -24,6 +24,7 @@ namespace Repository.Repositories
         public async Task<(IReadOnlyList<AdminAccountProjection> Items, int Total)> GetAccountsAsync(
             string? status,
             string? role,
+            string? search,
             int page,
             int pageSize,
             CancellationToken ct = default)
@@ -41,6 +42,11 @@ namespace Repository.Repositories
             if (!string.IsNullOrWhiteSpace(normalizedRole))
             {
                 query = query.Where(a => a.account_roles.Any(ar => ar.role.role_code == normalizedRole));
+            }
+
+            if (!string.IsNullOrWhiteSpace(search))
+            {
+                query = query.Where(a => a.username.Contains(search) || a.email.Contains(search));
             }
 
             var total = await query.CountAsync(ct);

@@ -39,20 +39,15 @@ namespace Main.Controllers
             
     
                     [HttpGet("accounts")]
-    
-                    public async Task<ActionResult<PagedResult<AdminAccountResponse>>> GetAccounts(
-    
-                        [FromQuery] string? status,
-    
-                        [FromQuery] string? role,
-    
-                        [FromQuery] int page = 1,
-    
-                        [FromQuery] int pageSize = 20,
-    
-                        CancellationToken ct = default)
-    
-                    {                var result = await _adminService.GetAccountsAsync(status, role, page, pageSize, ct);
+                public async Task<ActionResult<PagedResult<AdminAccountResponse>>> GetAccounts(
+                    [FromQuery] string? status,
+                    [FromQuery] string? role,
+                    [FromQuery] string? search,
+                    [FromQuery] int page = 1,
+                    [FromQuery] int pageSize = 20,
+                    CancellationToken ct = default)
+                {
+                var result = await _adminService.GetAccountsAsync(status, role, search, page, pageSize, ct);
                 return Ok(result);
             }
 

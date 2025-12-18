@@ -31,10 +31,10 @@ namespace IOSRA.Tests.Controllers
         public async Task GetAccounts_Should_Return_Ok()
         {
             var res = new PagedResult<AdminAccountResponse> { Items = Array.Empty<AdminAccountResponse>(), Total = 0, Page = 1, PageSize = 20 };
-            _serviceMock.Setup(x => x.GetAccountsAsync(null, null, 1, 20, It.IsAny<CancellationToken>()))
+            _serviceMock.Setup(x => x.GetAccountsAsync(null, null, null, 1, 20, It.IsAny<CancellationToken>()))
                 .ReturnsAsync(res);
 
-            var result = await _controller.GetAccounts(null, null, 1, 20, CancellationToken.None);
+            var result = await _controller.GetAccounts(null, null, null, 1, 20, CancellationToken.None);
             var okResult = result.Result.Should().BeOfType<OkObjectResult>().Subject;
             okResult.Value.Should().Be(res);
         }

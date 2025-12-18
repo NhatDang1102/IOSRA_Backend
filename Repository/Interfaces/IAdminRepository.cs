@@ -12,6 +12,7 @@ namespace Repository.Interfaces
         Task<(IReadOnlyList<AdminAccountProjection> Items, int Total)> GetAccountsAsync(
             string? status,
             string? role,
+            string? search,
             int page,
             int pageSize,
             CancellationToken ct = default);

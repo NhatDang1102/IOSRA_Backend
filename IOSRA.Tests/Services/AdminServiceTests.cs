@@ -34,10 +34,10 @@ namespace IOSRA.Tests.Services
             {
                 new() { AccountId = Guid.NewGuid(), Username = "user1", Roles = new[] { "reader" } }
             };
-            _repoMock.Setup(x => x.GetAccountsAsync(null, null, 1, 20, It.IsAny<CancellationToken>()))
+            _repoMock.Setup(x => x.GetAccountsAsync(null, null, null, 1, 20, It.IsAny<CancellationToken>()))
                 .ReturnsAsync((items, 1));
 
-            var result = await _service.GetAccountsAsync(null, null, 1, 20);
+            var result = await _service.GetAccountsAsync(null, null, null, 1, 20);
 
             result.Should().NotBeNull();
             result.Total.Should().Be(1);
