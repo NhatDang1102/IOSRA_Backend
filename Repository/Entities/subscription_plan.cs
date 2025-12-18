@@ -25,6 +25,8 @@ public partial class subscription_plan
 
     public uint daily_dias { get; set; }
 
+    public uint initial_dias { get; set; }
+
     [InverseProperty("plan_codeNavigation")]
     public virtual ICollection<subscription> subscriptions { get; set; } = new List<subscription>();
 

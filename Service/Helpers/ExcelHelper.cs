@@ -1,11 +1,48 @@
 using System.IO;
 using ClosedXML.Excel;
+using Contract.DTOs.Response.Common;
 using Contract.DTOs.Response.OperationMod;
 
 namespace Service.Helpers
 {
     public static class ExcelHelper
     {
+        public static byte[] GenerateStatSeriesExcel(string title, StatSeriesResponse data)
+        {
+            using var workbook = new XLWorkbook();
+            var worksheet = workbook.Worksheets.Add(title.Length > 31 ? title[..31] : title);
+
+            worksheet.Cell(1, 1).Value = "Report";
+            worksheet.Cell(1, 2).Value = title;
+            worksheet.Range(1, 1, 1, 2).Style.Font.Bold = true;
+
+            worksheet.Cell(2, 1).Value = "Period Type";
+            worksheet.Cell(2, 2).Value = data.Period;
+
+            worksheet.Cell(4, 1).Value = "Period";
+            worksheet.Cell(4, 2).Value = "Value";
+            worksheet.Range(4, 1, 4, 2).Style.Font.Bold = true;
+
+            int row = 5;
+            foreach (var point in data.Points)
+            {
+                worksheet.Cell(row, 1).Value = point.PeriodLabel;
+                worksheet.Cell(row, 2).Value = point.Value;
+                row++;
+            }
+
+            row++;
+            worksheet.Cell(row, 1).Value = "Total";
+            worksheet.Cell(row, 2).Value = data.Total;
+            worksheet.Range(row, 1, row, 2).Style.Font.Bold = true;
+
+            worksheet.Columns().AdjustToContents();
+
+            using var stream = new MemoryStream();
+            workbook.SaveAs(stream);
+            return stream.ToArray();
+        }
+
         public static byte[] GenerateRevenueExcel(OperationRevenueResponse data)
         {
             using var workbook = new XLWorkbook();

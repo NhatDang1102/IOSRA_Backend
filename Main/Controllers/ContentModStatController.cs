@@ -21,6 +21,11 @@ namespace Main.Controllers
         [HttpGet("stories")]
         public async Task<IActionResult> GetStoryStats([FromQuery] StatQueryRequest query, CancellationToken ct)
         {
+            if (query.GenerateReport)
+            {
+                var file = await _statService.ExportStoryPublishStatsAsync(query, ct);
+                return File(file.Content, file.ContentType, file.FileName);
+            }
             var result = await _statService.GetStoryPublishStatsAsync(query, ct);
             return Ok(result);
         }
@@ -28,6 +33,11 @@ namespace Main.Controllers
         [HttpGet("chapters")]
         public async Task<IActionResult> GetChapterStats([FromQuery] StatQueryRequest query, CancellationToken ct)
         {
+            if (query.GenerateReport)
+            {
+                var file = await _statService.ExportChapterPublishStatsAsync(query, ct);
+                return File(file.Content, file.ContentType, file.FileName);
+            }
             var result = await _statService.GetChapterPublishStatsAsync(query, ct);
             return Ok(result);
         }
@@ -35,6 +45,11 @@ namespace Main.Controllers
         [HttpGet("story-decisions")]
         public async Task<IActionResult> GetStoryDecisionStats([FromQuery] StatQueryRequest query, [FromQuery] string? status, CancellationToken ct)
         {
+            if (query.GenerateReport)
+            {
+                var file = await _statService.ExportStoryDecisionStatsAsync(status, query, ct);
+                return File(file.Content, file.ContentType, file.FileName);
+            }
             var result = await _statService.GetStoryDecisionStatsAsync(status, query, ct);
             return Ok(result);
         }
@@ -42,6 +57,11 @@ namespace Main.Controllers
         [HttpGet("reports")]
         public async Task<IActionResult> GetReportStats([FromQuery] StatQueryRequest query, [FromQuery] string? status, CancellationToken ct)
         {
+            if (query.GenerateReport)
+            {
+                var file = await _statService.ExportReportStatsAsync(status, query, ct);
+                return File(file.Content, file.ContentType, file.FileName);
+            }
             var result = await _statService.GetReportStatsAsync(status, query, ct);
             return Ok(result);
         }
@@ -49,6 +69,11 @@ namespace Main.Controllers
         [HttpGet("reports/handled")]
         public async Task<IActionResult> GetHandledReportStats([FromQuery] StatQueryRequest query, [FromQuery] string? status, CancellationToken ct)
         {
+            if (query.GenerateReport)
+            {
+                var file = await _statService.ExportHandledReportStatsAsync(status, AccountId, query, ct);
+                return File(file.Content, file.ContentType, file.FileName);
+            }
             var result = await _statService.GetHandledReportStatsAsync(status, AccountId, query, ct);
             return Ok(result);
         }

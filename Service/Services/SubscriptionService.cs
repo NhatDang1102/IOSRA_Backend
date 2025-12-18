@@ -172,6 +172,41 @@ namespace Service.Services
             }
 
             await _repository.SaveChangesAsync(ct);
+
+            // Grant initial diamonds if configured for the plan
+            if (plan.initial_dias > 0)
+            {
+                var wallet = await _repository.GetWalletAsync(accountId, ct);
+                if (wallet == null)
+                {
+                    wallet = new dia_wallet
+                    {
+                        wallet_id = Guid.NewGuid(),
+                        account_id = accountId,
+                        balance_dias = 0,
+                        locked_dias = 0,
+                        updated_at = now
+                    };
+                    await _repository.AddWalletAsync(wallet, ct);
+                }
+
+                wallet.balance_dias += plan.initial_dias;
+                wallet.updated_at = now;
+
+                var walletPayment = new wallet_payment
+                {
+                    trs_id = Guid.NewGuid(),
+                    wallet_id = wallet.wallet_id,
+                    type = "adjust",
+                    dias_delta = (long)plan.initial_dias,
+                    dias_after = wallet.balance_dias,
+                    ref_id = subscription.sub_id, // Link to subscription
+                    created_at = now
+                };
+                _repository.AddWalletPayment(walletPayment);
+
+                await _repository.SaveChangesAsync(ct);
+            }
         }
     }
 }

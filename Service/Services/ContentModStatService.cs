@@ -59,6 +59,59 @@ namespace Service.Services
             return BuildResponse(period, points);
         }
 
+        public async Task<FileExportResponse> ExportStoryPublishStatsAsync(StatQueryRequest query, CancellationToken ct = default)
+        {
+            var data = await GetStoryPublishStatsAsync(query, ct);
+            var content = Helpers.ExcelHelper.GenerateStatSeriesExcel("Story Publish Stats", data);
+
+            return CreateFileResponse(content, "story_publish_stats");
+        }
+
+        public async Task<FileExportResponse> ExportChapterPublishStatsAsync(StatQueryRequest query, CancellationToken ct = default)
+        {
+            var data = await GetChapterPublishStatsAsync(query, ct);
+            var content = Helpers.ExcelHelper.GenerateStatSeriesExcel("Chapter Publish Stats", data);
+
+            return CreateFileResponse(content, "chapter_publish_stats");
+        }
+
+        public async Task<FileExportResponse> ExportStoryDecisionStatsAsync(string? status, StatQueryRequest query, CancellationToken ct = default)
+        {
+            var data = await GetStoryDecisionStatsAsync(status, query, ct);
+            var title = string.IsNullOrEmpty(status) ? "Story Decisions" : $"Story Decisions ({status})";
+            var content = Helpers.ExcelHelper.GenerateStatSeriesExcel(title, data);
+
+            return CreateFileResponse(content, $"story_decisions_{status ?? "all"}");
+        }
+
+        public async Task<FileExportResponse> ExportReportStatsAsync(string? status, StatQueryRequest query, CancellationToken ct = default)
+        {
+            var data = await GetReportStatsAsync(status, query, ct);
+            var title = string.IsNullOrEmpty(status) ? "Report Stats" : $"Report Stats ({status})";
+            var content = Helpers.ExcelHelper.GenerateStatSeriesExcel(title, data);
+
+            return CreateFileResponse(content, $"report_stats_{status ?? "all"}");
+        }
+
+        public async Task<FileExportResponse> ExportHandledReportStatsAsync(string? status, Guid moderatorAccountId, StatQueryRequest query, CancellationToken ct = default)
+        {
+            var data = await GetHandledReportStatsAsync(status, moderatorAccountId, query, ct);
+            var title = string.IsNullOrEmpty(status) ? "Handled Reports" : $"Handled Reports ({status})";
+            var content = Helpers.ExcelHelper.GenerateStatSeriesExcel(title, data);
+
+            return CreateFileResponse(content, $"handled_reports_{status ?? "all"}");
+        }
+
+        private static FileExportResponse CreateFileResponse(byte[] content, string filePrefix)
+        {
+            return new FileExportResponse
+            {
+                Content = content,
+                ContentType = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                FileName = $"{filePrefix}_{DateTime.UtcNow:yyyyMMddHHmm}.xlsx"
+            };
+        }
+
         private static (string period, DateTime from, DateTime to) NormalizeQuery(StatQueryRequest query)
         {
             var period = string.IsNullOrWhiteSpace(query.Period) ? "month" : query.Period.Trim().ToLowerInvariant();
