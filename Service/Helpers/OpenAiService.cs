@@ -172,8 +172,8 @@ namespace Service.Helpers
             };
         }
 
-        public Task<OpenAiModerationResult> ModerateStoryAsync(string title, string? description, string outline, CancellationToken ct = default)
-            => ModerateContentAsync(title, description, outline, StoryProfile, null, ct);
+        public Task<OpenAiModerationResult> ModerateStoryAsync(string title, string? description, string outline, string languageCode, CancellationToken ct = default)
+            => ModerateContentAsync(title, description, outline, StoryProfile, languageCode, ct);
 
         public Task<OpenAiModerationResult> ModerateChapterAsync(string title, string content, string languageCode, CancellationToken ct = default)
             => ModerateContentAsync(title, content, null, ChapterProfile, languageCode, ct);

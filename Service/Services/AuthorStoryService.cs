@@ -186,8 +186,10 @@ namespace Service.Services
                 throw new AppException("PublishedStoryIncomplete", "Vui lòng hoàn thành truyện đã xuất bản của bạn trước khi gửi truyện mới.", 400);
             }
 
+            var langCode = story.language?.lang_code ?? "vi-VN";
+
             //gọi bên OpenAIService để request title và desc cho AI 
-            var aiResult = await _openAiModerationService.ModerateStoryAsync(story.title, story.desc, story.outline, ct);
+            var aiResult = await _openAiModerationService.ModerateStoryAsync(story.title, story.desc, story.outline, langCode, ct);
             //làm tròn điểm AI 
             var aiScore = (decimal)Math.Round(aiResult.Score, 2, MidpointRounding.AwayFromZero);
 
