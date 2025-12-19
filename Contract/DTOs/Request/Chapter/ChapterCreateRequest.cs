@@ -4,19 +4,17 @@ namespace Contract.DTOs.Request.Chapter
 {
     public class ChapterCreateRequest
     {
-        [Required(ErrorMessage = "Title is required.")]
-        [MinLength(20)]
-        [StringLength(255, ErrorMessage = "Title must not exceed 255 characters.")]
+        [Required]
+        [StringLength(50, MinimumLength = 20, ErrorMessage = "Tiêu đề phải từ 20-50 kí tự.")]
         public string Title { get; set; } = null!;
 
-        [Required(ErrorMessage = "Language code is required.")]
-        [StringLength(8, ErrorMessage = "Language code must not exceed 8 characters.")]
+        [Required(ErrorMessage = "Không được để trống ngôn ngữ.")]
         public string LanguageCode { get; set; } = null!;
 
-        [Required(ErrorMessage = "Content is required.")]
+        [Required(ErrorMessage = "Không được để trống nội dung chương.")]
         public string Content { get; set; } = null!;
 
-        [RegularExpression("^(?i)(free|dias)$", ErrorMessage = "AccessType must be either 'free' or 'dias'.")]
+        [RegularExpression("^(?i)(free|dias)$", ErrorMessage = "Chỉ được chọn 1 trong 2 loại miễn phí/trả phí")]
         public string? AccessType { get; set; }
     }
 }

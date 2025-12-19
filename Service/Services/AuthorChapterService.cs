@@ -18,7 +18,7 @@ namespace Service.Services
 {
     public class AuthorChapterService : IAuthorChapterService
     { //số chữ min khi up chap 
-        private const int MinContentLength = 50;
+        private const int MinContentLength = 200;
         private const int MaxContentLength = 10000;
         private readonly IAuthorChapterRepository _chapterRepository;
         private readonly IAuthorStoryRepository _storyRepository;
