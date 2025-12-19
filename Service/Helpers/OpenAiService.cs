@@ -475,7 +475,7 @@ If no policy issue exists, state clearly that no deductions were applied but pro
                 throw new ArgumentException("Language codes are required.");
             }
 
-            var systemPrompt = $"You are a professional literary translator. Translate from {sourceLanguageCode} to {targetLanguageCode}. Preserve the author's tone, keep paragraph breaks, and return plain text only without commentary.";
+            var systemPrompt = $"You are a professional literary translator. Translate from {sourceLanguageCode} to {targetLanguageCode}. Preserve the author's tone and paragraph breaks. IMPORTANT: The content may contain formatting tags, markup, or special technical symbols. You MUST PRESERVE ALL such tags and symbols EXACTLY as they appear in the source text. Do not translate, remove, or modify any tags. Ensure the translated text is correctly placed within the original formatting structure. Return ONLY the translated content with no additional commentary.";
             var payload = new ChatCompletionsRequest
             {
                 Model = _settings.ChatModel,
