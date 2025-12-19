@@ -25,5 +25,5 @@ public partial class language_list
     public virtual ICollection<chapter_localization> chapter_localizations { get; set; } = new List<chapter_localization>();
 
     [InverseProperty("language")]
-    public virtual ICollection<chapter> chapters { get; set; } = new List<chapter>();
+    public virtual ICollection<story> stories { get; set; } = new List<story>();
 }

@@ -33,7 +33,7 @@ namespace Repository.Repositories
 
             return await _db.chapter
                 .Include(c => c.story).ThenInclude(s => s.author).ThenInclude(a => a.account)
-                .Include(c => c.language)
+                .Include(c => c.story).ThenInclude(s => s.language)
                 .Include(c => c.content_approves)
                 .Where(c => statusList.Contains(c.status.ToLower()))
                 .OrderByDescending(c => c.submitted_at ?? c.updated_at)
@@ -51,7 +51,8 @@ namespace Repository.Repositories
                       .ThenInclude(s => s.author!)
                       .ThenInclude(a => a.rank)
                   .Include(c => c.chapter!)
-                      .ThenInclude(ch => ch.language)
+                      .ThenInclude(ch => ch.story!)
+                      .ThenInclude(s => s.language)
                   .FirstOrDefaultAsync(c => c.review_id == reviewId, ct);
 
         public Task SaveChangesAsync(CancellationToken ct = default)

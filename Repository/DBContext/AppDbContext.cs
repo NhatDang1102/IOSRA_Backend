@@ -444,6 +444,11 @@ namespace Repository.DBContext
                 entity.HasOne(d => d.author).WithMany(p => p.stories)
                     .OnDelete(DeleteBehavior.ClientSetNull)
                     .HasConstraintName("fk_story_author");
+
+                entity.HasOne(d => d.language).WithMany(p => p.stories)
+                    .HasForeignKey(d => d.language_id)
+                    .OnDelete(DeleteBehavior.ClientSetNull)
+                    .HasConstraintName("fk_story_language");
             });
 
             modelBuilder.Entity<story_tag>(entity =>

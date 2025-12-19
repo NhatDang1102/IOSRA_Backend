@@ -10,6 +10,7 @@ namespace Repository.Interfaces
     {
         Task<author?> GetAuthorAsync(Guid accountId, CancellationToken ct = default);
         Task<List<tag>> GetTagsByIdsAsync(IEnumerable<Guid> tagIds, CancellationToken ct = default);
+        Task<language_list?> GetLanguageByCodeAsync(string code, CancellationToken ct = default);
         Task<story> CreateAsync(story entity, IEnumerable<Guid> tagIds, CancellationToken ct = default);
         Task<List<story>> GetAllByAuthorAsync(Guid authorId, IEnumerable<string>? statuses = null, CancellationToken ct = default);
         Task<story?> GetStoryWithDetailsAsync(Guid storyId, CancellationToken ct = default);

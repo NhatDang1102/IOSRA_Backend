@@ -16,6 +16,7 @@ public partial class story
 
     public string title { get; set; } = null!;
 
+    public Guid language_id { get; set; }
     
     public Guid author_id { get; set; }
 
@@ -50,6 +51,9 @@ public partial class story
     [ForeignKey("author_id")]
     [InverseProperty("stories")]
     public virtual author author { get; set; } = null!;
+
+    [ForeignKey("language_id")]
+    public virtual language_list language { get; set; } = null!;
 
     [InverseProperty("story")]
     public virtual ICollection<chapter> chapters { get; set; } = new List<chapter>();

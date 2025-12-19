@@ -26,7 +26,7 @@ namespace Repository.Repositories
 
             var query = _db.chapter
                 .AsNoTracking()
-                .Include(c => c.language)
+                .Include(c => c.story).ThenInclude(s => s.language)
                 .Where(c => c.story_id == storyId && c.status == PublishedStatus)
                 .OrderBy(c => c.chapter_no);
 
@@ -39,16 +39,14 @@ namespace Repository.Repositories
         public Task<chapter?> GetPublishedChapterByIdAsync(Guid chapterId, CancellationToken ct = default)
             => _db.chapter
                   .AsNoTracking()
-                  .Include(c => c.language)
-                  .Include(c => c.story)
+                  .Include(c => c.story).ThenInclude(s => s.language)
                   .Include(c => c.mood)
                   .FirstOrDefaultAsync(c => c.chapter_id == chapterId && c.status == PublishedStatus, ct);
 
         public Task<chapter?> GetPublishedChapterWithVoicesAsync(Guid chapterId, CancellationToken ct = default)
             => _db.chapter
                 .AsNoTracking()
-                .Include(c => c.language)
-                .Include(c => c.story)
+                .Include(c => c.story).ThenInclude(s => s.language)
                 .Include(c => c.chapter_voices)
                     .ThenInclude(v => v.voice)
                 .Include(c => c.mood)

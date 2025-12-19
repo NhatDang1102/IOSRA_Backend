@@ -22,6 +22,8 @@ namespace Service.Helpers
             {
                 StoryId = entity.story_id,
                 Title = entity.title,
+                LanguageCode = entity.language?.lang_code ?? string.Empty,
+                LanguageName = entity.language?.lang_name ?? string.Empty,
                 AuthorId = entity.author_id,
                 AuthorUsername = entity.author.account.username,
                 CoverUrl = entity.cover_url,

@@ -127,6 +127,8 @@ namespace Service.Services
             {
                 StoryId = story.story_id,
                 Title = story.title,
+                LanguageCode = story.language?.lang_code ?? string.Empty,
+                LanguageName = story.language?.lang_name ?? string.Empty,
                 AuthorId = story.author_id,
                 AuthorUsername = story.author.account.username,
                 CoverUrl = story.cover_url,

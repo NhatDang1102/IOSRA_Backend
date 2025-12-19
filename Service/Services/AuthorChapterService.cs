@@ -88,14 +88,6 @@ namespace Service.Services
                 throw new AppException("InvalidChapterTitle", "Tiêu đề chương không được để trống.", 400);
             }
 
-            var languageCode = (request.LanguageCode ?? string.Empty).Trim();
-            if (string.IsNullOrWhiteSpace(languageCode))
-            {
-                throw new AppException("LanguageCodeRequired", "Mã ngôn ngữ không được để trống.", 400);
-            }
-            //gọi repo lấy language líst để đảm bảo language cho phép phải có trong db và đúng code 
-            var language = await _chapterRepository.GetLanguageByCodeAsync(languageCode, ct)
-                          ?? throw new AppException("LanguageNotSupported", $"Ngôn ngữ '{languageCode}' không được hỗ trợ.", 400);
             var content = (request.Content ?? string.Empty).Trim();
             if (content.Length < MinContentLength)
             {
@@ -128,7 +120,6 @@ namespace Service.Services
                 chapter_id = chapterId,
                 story_id = story.story_id,
                 chapter_no = (uint)chapterNumber,
-                language_id = language.lang_id,
                 title = title,
                 summary = null,
                 dias_price = (uint)price,
@@ -143,7 +134,6 @@ namespace Service.Services
                 submitted_at = null,
                 published_at = null
             };
-            chapter.language = language;
 
             string contentKey;
             try
@@ -243,7 +233,7 @@ namespace Service.Services
             //gọi AI tóm tắt chapter
             chapter.summary = await _openAiModerationService.SummarizeChapterAsync(content, ct);
             //gọi openAI kiểm duyệt 
-            var langCode = chapter.language?.lang_code ?? "vi-VN";
+            var langCode = chapter.story?.language?.lang_code ?? "vi-VN";
             var moderation = await _openAiModerationService.ModerateChapterAsync(chapter.title, content, langCode, ct);
             var aiScoreDecimal = (decimal)Math.Round(moderation.Score, 2, MidpointRounding.AwayFromZero);
             var timestamp = TimezoneConverter.VietnamNow;
@@ -362,21 +352,6 @@ namespace Service.Services
                 }
 
                 chapter.title = title;
-                updated = true;
-            }
-
-            if (request.LanguageCode != null)
-            {
-                var languageCode = request.LanguageCode.Trim();
-                if (string.IsNullOrWhiteSpace(languageCode))
-                {
-                    throw new AppException("LanguageCodeRequired", "Mã ngôn ngữ không được để trống.", 400);
-                }
-
-                var language = await _chapterRepository.GetLanguageByCodeAsync(languageCode, ct)
-                              ?? throw new AppException("LanguageNotSupported", $"Ngôn ngữ '{languageCode}' không được hỗ trợ.", 400);
-                chapter.language_id = language.lang_id;
-                chapter.language = language;
                 updated = true;
             }
 
@@ -530,7 +505,7 @@ namespace Service.Services
 
         private static ChapterResponse MapChapter(chapter chapter, IReadOnlyList<content_approve> approvals)
         {
-            var language = chapter.language ?? throw new InvalidOperationException("Chapter language navigation was not loaded.");
+            var language = chapter.story?.language ?? throw new InvalidOperationException("Chapter story language navigation was not loaded.");
             var latestApproval = approvals?
                 .OrderByDescending(a => a.created_at)
                 .FirstOrDefault();
@@ -592,7 +567,7 @@ namespace Service.Services
 
         private static ChapterListItemResponse MapChapterListItem(chapter chapter)
         {
-            var language = chapter.language ?? throw new InvalidOperationException("Chapter language navigation was not loaded.");
+            var language = chapter.story?.language ?? throw new InvalidOperationException("Chapter story language navigation was not loaded.");
             var approval = chapter.content_approves?
                 .OrderByDescending(a => a.created_at)
                 .FirstOrDefault();

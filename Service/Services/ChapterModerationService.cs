@@ -192,7 +192,7 @@ namespace Service.Services
             var story = chapter.story ?? throw new InvalidOperationException("Chapter story navigation was not loaded.");
             var author = story.author ?? throw new InvalidOperationException("Story author navigation was not loaded.");
             var account = author.account ?? throw new InvalidOperationException("Author account navigation was not loaded.");
-            var language = chapter.language ?? throw new InvalidOperationException("Chapter language navigation was not loaded.");
+            var language = story.language ?? throw new InvalidOperationException("Story language navigation was not loaded.");
             var aiScore = review.ai_score;
             var aiFeedback = review.ai_feedback;
 

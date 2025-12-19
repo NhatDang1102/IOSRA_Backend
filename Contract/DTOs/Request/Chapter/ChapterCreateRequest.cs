@@ -8,9 +8,6 @@ namespace Contract.DTOs.Request.Chapter
         [StringLength(50, MinimumLength = 20, ErrorMessage = "Tiêu đề phải từ 20-50 kí tự.")]
         public string Title { get; set; } = null!;
 
-        [Required(ErrorMessage = "Không được để trống ngôn ngữ.")]
-        public string LanguageCode { get; set; } = null!;
-
         [Required(ErrorMessage = "Không được để trống nội dung chương.")]
         public string Content { get; set; } = null!;
 

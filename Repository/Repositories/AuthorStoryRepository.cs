@@ -34,6 +34,12 @@ namespace Repository.Repositories
             return _db.tag.Where(t => ids.Contains(t.tag_id)).ToListAsync(ct);
         }
 
+        public Task<language_list?> GetLanguageByCodeAsync(string code, CancellationToken ct = default)
+        {
+            var normalized = code.Trim();
+            return _db.language_lists.FirstOrDefaultAsync(l => l.lang_code == normalized, ct);
+        }
+
         public async Task<story> CreateAsync(story entity, IEnumerable<Guid> tagIds, CancellationToken ct = default)
         {
 
@@ -68,6 +74,7 @@ namespace Repository.Repositories
             //bóc ra líst stor của author kèm luôn tag và trạng thái kiểm duyệt từng story 
             var query = _db.stories
                 .Include(s => s.story_tags).ThenInclude(st => st.tag)
+                .Include(s => s.language)
                 .Include(s => s.content_approves)
                 .Where(s => s.author_id == authorId);
 
@@ -100,11 +107,13 @@ namespace Repository.Repositories
                   .Include(s => s.author).ThenInclude(a => a.account)
                   .Include(s => s.author).ThenInclude(a => a.rank)
                   .Include(s => s.story_tags).ThenInclude(st => st.tag)
+                  .Include(s => s.language)
                   .FirstOrDefaultAsync(s => s.story_id == storyId, ct);
 
         public Task<story?> GetByIdForAuthorAsync(Guid storyId, Guid authorId, CancellationToken ct = default)
             => _db.stories
                   .Include(s => s.story_tags).ThenInclude(st => st.tag)
+                  .Include(s => s.language)
                   .FirstOrDefaultAsync(s => s.story_id == storyId && s.author_id == authorId, ct);
 
         public async Task UpdateAsync(story entity, CancellationToken ct = default)

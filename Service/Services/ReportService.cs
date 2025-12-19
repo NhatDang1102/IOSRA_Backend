@@ -363,8 +363,8 @@ namespace Service.Services
                                 AccessType = chapter.access_type ?? string.Empty,
                                 PriceDias = chapter.dias_price,
                                 ContentPath = chapter.content_url,
-                                LanguageCode = chapter.language?.lang_code,
-                                LanguageName = chapter.language?.lang_name
+                                LanguageCode = chapter.story?.language?.lang_code,
+                                LanguageName = chapter.story?.language?.lang_name
                             };
                         }
                         break;

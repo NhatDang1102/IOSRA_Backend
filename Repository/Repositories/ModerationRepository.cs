@@ -29,7 +29,7 @@ namespace Repository.Repositories
         public Task<chapter?> GetChapterAsync(Guid chapterId, CancellationToken ct = default)
             => _db.chapter
                   .Include(c => c.story).ThenInclude(s => s.author).ThenInclude(a => a.account)
-                  .Include(c => c.language)
+                  .Include(c => c.story).ThenInclude(s => s.language)
                   .FirstOrDefaultAsync(c => c.chapter_id == chapterId, ct);
 
         public async Task UpdateChapterAsync(chapter entity, CancellationToken ct = default)

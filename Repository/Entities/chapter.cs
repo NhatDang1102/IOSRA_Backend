@@ -18,8 +18,6 @@ public partial class chapter
 
     public uint chapter_no { get; set; }
 
-    public Guid language_id { get; set; }
-
     [StringLength(255)]
     public string title { get; set; } = null!;
 
@@ -80,10 +78,6 @@ public partial class chapter
     [ForeignKey("story_id")]
     [InverseProperty("chapters")]
     public virtual story story { get; set; } = null!;
-
-    [ForeignKey("language_id")]
-    [InverseProperty("chapters")]
-    public virtual language_list language { get; set; } = null!;
 
     [ForeignKey("mood_code")]
     [InverseProperty("chapters")]

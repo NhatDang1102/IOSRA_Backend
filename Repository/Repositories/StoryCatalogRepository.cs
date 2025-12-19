@@ -28,6 +28,7 @@ namespace Repository.Repositories
                 .AsNoTracking()
                 .Include(s => s.author).ThenInclude(a => a.account)
                 .Include(s => s.story_tags).ThenInclude(st => st.tag)
+                .Include(s => s.language)
                 .Where(s => PublicStoryStatuses.Contains(s.status))
                 .Where(s => s.chapters.Any(c => c.status == "published"));
 
@@ -75,6 +76,7 @@ namespace Repository.Repositories
                 .AsNoTracking()
                 .Include(s => s.author).ThenInclude(a => a.account)
                 .Include(s => s.story_tags).ThenInclude(st => st.tag)
+                .Include(s => s.language)
                 .Where(s => PublicStoryStatuses.Contains(s.status))
                 .Where(s => s.chapters.Any(c => c.status == "published"))
                 .OrderByDescending(s => s.published_at ?? s.updated_at)
@@ -94,6 +96,7 @@ namespace Repository.Repositories
                 .AsNoTracking()
                 .Include(s => s.author).ThenInclude(a => a.account)
                 .Include(s => s.story_tags).ThenInclude(st => st.tag)
+                .Include(s => s.language)
                 .Where(s => ids.Contains(s.story_id) && PublicStoryStatuses.Contains(s.status))
                 .ToListAsync(ct);
         }
@@ -103,6 +106,7 @@ namespace Repository.Repositories
                   .AsNoTracking()
                   .Include(s => s.author).ThenInclude(a => a.account)
                   .Include(s => s.story_tags).ThenInclude(st => st.tag)
+                  .Include(s => s.language)
                   .FirstOrDefaultAsync(s => s.story_id == storyId && PublicStoryStatuses.Contains(s.status), ct);
         private static string BuildLikePattern(string term)
         {
@@ -255,6 +259,7 @@ namespace Repository.Repositories
                 .Take(pageSize)
                 .Include(s => s.author).ThenInclude(a => a.account)
                 .Include(s => s.story_tags).ThenInclude(st => st.tag)
+                .Include(s => s.language)
                 .ToListAsync(ct);
 
             return (items, total);

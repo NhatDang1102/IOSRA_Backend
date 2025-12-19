@@ -70,7 +70,7 @@ namespace Service.Services
 
             var translated = await _translationService.TranslateAsync(
                 originalContent,
-                chapter.language?.lang_code ?? "vi-VN",
+                chapter.story?.language?.lang_code ?? "vi-VN",
                 targetLanguage.lang_code,
                 ct);
 
@@ -138,7 +138,7 @@ namespace Service.Services
             var localizations = await _chapterRepository.GetLocalizationsByChapterAsync(chapter.chapter_id, ct);
             var localizationMap = localizations.ToDictionary(l => l.lang_id, l => l);
 
-            var originalCode = chapter.language?.lang_code ?? string.Empty;
+            var originalCode = chapter.story?.language?.lang_code ?? string.Empty;
             var locales = new ChapterTranslationLocaleStatus[languages.Count];
 
             for (var i = 0; i < languages.Count; i++)
@@ -215,7 +215,7 @@ namespace Service.Services
 
         private static void EnsureNotOriginalLanguage(chapter chapter, language_list targetLanguage)
         {
-            var originalCode = chapter.language?.lang_code ?? string.Empty;
+            var originalCode = chapter.story?.language?.lang_code ?? string.Empty;
             if (string.Equals(originalCode, targetLanguage.lang_code, StringComparison.OrdinalIgnoreCase))
             {
                 throw new AppException("TranslationNotNeeded", "Chương đã có sẵn ngôn ngữ này.", 400);
@@ -238,7 +238,7 @@ namespace Service.Services
             {
                 ChapterId = chapter.chapter_id,
                 StoryId = chapter.story_id,
-                OriginalLanguageCode = chapter.language?.lang_code ?? string.Empty,
+                OriginalLanguageCode = chapter.story?.language?.lang_code ?? string.Empty,
                 TargetLanguageCode = targetLanguage.lang_code,
                 TargetLanguageName = targetLanguage.lang_name ?? targetLanguage.lang_code,
                 ContentUrl = localization.content_url,

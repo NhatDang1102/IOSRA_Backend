@@ -11,6 +11,9 @@ namespace Contract.DTOs.Request.Story
         [StringLength(50, MinimumLength = 20, ErrorMessage = "Tiêu đề phải từ 20-50 kí tự.")]
         public string Title { get; set; } = null!;
 
+        [Required(ErrorMessage = "Mã ngôn ngữ là bắt buộc.")]
+        public string LanguageCode { get; set; } = null!;
+
         [StringLength(1000, MinimumLength = 6, ErrorMessage = "Mô tả phải từ 6-1000 kí tự.")]
         public string? Description { get; set; }
 

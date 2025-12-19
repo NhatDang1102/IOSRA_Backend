@@ -110,6 +110,10 @@ namespace Service.Services
 
             var lengthPlan = NormalizeLengthPlan(request.LengthPlan);
 
+            var languageCode = (request.LanguageCode ?? string.Empty).Trim();
+            var language = await _storyRepository.GetLanguageByCodeAsync(languageCode, ct)
+                          ?? throw new AppException("LanguageNotSupported", $"Ngôn ngữ '{languageCode}' không được hỗ trợ.", 400);
+
             //tách tag riêng biệt xong thì get by id để check từng tag coi hợp lệ ko 
             var tags = await _storyRepository.GetTagsByIdsAsync(tagIds, ct);
             if (tags.Count != tagIds.Length)
@@ -122,6 +126,7 @@ namespace Service.Services
             {
                 author_id = author.account_id,
                 title = request.Title.Trim(),
+                language_id = language.lang_id,
                 desc = string.IsNullOrWhiteSpace(request.Description) ? null : request.Description.Trim(),
                 outline = outline,
                 length_plan = lengthPlan,
@@ -129,6 +134,7 @@ namespace Service.Services
                 status = "draft",
                 is_premium = false
             };
+            story.language = language;
 
             await _storyRepository.CreateAsync(story, tagIds, ct);
 
@@ -372,6 +378,20 @@ namespace Service.Services
                 updated = true;
             }
 
+            if (!string.IsNullOrWhiteSpace(request.LanguageCode))
+            {
+                var langCode = request.LanguageCode.Trim();
+                var language = await _storyRepository.GetLanguageByCodeAsync(langCode, ct)
+                              ?? throw new AppException("LanguageNotSupported", $"Ngôn ngữ '{langCode}' không được hỗ trợ.", 400);
+
+                if (story.language_id != language.lang_id)
+                {
+                    story.language_id = language.lang_id;
+                    story.language = language;
+                    updated = true;
+                }
+            }
+
             if (request.Description != null)
             {
                 story.desc = string.IsNullOrWhiteSpace(request.Description) ? null : request.Description.Trim();
@@ -540,6 +560,8 @@ namespace Service.Services
         //map hết info từ nhiều bảng khác nhau vô response)
         private static StoryResponse MapStory(story story, IEnumerable<content_approve> approvals)
         {
+            var language = story.language ?? throw new InvalidOperationException("Story language navigation was not loaded.");
+
             var tags = story.story_tags?
                 .Where(st => st.tag != null)
                 .Select(st => new StoryTagResponse
@@ -562,6 +584,8 @@ namespace Service.Services
             {
                 StoryId = story.story_id,
                 Title = story.title,
+                LanguageCode = language.lang_code,
+                LanguageName = language.lang_name,
                 Description = story.desc,
                 Status = story.status,
                 IsPremium = story.is_premium,
@@ -582,6 +606,8 @@ namespace Service.Services
 
         private static StoryListItemResponse MapStoryListItem(story story)
         {
+            var language = story.language ?? throw new InvalidOperationException("Story language navigation was not loaded.");
+
             var tags = story.story_tags?
                 .Where(st => st.tag != null)
                 .Select(st => new StoryTagResponse
@@ -604,6 +630,8 @@ namespace Service.Services
             {
                 StoryId = story.story_id,
                 Title = story.title,
+                LanguageCode = language.lang_code,
+                LanguageName = language.lang_name,
                 Status = story.status,
                 IsPremium = story.is_premium,
                 CoverUrl = story.cover_url,
