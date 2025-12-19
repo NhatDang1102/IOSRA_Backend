@@ -523,7 +523,7 @@ namespace IOSRA.Tests.Services
                 SanitizedContent: "sanitized",
                 Explanation: "contains disallowed words");
 
-            _modAi.Setup(m => m.ModerateChapterAsync(chapter.title, "bad content", It.IsAny<CancellationToken>()))
+            _modAi.Setup(m => m.ModerateChapterAsync(chapter.title, "bad content", It.IsAny<string>(), It.IsAny<CancellationToken>()))
                   .ReturnsAsync(aiResult);
 
             _chapterRepo.Setup(r => r.UpdateAsync(chapter, It.IsAny<CancellationToken>()))
@@ -538,7 +538,7 @@ namespace IOSRA.Tests.Services
             var act = () => _svc.SubmitAsync(accId, chapterId, req, CancellationToken.None);
 
             var ex = await act.Should().ThrowAsync<AppException>();
-            ex.Which.Message.Should().Contain("Chapter was rejected by automated moderation");
+            ex.Which.Message.Should().Contain("Chapter đã bị từ chối bởi AI.");
 
             chapter.status.Should().Be("rejected");
             chapter.published_at.Should().BeNull();
@@ -591,7 +591,7 @@ namespace IOSRA.Tests.Services
                 SanitizedContent: "content ok",
                 Explanation: "safe");
 
-            _modAi.Setup(m => m.ModerateChapterAsync(chapter.title, "content ok", It.IsAny<CancellationToken>()))
+            _modAi.Setup(m => m.ModerateChapterAsync(chapter.title, "content ok", It.IsAny<string>(), It.IsAny<CancellationToken>()))
                   .ReturnsAsync(aiResult);
 
             _chapterRepo.Setup(r => r.UpdateAsync(chapter, It.IsAny<CancellationToken>()))
@@ -669,7 +669,7 @@ namespace IOSRA.Tests.Services
                 SanitizedContent: "content mid",
                 Explanation: "needs review");
 
-            _modAi.Setup(m => m.ModerateChapterAsync(chapter.title, "content mid", It.IsAny<CancellationToken>()))
+            _modAi.Setup(m => m.ModerateChapterAsync(chapter.title, "content mid", It.IsAny<string>(), It.IsAny<CancellationToken>()))
                   .ReturnsAsync(aiResult);
 
             _chapterRepo.Setup(r => r.UpdateAsync(chapter, It.IsAny<CancellationToken>()))

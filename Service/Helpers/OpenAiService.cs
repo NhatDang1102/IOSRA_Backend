@@ -173,19 +173,19 @@ namespace Service.Helpers
         }
 
         public Task<OpenAiModerationResult> ModerateStoryAsync(string title, string? description, string outline, CancellationToken ct = default)
-            => ModerateContentAsync(title, description, outline, StoryProfile, ct);
+            => ModerateContentAsync(title, description, outline, StoryProfile, null, ct);
 
-        public Task<OpenAiModerationResult> ModerateChapterAsync(string title, string content, CancellationToken ct = default)
-            => ModerateContentAsync(title, content, null, ChapterProfile, ct);
+        public Task<OpenAiModerationResult> ModerateChapterAsync(string title, string content, string languageCode, CancellationToken ct = default)
+            => ModerateContentAsync(title, content, null, ChapterProfile, languageCode, ct);
 
 
         //hàm quét AI kiểm duyệt 
-        private async Task<OpenAiModerationResult> ModerateContentAsync(string primary, string? secondary, string? tertiary, ModerationProfile profile, CancellationToken ct)
+        private async Task<OpenAiModerationResult> ModerateContentAsync(string primary, string? secondary, string? tertiary, ModerationProfile profile, string? languageCode, CancellationToken ct)
         {
 
             //gắn hết content vô 1 chuỗi để request cho openai 
             var combined = ComposeContent(primary, secondary, tertiary);
-            var ai = await RequestModerationAsync(profile, combined, ct);
+            var ai = await RequestModerationAsync(profile, combined, languageCode, ct);
 
             //tính điểm trực tiếp (ko để AI tính vì tính sai)
             var totalDeduction = ai?.Violations?.Sum(v => Math.Abs(v.Penalty ?? 0)) ?? 0;
@@ -254,12 +254,17 @@ namespace Service.Helpers
         }
 
         //hàm request gửi cho OpenAI để chấm điểm trc 
-        private async Task<ModerationAiResponse?> RequestModerationAsync(ModerationProfile profile, string content, CancellationToken ct)
+        private async Task<ModerationAiResponse?> RequestModerationAsync(ModerationProfile profile, string content, string? languageCode, CancellationToken ct)
         {
             //define system openAI 
             var moderationInstructions = @"Return JSON only with shape { ""score"": number, ""decision"": ""auto_approved|pending_manual_review|rejected"", ""violations"": [{ ""label"": string, ""evidence"": [string], ""penalty"": number }], ""explanation"": { ""english"": string, ""vietnamese"": string } }.
 Start from base score = 10.00 and subtract penalties exactly as defined in ""deductions"". Every time you subtract points you MUST add a violation entry (label must match the table), set the ""penalty"" field to the positive number of points deducted (e.g. 1.5), and quote the offending snippet inside ""evidence"".
 Rules that must always be enforced:
+- If ""languageCode"" is provided in the input, you MUST detect the language of the Title and Content. If they do not match the provided ""languageCode"":
+    - Set score to 0.00 immediately.
+    - Add a violation with label ""wrong_language"" and penalty 10.0.
+    - Decision MUST be ""rejected"".
+    - In the explanation, explicitly state that the content language does not match the required language code.
 - Any URL, external link, or redirect CTA (http, https, www, .com, bit.ly, telegram, discord.gg, invite codes, etc.) => label ""url_redirect"" and subtract at least 1.5 points per link.
 - Spam, nonsense, or repeated tokens (""up up up"", ""aaaaaaaa"", ""test test"", placeholder text) OR random keyboard smashing/gibberish (e.g., ""xyzba abznx"", ""asdfghjkl"") => label ""spam_repetition"" and subtract at least 1.5 points.
 - If the content is a story (contains title, description, and outline), check for consistency. If they are unrelated or contradictory => label ""inconsistent_content"" and subtract 3.0 points. (example: the description talk about character A and B in a C scenario, but the outline is not related to A, B, or C)
@@ -280,6 +285,7 @@ If no policy issue exists, state clearly that no deductions were applied but pro
             var userPayload = new
             {
                 contentType = profile.ContentType,
+                languageCode = languageCode,
                 scoring = new
                 {
                     autoApprove = AutoApproveThreshold,

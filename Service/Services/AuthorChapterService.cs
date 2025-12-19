@@ -243,7 +243,8 @@ namespace Service.Services
             //gọi AI tóm tắt chapter
             chapter.summary = await _openAiModerationService.SummarizeChapterAsync(content, ct);
             //gọi openAI kiểm duyệt 
-            var moderation = await _openAiModerationService.ModerateChapterAsync(chapter.title, content, ct);
+            var langCode = chapter.language?.lang_code ?? "vi-VN";
+            var moderation = await _openAiModerationService.ModerateChapterAsync(chapter.title, content, langCode, ct);
             var aiScoreDecimal = (decimal)Math.Round(moderation.Score, 2, MidpointRounding.AwayFromZero);
             var timestamp = TimezoneConverter.VietnamNow;
 
