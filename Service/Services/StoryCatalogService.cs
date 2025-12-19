@@ -134,6 +134,7 @@ namespace Service.Services
                 Status = story.status,
                 Description = story.desc,
                 TotalChapters = totalChapters,
+                TotalViews = story.total_views,
                 PublishedAt = story.published_at,
                 LengthPlan = story.length_plan,
                 Tags = tags

@@ -64,21 +64,49 @@ namespace Service.Background
             using var scope = _scopeFactory.CreateScope();
             //lấy service track lượt view (redis)
             var tracker = scope.ServiceProvider.GetRequiredService<IStoryViewTracker>();
-            //lấy repo để truy vấn db
-            var repository = scope.ServiceProvider.GetRequiredService<IStoryWeeklyViewRepository>();
+            //đọc bảng story weekly view
+            var weeklyViewRepo = scope.ServiceProvider.GetRequiredService<IStoryWeeklyViewRepository>();
+            var storyRepo = scope.ServiceProvider.GetRequiredService<IStoryCatalogRepository>();
 
+            //xác định tuần hiện tại 
             var weekStartUtc = tracker.GetCurrentWeekStartUtc();
-
-            //bóc TẤT CẢ lượt xem tuần này trên redis
-            var views = await tracker.GetWeeklyViewsAsync(weekStartUtc, ct);
-            if (views.Count == 0)
+            //xác định số view mới 
+            var newViews = await tracker.GetWeeklyViewsAsync(weekStartUtc, ct);
+            //nếu ko có view mới ->  end luôn task
+            if (newViews.Count == 0)
             {
-                _logger.LogDebug("No story views to archive for week {WeekStart}.", weekStartUtc);
+                _logger.LogDebug("No new story views to process for week {WeekStart}.", weekStartUtc);
                 return;
             }
-            //upsert vào db
-            await repository.UpsertWeeklyViewsAsync(weekStartUtc, views, ct);
-            _logger.LogInformation("Upserted {Count} story weekly view records for week {WeekStart}.", views.Count, weekStartUtc);
+            //gom hết id của story mới
+            var storyIds = newViews.Select(v => v.StoryId).ToArray();
+            //lấy số lượt xem từ đợt update cuối cùng
+            var lastViews = await weeklyViewRepo.GetWeeklyViewsByStoryIdsAsync(weekStartUtc, storyIds, ct);
+            //convert result từ db -> dictionary thay vì duyệt từng mảng
+            var lastViewsLookup = lastViews.ToDictionary(v => v.StoryId, v => v.ViewCount);
+
+            var viewIncrements = new Dictionary<Guid, ulong>();
+            //duyệt qua từng story có trong data mới từ redis
+            foreach (var view in newViews)
+            {
+                //lấy ra số view từ lần lưu gần nhất trong db, ko có thì tính là 0
+                lastViewsLookup.TryGetValue(view.StoryId, out var lastCount);
+                //nếu có chênh lệch thì lấy lần mới - lần cũ ra số view mới
+                if (view.ViewCount > lastCount)
+                {
+                    viewIncrements[view.StoryId] = view.ViewCount - lastCount;
+                }
+            }
+            //nếu story có lượt view mới thì tiếp tục
+            if (viewIncrements.Count > 0)
+            {
+                //cộng dồn số view mới tính ở trên vô db
+                await storyRepo.IncrementTotalViewsAsync(viewIncrements, ct);
+                _logger.LogInformation("Incremented total views for {Count} stories.", viewIncrements.Count);
+            }
+            //cập nhật bảng story weekly view để cho highlight story, và làm cơ sở cho lần bắt đầu tiếp theo
+            await weeklyViewRepo.UpsertWeeklyViewsAsync(weekStartUtc, newViews, ct);
+            _logger.LogInformation("Upserted {Count} story weekly view records for week {WeekStart}.", newViews.Count, weekStartUtc);
         }
     }
 }

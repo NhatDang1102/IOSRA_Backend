@@ -36,6 +36,8 @@ public partial class story
 
     public bool is_premium { get; set; }
 
+    public long total_views { get; set; }
+
     [Column(TypeName = "datetime")]
     public DateTime created_at { get; set; }
 

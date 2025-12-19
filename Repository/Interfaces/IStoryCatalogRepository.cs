@@ -14,6 +14,7 @@ namespace Repository.Interfaces
         Task<story?> GetPublishedStoryByIdAsync(Guid storyId, CancellationToken ct = default);
         Task<(List<story> Items, int Total)> SearchPublishedStoriesAdvancedAsync(string? query, Guid? tagId, Guid? authorId, bool? isPremium, double? minAvgRating, string? sortBy, 
             bool sortDesc, DateTime? weekStartUtc, int page, int pageSize, CancellationToken ct = default);
+        Task IncrementTotalViewsAsync(IReadOnlyDictionary<Guid, ulong> viewIncrements, CancellationToken ct = default);
     }
 }
 

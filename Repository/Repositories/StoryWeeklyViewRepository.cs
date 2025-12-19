@@ -81,6 +81,17 @@ namespace Repository.Repositories
             return data;
         }
 
+        public async Task<IReadOnlyList<StoryViewCount>> GetWeeklyViewsByStoryIdsAsync(DateTime weekStartUtc, IEnumerable<Guid> storyIds, CancellationToken ct = default)
+        {
+            var normalizedWeekStart = weekStartUtc.TrimToMinute();
+            var ids = storyIds.ToArray();
+
+            return await _db.story_weekly_view
+                .Where(x => x.week_start_utc == normalizedWeekStart && ids.Contains(x.story_id))
+                .Select(x => new StoryViewCount { StoryId = x.story_id, ViewCount = x.view_count })
+                .ToListAsync(ct);
+        }
+
     }
 
     internal static class DateTimeExtensions

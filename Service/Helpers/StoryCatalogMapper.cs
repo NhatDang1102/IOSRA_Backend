@@ -28,6 +28,7 @@ namespace Service.Helpers
                 IsPremium = entity.is_premium,
                 Status = entity.status,
                 TotalChapters = chapterCount,
+                TotalViews = entity.total_views,
                 PublishedAt = entity.published_at,
                 LengthPlan = entity.length_plan,
                 ShortDescription = BuildShortDescription(entity.desc),

@@ -259,5 +259,26 @@ namespace Repository.Repositories
 
             return (items, total);
         }
+
+        public async Task IncrementTotalViewsAsync(IReadOnlyDictionary<Guid, ulong> viewIncrements, CancellationToken ct = default)
+        {
+            if (viewIncrements == null || viewIncrements.Count == 0)
+            {
+                return;
+            }
+
+            var storyIds = viewIncrements.Keys.ToList();
+
+            
+            foreach (var storyId in storyIds)
+            {
+                if (viewIncrements.TryGetValue(storyId, out var increment) && increment > 0)
+                {
+                    await _db.stories
+                        .Where(s => s.story_id == storyId)
+                        .ExecuteUpdateAsync(p => p.SetProperty(s => s.total_views, s => s.total_views + (long)increment), ct);
+                }
+            }
+        }
     }
 }

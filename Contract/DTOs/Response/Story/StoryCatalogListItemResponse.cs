@@ -13,6 +13,7 @@ namespace Contract.DTOs.Response.Story
         public bool IsPremium { get; set; }
         public string Status { get; set; } = null!;
         public int TotalChapters { get; set; }
+        public long TotalViews { get; set; }
         public DateTime? PublishedAt { get; set; }
         public string? ShortDescription { get; set; }
         public string LengthPlan { get; set; } = null!;
