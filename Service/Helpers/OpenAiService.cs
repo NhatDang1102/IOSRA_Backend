@@ -260,11 +260,13 @@ namespace Service.Helpers
             var moderationInstructions = @"Return JSON only with shape { ""score"": number, ""decision"": ""auto_approved|pending_manual_review|rejected"", ""violations"": [{ ""label"": string, ""evidence"": [string], ""penalty"": number }], ""explanation"": { ""english"": string, ""vietnamese"": string } }.
 Start from base score = 10.00 and subtract penalties exactly as defined in ""deductions"". Every time you subtract points you MUST add a violation entry (label must match the table), set the ""penalty"" field to the positive number of points deducted (e.g. 1.5), and quote the offending snippet inside ""evidence"".
 Rules that must always be enforced:
-- If ""languageCode"" is provided in the input, you MUST detect the language of the Title and Content. If they do not match the provided ""languageCode"":
-    - Set score to 0.00 immediately.
-    - Add a violation with label ""wrong_language"" and penalty 10.0.
+- A `languageCode` field (e.g., 'en-US', 'vi-VN') is provided. This is the REQUIRED language. You MUST determine the primary language of the submitted `content`.
+- If the primary language of the `content` does NOT strictly match the language specified in `languageCode`, you MUST REJECT the submission.
+    - Set score to 0.0.
     - Decision MUST be ""rejected"".
-    - In the explanation, explicitly state that the content language does not match the required language code.
+    - Add a single violation with the label ""wrong_language"" and a penalty of 10.0.
+    - The explanation MUST clearly state that the content language does not match the required language. Example: ""The chapter is written in Japanese, but the required language is Vietnamese (vi-VN).""
+- A few words/phrases in another language are acceptable (eg., names, locations), but if the main body of text is in the wrong language, it's an immediate rejection.
 - Any URL, external link, or redirect CTA (http, https, www, .com, bit.ly, telegram, discord.gg, invite codes, etc.) => label ""url_redirect"" and subtract at least 1.5 points per link.
 - Spam, nonsense, or repeated tokens (""up up up"", ""aaaaaaaa"", ""test test"", placeholder text) OR random keyboard smashing/gibberish (e.g., ""xyzba abznx"", ""asdfghjkl"") => label ""spam_repetition"" and subtract at least 1.5 points.
 - If the content is a story (contains title, description, and outline), check for consistency. If they are unrelated or contradictory => label ""inconsistent_content"" and subtract 3.0 points. (example: the description talk about character A and B in a C scenario, but the outline is not related to A, B, or C)
