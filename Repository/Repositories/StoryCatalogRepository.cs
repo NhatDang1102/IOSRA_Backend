@@ -28,7 +28,8 @@ namespace Repository.Repositories
                 .AsNoTracking()
                 .Include(s => s.author).ThenInclude(a => a.account)
                 .Include(s => s.story_tags).ThenInclude(st => st.tag)
-                .Where(s => PublicStoryStatuses.Contains(s.status));
+                .Where(s => PublicStoryStatuses.Contains(s.status))
+                .Where(s => s.chapters.Any(c => c.status == "published"));
 
             if (!string.IsNullOrWhiteSpace(query))
             {
@@ -75,6 +76,7 @@ namespace Repository.Repositories
                 .Include(s => s.author).ThenInclude(a => a.account)
                 .Include(s => s.story_tags).ThenInclude(st => st.tag)
                 .Where(s => PublicStoryStatuses.Contains(s.status))
+                .Where(s => s.chapters.Any(c => c.status == "published"))
                 .OrderByDescending(s => s.published_at ?? s.updated_at)
                 .Take(limit)
                 .ToListAsync(ct);
@@ -118,7 +120,8 @@ namespace Repository.Repositories
             var q = _db.stories
                 .AsNoTracking()
                 .Include(s => s.author).ThenInclude(a => a.account)
-                .Where(s => PublicStoryStatuses.Contains(s.status));
+                .Where(s => PublicStoryStatuses.Contains(s.status))
+                .Where(s => s.chapters.Any(c => c.status == "published"));
 
             // text search
             if (!string.IsNullOrWhiteSpace(query))
