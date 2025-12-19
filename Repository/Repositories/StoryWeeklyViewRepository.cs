@@ -44,7 +44,7 @@ namespace Repository.Repositories
                 if (existingLookup.TryGetValue(item.StoryId, out var entity))
                 {
                     entity.view_count = item.ViewCount;
-                    entity.captured_at_utc = now;
+                    entity.captured_at = now;
                 }
                 else
                 {
@@ -54,7 +54,7 @@ namespace Repository.Repositories
                         story_id = item.StoryId,
                         week_start_utc = normalizedWeekStart,
                         view_count = item.ViewCount,
-                        captured_at_utc = now
+                        captured_at = now
                     });
                 }
             }

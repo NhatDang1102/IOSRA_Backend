@@ -18,7 +18,7 @@ public partial class story_weekly_view
     public ulong view_count { get; set; }
 
     [Column(TypeName = "datetime")]
-    public DateTime captured_at_utc { get; set; }
+    public DateTime captured_at { get; set; }
 
     [ForeignKey(nameof(story_id))]
     public virtual story story { get; set; } = null!;

@@ -435,6 +435,7 @@ namespace Repository.DBContext
 
                 entity.Property(e => e.created_at).HasDefaultValueSql("CURRENT_TIMESTAMP");
                 entity.Property(e => e.status).HasDefaultValueSql("'draft'");
+                entity.Property(e => e.total_views).HasDefaultValue(0L);
                 entity.Property(e => e.updated_at)
                     .ValueGeneratedOnAddOrUpdate()
                     .HasDefaultValueSql("CURRENT_TIMESTAMP");
@@ -469,7 +470,7 @@ namespace Repository.DBContext
                 entity.Property(e => e.story_weekly_view_id).ValueGeneratedNever();
                 entity.Property(e => e.view_count).HasDefaultValueSql("0");
                 entity.Property(e => e.week_start_utc).HasColumnType("datetime");
-                entity.Property(e => e.captured_at_utc).HasDefaultValueSql("CURRENT_TIMESTAMP");
+                entity.Property(e => e.captured_at).HasDefaultValueSql("CURRENT_TIMESTAMP");
 
                 entity.HasOne(d => d.story).WithMany(p => p.story_weekly_views)
                     .HasForeignKey(d => d.story_id)
