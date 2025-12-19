@@ -22,6 +22,8 @@ namespace Repository.Repositories
                 .Include(f => f.story)
                     .ThenInclude(s => s.author)
                         .ThenInclude(a => a.account)
+                .Include(f => f.story)
+                    .ThenInclude(s => s.language)
                 .FirstOrDefaultAsync(f => f.reader_id == readerId && f.story_id == storyId, ct);
 
         public Task AddAsync(favorite_story entity, CancellationToken ct = default)
@@ -46,6 +48,8 @@ namespace Repository.Repositories
                 .Include(f => f.story)
                     .ThenInclude(s => s.author)
                         .ThenInclude(a => a.account)
+                .Include(f => f.story)
+                    .ThenInclude(s => s.language)
                 .Where(f => f.reader_id == readerId);
 
             var total = await query.CountAsync(ct);

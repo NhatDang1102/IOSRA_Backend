@@ -153,6 +153,7 @@ namespace Repository.Repositories
         {
             return await _db.chapter
                 .Include(c => c.story)
+                    .ThenInclude(s => s.language)
                 .Where(c => c.status == "published" && c.summary == null)
                 .OrderByDescending(c => c.created_at)
                 .Take(limit)

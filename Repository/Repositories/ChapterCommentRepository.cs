@@ -36,11 +36,11 @@ namespace Repository.Repositories
             var query = _db.chapter_comments
                 .AsNoTracking()
                 .Include(c => c.reader).ThenInclude(r => r.account)
-                .Include(c => c.chapter)
+                .Include(c => c.chapter).ThenInclude(ch => ch.story).ThenInclude(s => s.language)
                 .Include(c => c.replies.Where(r => VisibleStatuses.Contains(r.status)))
                     .ThenInclude(r => r.reader).ThenInclude(a => a.account)
                 .Include(c => c.replies.Where(r => VisibleStatuses.Contains(r.status)))
-                    .ThenInclude(r => r.chapter).ThenInclude(ch => ch.story)
+                    .ThenInclude(r => r.chapter).ThenInclude(ch => ch.story).ThenInclude(s => s.language)
                 .Where(c => c.chapter_id == chapterId
                             && c.parent_comment_id == null
                             && VisibleStatuses.Contains(c.status));
@@ -64,11 +64,11 @@ namespace Repository.Repositories
             var query = _db.chapter_comments
                 .AsNoTracking()
                 .Include(c => c.reader).ThenInclude(r => r.account)
-                .Include(c => c.chapter)
+                .Include(c => c.chapter).ThenInclude(ch => ch.story).ThenInclude(s => s.language)
                 .Include(c => c.replies.Where(r => VisibleStatuses.Contains(r.status)))
                     .ThenInclude(r => r.reader).ThenInclude(a => a.account)
                 .Include(c => c.replies.Where(r => VisibleStatuses.Contains(r.status)))
-                    .ThenInclude(r => r.chapter).ThenInclude(ch => ch.story)
+                    .ThenInclude(r => r.chapter).ThenInclude(ch => ch.story).ThenInclude(s => s.language)
                 .Where(c => c.story_id == storyId
                             && c.parent_comment_id == null
                             && VisibleStatuses.Contains(c.status));
@@ -97,7 +97,7 @@ namespace Repository.Repositories
             var query = _db.chapter_comments
                 .AsNoTracking()
                 .Include(c => c.reader).ThenInclude(r => r.account)
-                .Include(c => c.chapter).ThenInclude(ch => ch.story)
+                .Include(c => c.chapter).ThenInclude(ch => ch.story).ThenInclude(s => s.language)
                 .Include(c => c.parent_comment)
                 .AsQueryable();
 
@@ -139,13 +139,13 @@ namespace Repository.Repositories
         public Task<chapter_comment?> GetAsync(Guid chapterId, Guid commentId, CancellationToken ct = default)
             => _db.chapter_comments
                   .Include(c => c.reader).ThenInclude(r => r.account)
-                  .Include(c => c.chapter).ThenInclude(ch => ch.story)
+                  .Include(c => c.chapter).ThenInclude(ch => ch.story).ThenInclude(s => s.language)
                   .FirstOrDefaultAsync(c => c.chapter_id == chapterId && c.comment_id == commentId, ct);
 
         public Task<chapter_comment?> GetForOwnerAsync(Guid chapterId, Guid commentId, Guid readerId, CancellationToken ct = default)
             => _db.chapter_comments
                   .Include(c => c.reader).ThenInclude(r => r.account)
-                  .Include(c => c.chapter).ThenInclude(ch => ch.story)
+                  .Include(c => c.chapter).ThenInclude(ch => ch.story).ThenInclude(s => s.language)
                   .FirstOrDefaultAsync(c => c.chapter_id == chapterId && c.comment_id == commentId && c.reader_id == readerId, ct);
 
         public async Task AddAsync(chapter_comment comment, CancellationToken ct = default)

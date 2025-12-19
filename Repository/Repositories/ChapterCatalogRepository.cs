@@ -57,6 +57,8 @@ namespace Repository.Repositories
                 .AsNoTracking()
                 .Include(cv => cv.voice)
                 .Include(cv => cv.chapter)
+                    .ThenInclude(c => c.story)
+                        .ThenInclude(s => s.language)
                 .Where(cv => cv.chapter_id == chapterId
                              && cv.voice_id == voiceId
                              && cv.chapter.status == PublishedStatus)
