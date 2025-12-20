@@ -262,6 +262,7 @@ public class PaymentService : IPaymentService
         var diaPayment = await _billingRepository.GetDiaPaymentByOrderCodeAsync(transactionId, ct);
         var subPayment = await _billingRepository.GetSubscriptionPaymentByOrderCodeAsync(transactionId, ct);
 
+        // Cố gắng gọi PayOS để hủy, nhưng không chặn việc cập nhật DB nếu thất bại
         try
         {
             await _payOS.cancelPaymentLink(orderCode, cancellationReason ?? "User cancelled payment");
@@ -269,8 +270,8 @@ public class PaymentService : IPaymentService
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to cancel payment link with order code: {OrderCode}", orderCode);
-            return false;
+            // Thường lỗi do link đã được hủy trên UI PayOS trước đó, ta chỉ log lại
+            _logger.LogWarning("PayOS cancel API returned error (possibly already cancelled): {Message}", ex.Message);
         }
 
         var updated = false;
@@ -289,10 +290,12 @@ public class PaymentService : IPaymentService
         if (updated)
         {
             await _billingRepository.SaveChangesAsync(ct);
+            _logger.LogInformation("Local payment record marked as cancelled for order {OrderCode}", transactionId);
         }
         else if (diaPayment == null && subPayment == null)
         {
             _logger.LogWarning("No payment record found for order {OrderCode}", transactionId);
+            return false;
         }
 
         return true;
