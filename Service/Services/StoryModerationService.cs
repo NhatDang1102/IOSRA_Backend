@@ -48,6 +48,7 @@ namespace Service.Services
             foreach (var story in stories)
             {
                 var approval = story.content_approves?
+                    .Where(a => string.Equals(a.approve_type, "story", StringComparison.OrdinalIgnoreCase))
                     .OrderByDescending(c => c.created_at)
                     .FirstOrDefault();
 
