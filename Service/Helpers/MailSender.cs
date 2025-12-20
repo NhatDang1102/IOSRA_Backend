@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using Contract.DTOs.Settings;
 using Microsoft.Extensions.Options;
 using Service.Interfaces;
@@ -25,8 +25,8 @@ namespace Service.Helpers
         public async Task SendOtpEmailAsync(string toEmail, string otp)
         {
             using var message = BuildMessage(
-                "Verify Your IOSRA Account",
-                $"Your OTP code is: {otp}\nThe code expires in 5 minutes.",
+                "Xác minh OTP",
+                $"Mã của bạn là : {otp}\nHết hạn sau 5 phút.",
                 toEmail);
             using var client = CreateClient();
             await client.SendMailAsync(message);
@@ -35,8 +35,8 @@ namespace Service.Helpers
         public async Task SendOtpForgotEmailAsync(string toEmail, string otp)
         {
             using var message = BuildMessage(
-                "Reset Your IOSRA Password",
-                $"Your password reset OTP is: {otp}\nThe code expires in 5 minutes.",
+                "Quên mật khẩu",
+                $"Mã của bạn là : {otp}\nHết hạn sau 5 phút.",
                 toEmail);
             using var client = CreateClient();
             await client.SendMailAsync(message);
@@ -45,8 +45,8 @@ namespace Service.Helpers
         public async Task SendWelcomeEmailAsync(string toEmail, string name)
         {
             using var message = BuildMessage(
-                "Welcome to IOSRA",
-                $"Hello {name},\nThank you for registering an IOSRA account.",
+                "Chào mừng đến với IOSRA - Toranovel",
+                $"Cảm ơn {name},\nđã tham gia hệ thống của chúng tôi. Chúc bạn có những trải nghiệm đọc và viết tuyệt vời",
                 toEmail);
             using var client = CreateClient();
             await client.SendMailAsync(message);
@@ -55,9 +55,9 @@ namespace Service.Helpers
         public async Task SendChangeEmailOtpAsync(string newEmail, string otp)
         {
             using var message = BuildMessage(
-                "Confirm Your IOSRA Email Change",
-                $"You (or someone else) requested to change the IOSRA login email to this address.\n" +
-                $"OTP: {otp}\nThe code expires in 5 minutes.\n\nIf you did not request this change, please ignore this email.",
+                "Xác minh đổi mail",
+                $"Bạn hoặc 1 người nào đó đã yêu cầu đổi mail.\n" +
+                $"Mã của bạn là: {otp}\nHết hạn sau 5 phút..\n\nNếu bạn không yêu cầu, hãy bỏ qua mail này",
                 newEmail);
             using var client = CreateClient();
             await client.SendMailAsync(message);
@@ -66,9 +66,9 @@ namespace Service.Helpers
         public async Task SendChangeEmailSuccessAsync(string oldEmail, string newEmail)
         {
             using var message = BuildMessage(
-                "Your IOSRA Email Was Updated",
-                $"Your IOSRA login email has been changed to: {newEmail}\n" +
-                $"If you did not perform this action, contact support immediately.",
+                "Mail của bạn đã được thay đổi thành công",
+                $"Mail mới của bạn: {newEmail}\n" +
+                $"Nếu bạn không thực hiện yêu cầu này, hãy liên hệ chúng tôi ngay.",
                 oldEmail);
             using var client = CreateClient();
             await client.SendMailAsync(message);
@@ -77,8 +77,8 @@ namespace Service.Helpers
         public async Task SendStoryApprovedEmailAsync(string toEmail, string storyTitle)
         {
             using var message = BuildMessage(
-                "Your Story Was Approved",
-                $"Congratulations! Your story \"{storyTitle}\" has been approved and is now live for readers.",
+                "Truyện của bạn đã được phê duyệt",
+                $"Chúc mừng, truyện \"{storyTitle}\" của bạn đã được phê duyệt và xuất bản thành công.",
                 toEmail);
             using var client = CreateClient();
             await client.SendMailAsync(message);
@@ -86,14 +86,14 @@ namespace Service.Helpers
 
         public async Task SendStoryRejectedEmailAsync(string toEmail, string storyTitle, string? note)
         {
-            var body = $"Your story \"{storyTitle}\" was rejected by our moderation team.";
+            var body = $"Rất tiếc, truyện \"{storyTitle}\" đã bị từ chối.";
             if (!string.IsNullOrWhiteSpace(note))
             {
-                body += $"\nModerator note: {note}";
+                body += $"\nNote của Moderator: {note}";
             }
-            body += "\nPlease review the content, make adjustments, and resubmit when ready.";
+            body += "\nBạn có thể rút lại bản nháp, điều chỉnh theo note của chúng tôi, và sau đó nộp lại. Thân ái!";
 
-            using var message = BuildMessage("Your Story Was Rejected", body, toEmail);
+            using var message = BuildMessage("Truyện đã bị từ chối", body, toEmail);
             using var client = CreateClient();
             await client.SendMailAsync(message);
         }
@@ -101,8 +101,8 @@ namespace Service.Helpers
         public async Task SendChapterApprovedEmailAsync(string toEmail, string storyTitle, string chapterTitle)
         {
             using var message = BuildMessage(
-                "Your Chapter Was Approved",
-                $"Great news! The chapter \"{chapterTitle}\" in story \"{storyTitle}\" has been approved and is now visible to readers.",
+                "Chương của bạn đã được phê duyệt",
+                $"Chúc mừng, chương \"{chapterTitle}\" của truyện \"{storyTitle}\" đã được xuất bản thành công!.",
                 toEmail);
             using var client = CreateClient();
             await client.SendMailAsync(message);
@@ -110,32 +110,32 @@ namespace Service.Helpers
 
         public async Task SendChapterRejectedEmailAsync(string toEmail, string storyTitle, string chapterTitle, string? note)
         {
-            var body = $"The chapter \"{chapterTitle}\" in story \"{storyTitle}\" was rejected by our moderation team.";
+            var body = $"Chương \"{chapterTitle}\" của truyện \"{storyTitle}\" đã bị chúng tôi từ chối.";
             if (!string.IsNullOrWhiteSpace(note))
             {
-                body += $"\nModerator note: {note}";
+                body += $"\nNote của Moderator: {note}";
             }
-            body += "\nPlease adjust the content and submit again when ready.";
+            body += "\nBạn có thể rút lại bản nháp và điều chỉnh lại, sau đó đăng lại cho chúng tôi kiểm duyệt.";
 
-            using var message = BuildMessage("Your Chapter Was Rejected", body, toEmail);
+            using var message = BuildMessage("Chương đã bị từ chối", body, toEmail);
             using var client = CreateClient();
             await client.SendMailAsync(message);
         }
 
         public async Task SendStrikeWarningEmailAsync(string toEmail, string username, string reason, byte strikeCount, DateTime? restrictedUntil)
         {
-            var body = $"Hello {username},\n"
+            var body = $"Thân chào {username},\n"
                        + $"{reason}\n"
-                       + $"Current strike level: {strikeCount}.";
+                       + $"Mức độ hạn chế hiện tại: {strikeCount}.";
 
             if (restrictedUntil.HasValue)
             {
-                body += $"\nYour account is temporarily restricted from posting new stories/chapters/comments until {restrictedUntil.Value:yyyy-MM-dd HH:mm:ss} (UTC+7).";
+                body += $"\nTài khoản của bạn bị hạn chế đăng truyện, chương, bình luận mới đến {restrictedUntil.Value:yyyy-MM-dd HH:mm:ss} (GMT+7).";
             }
 
-            body += "\nIf you believe this is a mistake, please contact support.";
+            body += "\nNếu muốn kháng cáo, hãy liên hệ chúng tôi";
 
-            using var message = BuildMessage("IOSRA Content Strike Warning", body, toEmail);
+            using var message = BuildMessage("Thông báo hạn chế!", body, toEmail);
             using var client = CreateClient();
             await client.SendMailAsync(message);
         }
