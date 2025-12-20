@@ -69,8 +69,9 @@ namespace Service.Helpers
                 category = "Spam / Nonsense / Gibberish",
                 labels = new[] { "spam_repetition" },
                 penalties = new[] { 
-                    "-1.5: Heavy spam, long sequences of nonsense, or filler text.",
-                    "-0.5: Short bursts of repetitive tokens."
+                    "-10.0: The content is primarily gibberish, keyboard smashing, or has NO meaningful prose (e.g. 'abcxyz...', 'hshshs').",
+                    "-4.0: Heavy spam, long sequences of nonsense, or filler text blocks.",
+                    "-1.0: Short bursts of repetitive tokens."
                 },
                 examples = "E.g.: 'up up up', 'aaaaaaaa', 'test test test', 'next next next... aaaaa...', 'xyzba abznx', 'asdfghjkl'.",
                 rules = "Detect placeholder text, keyboard smashing, or repetitive phrases used to inflate word count.",
