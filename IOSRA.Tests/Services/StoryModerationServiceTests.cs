@@ -167,7 +167,7 @@ namespace IOSRA.Tests.Services
             item.StoryId.Should().Be(story1.story_id);
             item.Title.Should().Be(story1.title);
             item.AiScore.Should().Be(8m);
-            item.AiResult.Should().Be("approved"); // ai_score >= 7
+            item.AiResult.Should().Be("approved"); // ai_score > 7
             item.Tags.Should().ContainSingle(t => t.TagId == tagId && t.TagName == "Action");
 
             _repo.VerifyAll();

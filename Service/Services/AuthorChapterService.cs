@@ -242,7 +242,7 @@ namespace Service.Services
             chapter.submitted_at = timestamp;
 
             var shouldReject = moderation.ShouldReject || aiScoreDecimal < 5m;
-            var autoApprove = !shouldReject && aiScoreDecimal >= 7m;
+            var autoApprove = !shouldReject && aiScoreDecimal > 7m;
             var notifyFollowers = false;
 
             if (shouldReject)
@@ -614,7 +614,7 @@ namespace Service.Services
                 return "rejected";
             }
 
-            if (score >= 7m)
+            if (score > 7m)
             {
                 return "approved";
             }

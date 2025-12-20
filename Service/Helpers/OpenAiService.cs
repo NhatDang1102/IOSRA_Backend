@@ -82,26 +82,28 @@ namespace Service.Helpers
             new
             {
                 category = "Explicit Sexual Content",
-                labels = new[] { "sexual_explicit", "sexual_minor", "sexual_transaction", "fetish_extreme" },
+                labels = new[] { "sexual_explicit", "sexual_minor", "sexual_transaction", "fetish_extreme", "sexual_degradation" },
                 penalties = new[] { 
-                    "-3.0: Graphic sexual acts, explicit NSFW descriptions, or non-consensual content.",
+                    "-10.0: Sexual content involving minors (CSAM), sexual violence (rape), sexual transactions, or severe degradation.",
+                    "-3.0: Graphic sexual acts, explicit NSFW descriptions.",
                     "-1.5: Detailed nudity, heavy sexual innuendo, or fetish focus.",
                     "-0.5: Mild romantic intimacy with borderline sexual descriptions."
                 },
                 examples = "E.g.: Descriptions of intercourse, sexual organs, or forced acts.",
-                note = "CRITICAL: Any sexual content involving minors results in immediate rejection (score < 5)."
+                note = "CRITICAL: Any sexual content involving minors results in immediate deduction of 10.0 points."
             },
             new
             {
                 category = "Violent / Extremist",
                 labels = new[] { "violent_gore", "extremist_rhetoric" },
                 penalties = new[] { 
-                    "-3.0: Graphic torture, excessive gore, or terrorist/extremist propaganda.",
+                    "-10.0: Terrorist propaganda, extremist rhetoric, or glorifying mass harm.",
+                    "-3.0: Graphic torture, excessive gore.",
                     "-1.5: Praising violence, glorifying murder, or encouraging harm.",
                     "-0.5: Narrative combat with moderate blood or injury descriptions."
                 },
                 examples = "E.g.: Terrorist manifestos, detailed descriptions of dismemberment, or glorifying mass shootings.",
-                note = "Narrative action is allowed, but glorification of extremist violence is not."
+                note = "Narrative action is allowed, but glorification of extremist violence is strictly penalized."
             },
             new
             {
@@ -120,7 +122,7 @@ namespace Service.Helpers
                 category = "Self-harm & Suicide",
                 labels = new[] { "self_harm_promotion", "self_harm_instruction", "self_harm_neutral" },
                 penalties = new[] { 
-                    "-3.0: Promoting, glorifying, or providing instructions for self-harm or suicide.",
+                    "-10.0: Promoting, glorifying, or providing instructions for self-harm or suicide.",
                     "-1.0: Neutral/narrative mention in an encouraging context."
                 },
                 examples = "E.g.: 'How to cut yourself...', glorifying suicide as a solution.",
@@ -185,20 +187,6 @@ namespace Service.Helpers
         //define các mood để tạo nhạc
         private static readonly string[] MoodCodes = { "calm", "sad", "mysterious", "excited", "romantic", "neutral" };
 
-
-        //define các label nặng nhất (để reject luôn)
-        private static readonly HashSet<string> ForceRejectLabels = new(
-            new[]
-            {
-                "sexual_minor",
-                "sexual_transaction",
-                "sexual_degradation",
-                "extremist_rhetoric",
-                "self_harm_promotion",
-                "self_harm_instruction"
-            },
-            StringComparer.OrdinalIgnoreCase);
-
         private readonly HttpClient _httpClient;
         private readonly OpenAiSettings _settings;
         private readonly JsonSerializerOptions _jsonOptions;
@@ -251,33 +239,16 @@ namespace Service.Helpers
             if (rawScore > 9.5) rawScore = 9.5;
 
             var score = Math.Clamp(Math.Round(rawScore, 2, MidpointRounding.AwayFromZero), 0.0, 10.0);
-            var normalizedDecision = ai?.Decision?.ToLowerInvariant();
+            
+            // Strict threshold logic:
+            // Score < 5.0 => Rejected
+            // 5.0 <= Score <= 7.0 => Pending Manual Review
+            // Score > 7.0 => Auto Approved
 
-            bool shouldReject = normalizedDecision switch
-            {
-                "rejected" => true,
-                "auto_approved" => score < ManualReviewThreshold ? true : false,
-                "pending_manual_review" => score < ManualReviewThreshold,
-                _ => score < ManualReviewThreshold
-            };
+            bool shouldReject = score < ManualReviewThreshold;
+            bool autoApproved = score > AutoApproveThreshold;
 
-            if (normalizedDecision is null)
-            {
-                if (score >= AutoApproveThreshold)
-                {
-                    normalizedDecision = "auto_approved";
-                }
-                else if (score >= ManualReviewThreshold)
-                {
-                    normalizedDecision = "pending_manual_review";
-                }
-                else
-                {
-                    normalizedDecision = "rejected";
-                }
-            }
-
-            var autoApproved = !shouldReject && score >= AutoApproveThreshold;
+            var normalizedDecision = shouldReject ? "rejected" : (autoApproved ? "auto_approved" : "pending_manual_review");
 
             var violations = ai?.Violations?
                 .Select(v =>
@@ -288,16 +259,6 @@ namespace Service.Helpers
                     return new ModerationViolation(label, Math.Max(1, evidence.Length), evidence, penalty);
                 })
                 .ToArray() ?? Array.Empty<ModerationViolation>();
-
-            if (!shouldReject && ai?.Violations != null)
-            {
-                var hasForced = ai.Violations.Any(v => v.Label != null && ForceRejectLabels.Contains(v.Label));
-                if (hasForced)
-                {
-                    shouldReject = true;
-                    normalizedDecision = "rejected";
-                }
-            }
 
             var explanation = BuildExplanationFromAi(profile, score, normalizedDecision, ai?.Explanation)
                               ?? BuildDecisionExplanation(profile, score, shouldReject, autoApproved);
@@ -337,9 +298,9 @@ Rules that must always be enforced:
 - Maximum allowed score for any submission is 9.5 (even with no violations).
 
 Decision Mapping (STRICT):
-- score >= 7.0 AND no forced rejection labels => ""auto_approved"".
-- 5.0 <= score < 7.0 => ""pending_manual_review"".
-- score < 5.0 OR any forced rejection labels => ""rejected"".
+- score > 7.0 => ""auto_approved"".
+- 5.0 <= score <= 7.0 => ""pending_manual_review"".
+- score < 5.0 => ""rejected"".
 
 Explanation requirements:
 - Provide a detailed Vietnamese summary. The explanation MUST align with the score and decision.
@@ -445,9 +406,9 @@ Explanation requirements:
                 return $"Điểm kiểm duyệt tự động là {score:0.00}/10 sau khi áp dụng các mức trừ (không có chi tiết), thấp hơn {ManualReviewThreshold:0.00} nên nội dung {profile.ContentType} bị từ chối.";
             
             if (autoApproved)
-                return $"Điểm kiểm duyệt tự động là {score:0.00}/10 sau khi áp dụng các mức trừ (không có chi tiết), đạt ngưỡng tự duyệt {AutoApproveThreshold:0.00} nên nội dung {profile.ContentType} được xuất bản.";
+                return $"Điểm kiểm duyệt tự động là {score:0.00}/10 sau khi áp dụng các mức trừ (không có chi tiết), lớn hơn {AutoApproveThreshold:0.00} nên nội dung {profile.ContentType} được xuất bản.";
 
-            return $"Điểm kiểm duyệt tự động là {score:0.00}/10 sau khi áp dụng các mức trừ (không có chi tiết), thấp hơn {AutoApproveThreshold:0.00} nhưng không dưới {ManualReviewThreshold:0.00} nên nội dung {profile.ContentType} chuyển cho moderator.";
+            return $"Điểm kiểm duyệt tự động là {score:0.00}/10 sau khi áp dụng các mức trừ (không có chi tiết), từ {ManualReviewThreshold:0.00} đến {AutoApproveThreshold:0.00} nên nội dung {profile.ContentType} chuyển cho moderator.";
         }
 
         //tạo hình AI cover 

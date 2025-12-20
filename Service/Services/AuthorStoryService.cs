@@ -223,8 +223,8 @@ namespace Service.Services
                     v.Penalty
                 }));
             }
-            //nếu >=7 thì giống ở trên nhưng khác cái là published 
-            if (aiScore >= 7m)
+            //nếu >7 thì giống ở trên nhưng khác cái là published 
+            if (aiScore > 7m)
             {
                 story.status = "published";
                 story.published_at ??= TimezoneConverter.VietnamNow;
@@ -661,7 +661,7 @@ namespace Service.Services
                 return "rejected";
             }
 
-            if (score >= 7m)
+            if (score > 7m)
             {
                 return "approved";
             }

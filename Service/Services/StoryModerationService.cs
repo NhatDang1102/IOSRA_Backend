@@ -240,7 +240,7 @@ namespace Service.Services
                 return "rejected";
             }
 
-            if (score >= 7m)
+            if (score > 7m)
             {
                 return "approved";
             }

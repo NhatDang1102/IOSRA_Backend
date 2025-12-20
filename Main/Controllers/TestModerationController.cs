@@ -67,7 +67,7 @@ namespace Main.Controllers
         private static string GetDecision(double score, bool shouldReject)
         {
             if (shouldReject || score < 5.0) return "rejected";
-            if (score >= 7.0) return "auto_approved";
+            if (score > 7.0) return "auto_approved";
             return "pending_manual_review";
         }
 

@@ -978,7 +978,7 @@ namespace IOSRA.Tests.Services
             _followers.VerifyNoOtherCalls();
         }
 
-        // CASE: Submit – score >= 7 -> publish, upsert approval, notify followers
+        // CASE: Submit – score > 7 -> publish, upsert approval, notify followers
         [Fact]
         public async Task SubmitForReviewAsync_Should_Publish_And_Notify_When_Score_High()
         {
