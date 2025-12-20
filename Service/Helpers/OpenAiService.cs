@@ -310,14 +310,19 @@ namespace Service.Helpers
         {
             //define system openAI 
             var moderationInstructions = @"Return JSON only with shape { ""score"": number, ""decision"": ""auto_approved|pending_manual_review|rejected"", ""violations"": [{ ""label"": string, ""evidence"": [string], ""penalty"": number }], ""explanation"": { ""english"": string, ""vietnamese"": string } }.
-Start from base score = 10.00. You MUST subtract penalties by looking up the EXACT values defined in the provided ""deductions"" table. Every time you subtract points you MUST add a violation entry (label must match the table), set the ""penalty"" field to the positive number of points deducted, and quote the offending snippet inside ""evidence"".
+Start from base score = 10.00. 
+
+STRICT PENALTY RULES:
+- Penalties are CUMULATIVE and PER OCCURRENCE.
+- For each violation, the ""penalty"" field MUST be calculated as: (Penalty Amount from table) * (Number of occurrences in the content).
+- Example: If ""spam_repetition"" is 1.5 and you find 3 snippets of spam, the ""penalty"" MUST be 4.5.
+- Example: If ""url_redirect"" is 1.5 and you find 2 links, the ""penalty"" MUST be 3.0.
+- You MUST list all offending snippets in the ""evidence"" array.
+- The final ""score"" field in the JSON MUST be exactly 10.00 minus the sum of all ""penalty"" values in the ""violations"" array.
 
 Rules that must always be enforced:
 - A `languageCode` field is provided. If the primary language of the `content` does NOT strictly match this, you MUST REJECT immediately: Set score to 0.0, Decision to ""rejected"", and use label ""wrong_language"" with penalty 10.0.
-- For issues like ""url_redirect"", ""spam_repetition"", and ""inconsistent_content"", refer to the ""deductions"" table for the correct labels and penalty amounts.
-- For ""inconsistent_content"", check if the title, description, and outline match conceptually. If they are unrelated, apply the penalty from the table.
-- Explicit sexual content, violence, hate speech, self-harm, and illegal activities MUST follow the deduction table strictly.
-- If ANY violation exists, it MUST be listed. Never return 10.00 if a deduction was applied.
+- Use the provided ""deductions"" table for labels and base penalty amounts.
 - Maximum allowed score for any submission is 9.5 (even with no violations).
 
 Decision Mapping (STRICT):
@@ -326,11 +331,8 @@ Decision Mapping (STRICT):
 - score < 5.0 OR any forced rejection labels => ""rejected"".
 
 Explanation requirements:
-- Provide detailed English and Vietnamese summaries.
-- The explanation MUST align with the decision: If auto_approved, do NOT mention manual review. If pending_manual_review, explain what needs checking.
-- For the Vietnamese part, provide actionable advice for the author.
-- DO NOT state the final score in the text; the system handles the display.
-If no issues exist, give a brief positive remark on the writing style.";
+- Provide detailed English and Vietnamese summaries. The explanation MUST align with the score and decision.
+- DO NOT state the final score in the text; the system handles the display.";
 
             //gom hết phạm vi luật, ngưỡng điểm, instruction vào 1 payload 
             var userPayload = new
