@@ -47,6 +47,7 @@ namespace Service.Services
             foreach (var chapter in chapters)
             {
                 var review = chapter.content_approves?
+                    .Where(a => string.Equals(a.approve_type, "chapter", StringComparison.OrdinalIgnoreCase))
                     .OrderByDescending(c => c.created_at)
                     .FirstOrDefault();
                 if (review == null)
