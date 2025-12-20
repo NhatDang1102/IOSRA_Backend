@@ -50,10 +50,10 @@ namespace Service.Helpers
             {
                 category = "Language Compliance",
                 labels = new[] { "wrong_language" },
-                penalties = new[] { "-10.0: The primary language of the content does not match the required languageCode." },
-                examples = "E.g.: Content is in English but languageCode is 'vi-VN'.",
-                rules = "Strictly enforced. If the main body is in the wrong language, set score to 0.0 and reject. A few loanwords or names are okay.",
-                note = "This is an immediate rejection case."
+                penalties = new[] { "-10.0: The primary language of the content is completely different from the required languageCode." },
+                examples = "E.g.: Content is in Japanese or English but languageCode is 'vi-VN'.",
+                rules = "ONLY use this if the content belongs to a DIFFERENT language. DO NOT use this for poor grammar, spelling errors, or 'teen code' if it is still the correct base language.",
+                note = "Mismatching the language family results in immediate 0.0 score."
             },
             new
             {
@@ -321,7 +321,10 @@ STRICT PENALTY RULES:
 - The final ""score"" field in the JSON MUST be exactly 10.00 minus the sum of all ""penalty"" values in the ""violations"" array.
 
 Rules that must always be enforced:
-- A `languageCode` field is provided. If the primary language of the `content` does NOT strictly match this, you MUST REJECT immediately: Set score to 0.0, Decision to ""rejected"", and use label ""wrong_language"" with penalty 10.0.
+- A `languageCode` field (e.g., 'en-US', 'vi-VN') is provided. This is the REQUIRED language.
+- If the content is written in a COMPLETELY DIFFERENT language (e.g., Japanese text for 'vi-VN'), you MUST REJECT: Set score to 0.0, Decision to ""rejected"", and add a violation with label ""wrong_language"" and penalty 10.0.
+- IMPORTANT: If the content is in the CORRECT language but has many spelling mistakes, bad grammar, or slang, DO NOT use ""wrong_language"". Instead, use ""grammar_spelling"" and ""weak_prose"" from the deductions table.
+- A few words/phrases in another language are acceptable (eg., names, locations).
 - Use the provided ""deductions"" table for labels and base penalty amounts.
 - Maximum allowed score for any submission is 9.5 (even with no violations).
 

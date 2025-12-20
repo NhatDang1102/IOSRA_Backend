@@ -32,4 +32,5 @@ public interface IOpRequestRepository
     Task<op_request> CreateWithdrawRequestAsync(Guid authorId, string payloadJson, ulong amount, CancellationToken ct = default);
     Task<IReadOnlyList<op_request>> ListWithdrawRequestsAsync(Guid? authorId, string? status, CancellationToken ct = default);
     Task<op_request?> GetWithdrawRequestAsync(Guid requestId, CancellationToken ct = default);
+    Task<List<author>> GetAllAuthorsAsync(string? query, CancellationToken ct = default);
 }

@@ -312,5 +312,23 @@ namespace Repository.Repositories
                 .Include(r => r.omod)
                     .ThenInclude(o => o.account)
                 .FirstOrDefaultAsync(r => r.request_id == requestId && r.request_type == "withdraw", ct);
+
+        public async Task<List<author>> GetAllAuthorsAsync(string? query, CancellationToken ct = default)
+        {
+            IQueryable<author> q = _db.authors
+                .Include(a => a.account)
+                .Include(a => a.rank)
+                .AsNoTracking();
+
+            if (!string.IsNullOrWhiteSpace(query))
+            {
+                var term = query.Trim().ToLowerInvariant();
+                q = q.Where(a => a.account.username.ToLower().Contains(term) || a.account.email.ToLower().Contains(term));
+            }
+
+            return await q
+                .OrderByDescending(a => a.total_story)
+                .ToListAsync(ct);
+        }
     }
 }

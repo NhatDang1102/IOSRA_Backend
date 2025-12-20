@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Service.Interfaces;
 using Contract.DTOs.Response.Author;
+using Contract.DTOs.Response.OperationMod;
 
 namespace Main.Controllers
 {
@@ -84,6 +85,13 @@ namespace Main.Controllers
         {
             await _service.RejectWithdrawAsync(requestId, AccountId, request, ct);
             return Ok(new { message = "Rejected" });
+        }
+
+        [HttpGet("authors")]
+        public async Task<ActionResult<IReadOnlyList<AuthorManagementListItemResponse>>> GetAuthors([FromQuery] string? query, CancellationToken ct)
+        {
+            var result = await _service.GetAuthorsAsync(query, ct);
+            return Ok(result);
         }
 
     }

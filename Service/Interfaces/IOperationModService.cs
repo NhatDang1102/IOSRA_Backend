@@ -16,5 +16,6 @@ namespace Service.Interfaces
         Task<IReadOnlyList<AuthorWithdrawRequestResponse>> ListWithdrawRequestsAsync(string? status, CancellationToken ct = default);
         Task ApproveWithdrawAsync(Guid requestId, Guid omodAccountId, ApproveWithdrawRequest request, CancellationToken ct = default);
         Task RejectWithdrawAsync(Guid requestId, Guid omodAccountId, RejectWithdrawRequest request, CancellationToken ct = default);
+        Task<IReadOnlyList<AuthorManagementListItemResponse>> GetAuthorsAsync(string? query, CancellationToken ct = default);
     }
 }

@@ -263,6 +263,25 @@ namespace Service.Implementations
                 }), ct);
         }
 
+        public async Task<IReadOnlyList<AuthorManagementListItemResponse>> GetAuthorsAsync(string? query, CancellationToken ct = default)
+        {
+            var authors = await _opRepo.GetAllAuthorsAsync(query, ct);
+            return authors.Select(a => new AuthorManagementListItemResponse
+            {
+                AccountId = a.account_id,
+                Username = a.account.username,
+                Email = a.account.email,
+                Restricted = a.restricted,
+                VerifiedStatus = a.verified_status,
+                TotalStory = a.total_story,
+                TotalFollower = a.total_follower,
+                RevenueBalance = a.revenue_balance,
+                RevenuePending = a.revenue_pending,
+                RevenueWithdrawn = a.revenue_withdrawn,
+                RankName = a.rank?.rank_name
+            }).ToList();
+        }
+
         private static AuthorWithdrawRequestResponse MapWithdrawResponse(op_request entity)
         {
             var payload = ParseWithdrawPayload(entity);
