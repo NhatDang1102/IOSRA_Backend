@@ -69,12 +69,14 @@ namespace Service.Helpers
                 category = "Spam / Nonsense / Gibberish",
                 labels = new[] { "spam_repetition" },
                 penalties = new[] { 
-                    "-10.0: The content is primarily gibberish, keyboard smashing, or has NO meaningful prose (e.g. 'abcxyz...', 'hshshs').",
-                    "-4.0: Heavy spam, long sequences of nonsense, or filler text blocks.",
-                    "-1.0: Short bursts of repetitive tokens."
+                    "-10.0: The content is primarily gibberish, keyboard smashing, or has NO meaningful prose.",
+                    "-10.0: Repetitive placeholder text (e.g., 'string string', 'text text', 'content content', 'test test') or repeating the same word/phrase > 3 times consecutively without narrative reason.",
+                    "-10.0: Repeating the same sentence or paragraph multiple times to fill space (copy-paste spam).",
+                    "-10.0: 'Lorem Ipsum' or standard dummy text.",
+                    "-5.0: Heavy spam, long sequences of nonsense, or filler text blocks."
                 },
-                examples = "E.g.: 'up up up', 'aaaaaaaa', 'test test test', 'next next next... aaaaa...', 'xyzba abznx', 'asdfghjkl'.",
-                rules = "Detect placeholder text, keyboard smashing, or repetitive phrases used to inflate word count.",
+                examples = "E.g.: 'string string string', 'text text text', 'Lorem ipsum dolor sit amet', 'abc abc abc', copy-pasting the same paragraph 5 times, 'asdf asdf asdf'.",
+                rules = "AGGRESSIVELY penalize any repetitive patterns used to inflate word count. If it looks like a test payload or copy-paste spam, REJECT IT immediately.",
                 note = "Ensures content has meaningful prose."
             },
             new
@@ -147,13 +149,15 @@ namespace Service.Helpers
             new
             {
                 category = "Low Quality / Irrelevant",
-                labels = new[] { "low_quality", "irrelevant_ad" },
+                labels = new[] { "low_quality", "irrelevant_ad", "template_placeholder" },
                 penalties = new[] { 
-                    "-1.5: Advertisements, promotional text, or placeholder text.",
-                    "-0.5: Mildly off-topic content."
+                    "-10.0: Content appears to be a raw template, form filler, or default value (e.g., 'Insert Story Here', 'Title goes here', 'Description...').",
+                    "-5.0: Content is extremely short, lacks narrative structure, or is just a list of keywords/tags.",
+                    "-2.0: Advertisements, promotional text, or placeholder text.",
+                    "-1.0: Mildly off-topic content."
                 },
-                examples = "E.g.: 'Buy Bitcoin now', 'Visit this shop for 50% off'.",
-                note = "Target content used for external advertising."
+                examples = "E.g.: 'Buy Bitcoin now', 'Insert body text here', 'Author Name: [Name]', just a list of random tags, 'story description'.",
+                note = "Target content used for external advertising or lazy template submissions."
             },
             new
             {
