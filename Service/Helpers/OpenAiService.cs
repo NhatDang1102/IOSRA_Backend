@@ -50,10 +50,10 @@ namespace Service.Helpers
             {
                 category = "Language Compliance",
                 labels = new[] { "wrong_language" },
-                penalties = new[] { "-10.0: The primary language of the content is completely different from the required languageCode." },
-                examples = "E.g.: Content is in Japanese or English but languageCode is 'vi-VN'.",
-                rules = "ONLY use this if the content belongs to a DIFFERENT language. DO NOT use this for poor grammar, spelling errors, or 'teen code' if it is still the correct base language.",
-                note = "Mismatching the language family results in immediate 0.0 score."
+                penalties = new[] { "-10.0: The primary language of the content DOES NOT MATCH the required languageCode." },
+                examples = "E.g.: Content is Vietnamese but languageCode is 'ja-JP'. Content is English but languageCode is 'vi-VN'.",
+                rules = "CRITICAL: Check if the content's language matches the provided 'languageCode'. If they are different families (e.g. Latin vs Kanji, or Vietnamese vs English), you MUST deduct 10.0 points immediately. Ignore minor loanwords, but reject if the main text is in the wrong language.",
+                note = "Mismatching the language results in immediate 0.0 score."
             },
             new
             {
@@ -327,12 +327,12 @@ STRICT PENALTY RULES:
 - The final ""score"" field in the JSON MUST be exactly 10.00 minus the sum of all ""penalty"" values in the ""violations"" array.
 
 Rules that must always be enforced:
-- A `languageCode` field (e.g., 'en-US', 'vi-VN') is provided. This is the REQUIRED language.
-- CHECK if the content language matches the `languageCode`.
-- ONLY use ""wrong_language"" if the content is in a COMPLETELY DIFFERENT language family (e.g., Russian text for 'en-US').
-- IF content matches `languageCode` (e.g. Japanese content with 'ja-JP'), you MUST NOT use ""wrong_language"".
-- IMPORTANT: If the content is in the CORRECT language but has many spelling mistakes, bad grammar, or slang, DO NOT use ""wrong_language"". Instead, use ""grammar_spelling"" and ""weak_prose"" from the deductions table.
-- A few words/phrases in another language are acceptable (eg., names, locations).
+- A `languageCode` field (e.g., 'en-US', 'vi-VN', 'ja-JP') is provided. This is the REQUIRED language.
+- STEP 1: DETECT the language of the provided content.
+- STEP 2: COMPARE the detected language with `languageCode`.
+- IF they do not match (e.g. `languageCode` is 'ja-JP' but content is Vietnamese), you MUST trigger the ""wrong_language"" violation (-10.0 points) and score it 0.00.
+- ONLY exception is if the content contains names/places in another language but the grammar/sentences are correct for `languageCode`.
+- IMPORTANT: If the content is in the CORRECT language but has many spelling mistakes, bad grammar, or slang, DO NOT use ""wrong_language"". Instead, use ""grammar_spelling"" and ""weak_prose"".
 - Use the provided ""deductions"" table for labels and base penalty amounts.
 - Maximum allowed score for any submission is 9.5 (even with no violations).
 
