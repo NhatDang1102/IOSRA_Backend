@@ -205,29 +205,22 @@ namespace Service.Services
             //nếu AI trả reject/điểm <5 thì: 
             if (aiResult.ShouldReject || aiScore < 5m)
             {
-                //gán status rejected 
                 story.status = "rejected";
-                //rejected nên null time published 
                 story.published_at = null;
-                //gọi repo để update bên db 
                 await _storyRepository.UpdateAsync(story, ct);
 
-                //update bảng story xong thì update bảng content_approve
-                var rejectionApproval = await UpsertStoryApprovalAsync(story.story_id, "rejected", aiScore, aiNote, ct);
-                //trả về response cho ng dùng đọc gồm score, nội dung nào bị gõ, tại sao gõ, mỗi cái gõ trừ mấy điểm
-                throw new AppException("StoryRejectedByAi", "Truyện bị trừ điểm bởi AI.", 422, new
+                await UpsertStoryApprovalAsync(story.story_id, "rejected", aiScore, aiNote, ct);
+                
+                var savedAfterReject = await _storyRepository.GetByIdForAuthorAsync(story.story_id, author.account_id, ct)
+                            ?? throw new InvalidOperationException("Failed to load story after rejection.");
+                var approvalsAfterReject = await _storyRepository.GetContentApprovalsForStoryAsync(savedAfterReject.story_id, ct);
+                
+                return MapStory(savedAfterReject, approvalsAfterReject, aiResult.Violations.Select(v => new
                 {
-                    reviewId = rejectionApproval.review_id,
-                    score = Math.Round(aiResult.Score, 2),
-                    sanitizedContent = aiResult.SanitizedContent,
-                    explanation = aiResult.Explanation,
-                    violations = aiResult.Violations.Select(v => new
-                    {
-                        v.Word,
-                        v.Count,
-                        Samples = v.Samples
-                    })
-                });
+                    v.Word,
+                    v.Count,
+                    Samples = v.Samples
+                }));
             }
             //nếu >=7 thì giống ở trên nhưng khác cái là published 
             if (aiScore >= 7m)
@@ -560,10 +553,9 @@ namespace Service.Services
 
 
         //map hết info từ nhiều bảng khác nhau vô response)
-        private static StoryResponse MapStory(story story, IEnumerable<content_approve> approvals)
+        private StoryResponse MapStory(story story, IEnumerable<content_approve> approvals, object? immediateViolations = null)
         {
-            var language = story.language ?? throw new InvalidOperationException("Story language navigation was not loaded.");
-
+            var language = story.language;
             var tags = story.story_tags?
                 .Where(st => st.tag != null)
                 .Select(st => new StoryTagResponse
@@ -592,17 +584,18 @@ namespace Service.Services
                 Status = story.status,
                 IsPremium = story.is_premium,
                 CoverUrl = story.cover_url,
-                AiScore = approval?.ai_score,
-                AiResult = ResolveAiDecision(approval),
-                AiFeedback = approval?.ai_feedback,
-                ModeratorStatus = moderatorStatus,
-                ModeratorNote = moderatorNote,
                 Outline = story.outline,
                 LengthPlan = story.length_plan,
                 CreatedAt = story.created_at,
                 UpdatedAt = story.updated_at,
                 PublishedAt = story.published_at,
-                Tags = tags
+                Tags = tags,
+                AiScore = approval?.ai_score,
+                AiResult = ResolveAiDecision(approval),
+                AiFeedback = approval?.ai_feedback,
+                AiViolations = immediateViolations,
+                ModeratorStatus = moderatorStatus,
+                ModeratorNote = moderatorNote
             };
         }
 

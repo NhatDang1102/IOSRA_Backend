@@ -16,6 +16,7 @@ namespace Contract.DTOs.Response.Story
         public decimal? AiScore { get; set; }
         public string? AiResult { get; set; }
         public string? AiFeedback { get; set; }
+        public object? AiViolations { get; set; }
         public string? ModeratorStatus { get; set; }
         public string? ModeratorNote { get; set; }
         public string Outline { get; set; } = null!;

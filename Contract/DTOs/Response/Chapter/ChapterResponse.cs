@@ -19,6 +19,7 @@ namespace Contract.DTOs.Response.Chapter
         public string Status { get; set; } = null!;
         public decimal? AiScore { get; set; }
         public string? AiFeedback { get; set; }
+        public object? AiViolations { get; set; }
         public string? AiResult { get; set; }
         public string? ModeratorStatus { get; set; }
         public string? ModeratorNote { get; set; }

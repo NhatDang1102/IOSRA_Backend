@@ -251,15 +251,16 @@ namespace Service.Services
                 chapter.published_at = null;
                 await _chapterRepository.UpdateAsync(chapter, ct);
 
-                var rejectionApproval = await UpsertChapterApprovalAsync(chapter, "rejected", aiScoreDecimal, moderation.Explanation, ct);
+                await UpsertChapterApprovalAsync(chapter, "rejected", aiScoreDecimal, moderation.Explanation, ct);
 
-                throw new AppException("ChapterRejectedByAi", "Chapter đã bị từ chối bởi AI.", 429, new
+                var approvalsAfterReject = await _chapterRepository.GetContentApprovalsForChapterAsync(chapter.chapter_id, ct);
+                
+                return MapChapter(chapter, approvalsAfterReject, moderation.Violations.Select(v => new
                 {
-                    reviewId = rejectionApproval.review_id,
-                    score = Math.Round(moderation.Score, 2),
-                    explanation = moderation.Explanation,
-                    violations = moderation.Violations.Select(v => new { v.Word, v.Count, v.Samples })
-                });
+                    v.Word,
+                    v.Count,
+                    Samples = v.Samples
+                }));
             }
 
             if (autoApprove)
@@ -503,14 +504,16 @@ namespace Service.Services
             return requestedAccessType;
         }
 
-        private static ChapterResponse MapChapter(chapter chapter, IReadOnlyList<content_approve> approvals)
+        private ChapterResponse MapChapter(chapter chapter, IEnumerable<content_approve> approvals, object? immediateViolations = null)
         {
-            var language = chapter.story?.language ?? throw new InvalidOperationException("Chapter story language navigation was not loaded.");
-            var latestApproval = approvals?
+            var story = chapter.story;
+            var approval = approvals
+                .Where(a => string.Equals(a.approve_type, "chapter", StringComparison.OrdinalIgnoreCase))
                 .OrderByDescending(a => a.created_at)
                 .FirstOrDefault();
-            var moderatorStatus = latestApproval?.moderator_id.HasValue == true ? latestApproval.status : null;
-            var moderatorNote = latestApproval?.moderator_id.HasValue == true ? latestApproval.moderator_feedback : null;
+
+            var moderatorStatus = approval?.moderator_id.HasValue == true ? approval.status : null;
+            var moderatorNote = approval?.moderator_id.HasValue == true ? approval.moderator_feedback : null;
 
             return new ChapterResponse
             {
@@ -521,22 +524,23 @@ namespace Service.Services
                 Summary = chapter.summary,
                 WordCount = chapter.word_count,
                 CharCount = chapter.char_count,
-                LanguageCode = language.lang_code,
-                LanguageName = language.lang_name,
+                LanguageCode = story.language.lang_code,
+                LanguageName = story.language.lang_name,
                 PriceDias = (int)chapter.dias_price,
                 AccessType = chapter.access_type,
                 Status = chapter.status,
-                AiScore = latestApproval?.ai_score,
-                AiFeedback = latestApproval?.ai_feedback,
-                AiResult = ResolveAiDecision(latestApproval),
+                AiScore = approval?.ai_score,
+                AiFeedback = approval?.ai_feedback,
+                AiViolations = immediateViolations,
+                AiResult = ResolveAiDecision(approval),
                 ModeratorStatus = moderatorStatus,
                 ModeratorNote = moderatorNote,
                 ContentPath = chapter.content_url,
-                Mood = MapMood(chapter),
                 CreatedAt = chapter.created_at,
                 UpdatedAt = chapter.updated_at,
                 SubmittedAt = chapter.submitted_at,
                 PublishedAt = chapter.published_at,
+                Mood = MapMood(chapter),
                 Voices = MapVoices(chapter)
             };
         }
