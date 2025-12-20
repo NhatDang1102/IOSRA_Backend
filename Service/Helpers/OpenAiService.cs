@@ -284,7 +284,8 @@ namespace Service.Helpers
                 {
                     var label = string.IsNullOrWhiteSpace(v.Label) ? "violation" : v.Label;
                     var evidence = v.Evidence ?? Array.Empty<string>();
-                    return new ModerationViolation(label, Math.Max(1, evidence.Length), evidence);
+                    var penalty = v.Penalty ?? 0.0;
+                    return new ModerationViolation(label, Math.Max(1, evidence.Length), evidence, penalty);
                 })
                 .ToArray() ?? Array.Empty<ModerationViolation>();
 

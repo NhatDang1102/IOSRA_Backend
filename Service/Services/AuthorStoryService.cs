@@ -219,7 +219,8 @@ namespace Service.Services
                 {
                     v.Word,
                     v.Count,
-                    Samples = v.Samples
+                    Samples = v.Samples,
+                    v.Penalty
                 }));
             }
             //nếu >=7 thì giống ở trên nhưng khác cái là published 

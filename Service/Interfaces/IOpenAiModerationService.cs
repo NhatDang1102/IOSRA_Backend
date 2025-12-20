@@ -7,7 +7,8 @@ namespace Service.Interfaces
     public record ModerationViolation(
         string Word,
         int Count,
-        IReadOnlyList<string> Samples);
+        IReadOnlyList<string> Samples,
+        double Penalty);
 
     public record OpenAiModerationResult(
         bool ShouldReject,
