@@ -38,6 +38,7 @@ namespace IOSRA.Tests.Controllers
             string? query = "magic";
             Guid? tagId = Guid.NewGuid();
             Guid? authorId = Guid.NewGuid();
+            string? languageCode = "en-US";
 
             var expected = new PagedResult<StoryCatalogListItemResponse>
             {
@@ -64,13 +65,14 @@ namespace IOSRA.Tests.Controllers
                         q.PageSize == pageSize &&
                         q.Query == query &&
                         q.TagId == tagId &&
-                        q.AuthorId == authorId),
+                        q.AuthorId == authorId &&
+                        q.LanguageCode == languageCode),
                     It.IsAny<CancellationToken>()))
                 .ReturnsAsync(expected)
                 .Verifiable();
 
             // Act
-            var result = await _controller.List(page, pageSize, query, tagId, authorId, CancellationToken.None);
+            var result = await _controller.List(page, pageSize, query, tagId, authorId, languageCode, CancellationToken.None);
 
             // Assert
             var ok = result.Result as OkObjectResult;
@@ -91,6 +93,7 @@ namespace IOSRA.Tests.Controllers
             string? queryText = "romance";
             Guid? tagId = Guid.NewGuid();
             Guid? authorId = Guid.NewGuid();
+            string? languageCode = "vi-VN";
             bool? isPremium = true;
             double? minAvgRating = 4.5;
             string? sortBy = "TopRated";
@@ -112,6 +115,7 @@ namespace IOSRA.Tests.Controllers
                         q.Query == queryText &&
                         q.TagId == tagId &&
                         q.AuthorId == authorId &&
+                        q.LanguageCode == languageCode &&
                         q.IsPremium == isPremium &&
                         q.MinAvgRating == minAvgRating &&
                         q.SortBy == StorySortBy.TopRated &&
@@ -128,6 +132,7 @@ namespace IOSRA.Tests.Controllers
                 queryText,
                 tagId,
                 authorId,
+                languageCode,
                 isPremium,
                 minAvgRating,
                 sortBy,

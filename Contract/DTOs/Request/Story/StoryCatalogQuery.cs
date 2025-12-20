@@ -32,6 +32,8 @@ namespace Contract.DTOs.Request.Story
 
         public Guid? AuthorId { get; set; }
 
+        public string? LanguageCode { get; set; }
+
         //add filter
         public bool? IsPremium { get; set; }
         public double? MinAvgRating { get; set; }

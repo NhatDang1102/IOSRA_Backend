@@ -204,6 +204,8 @@ namespace Service.Services
                 ReviewId = approval.review_id,
                 StoryId = story.story_id,
                 Title = story.title,
+                LanguageCode = story.language?.lang_code,
+                LanguageName = story.language?.lang_name,
                 Description = story.desc,
                 AuthorId = story.author_id,
                 AuthorUsername = story.author.account.username,

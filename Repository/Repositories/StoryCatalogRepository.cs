@@ -19,7 +19,7 @@ namespace Repository.Repositories
         {
         }
 
-        public async Task<(List<story> Items, int Total)> SearchPublishedStoriesAsync(string? query, Guid? tagId, Guid? authorId, int page, int pageSize, CancellationToken ct = default)
+        public async Task<(List<story> Items, int Total)> SearchPublishedStoriesAsync(string? query, Guid? tagId, Guid? authorId, string? languageCode, int page, int pageSize, CancellationToken ct = default)
         {
             if (page < 1) page = 1;
             if (pageSize < 1) pageSize = 20;
@@ -51,6 +51,11 @@ namespace Repository.Repositories
             if (authorId.HasValue && authorId.Value != Guid.Empty)
             {
                 storiesQuery = storiesQuery.Where(s => s.author_id == authorId.Value);
+            }
+
+            if (!string.IsNullOrWhiteSpace(languageCode))
+            {
+                storiesQuery = storiesQuery.Where(s => s.language.lang_code == languageCode.Trim());
             }
 
             var total = await storiesQuery.CountAsync(ct);
@@ -118,12 +123,13 @@ namespace Repository.Repositories
             return $"%{escaped}%";
         }
 
-        public async Task<(List<story> Items, int Total)> SearchPublishedStoriesAdvancedAsync(string? query, Guid? tagId, Guid? authorId, bool? isPremium, double? minAvgRating, string? sortBy, bool sortDesc, DateTime? weekStartUtc, int page, int pageSize, CancellationToken ct = default)
+        public async Task<(List<story> Items, int Total)> SearchPublishedStoriesAdvancedAsync(string? query, Guid? tagId, Guid? authorId, string? languageCode, bool? isPremium, double? minAvgRating, string? sortBy, bool sortDesc, DateTime? weekStartUtc, int page, int pageSize, CancellationToken ct = default)
         {
             // base query: chỉ lấy story public
             var q = _db.stories
                 .AsNoTracking()
                 .Include(s => s.author).ThenInclude(a => a.account)
+                .Include(s => s.language)
                 .Where(s => PublicStoryStatuses.Contains(s.status))
                 .Where(s => s.chapters.Any(c => c.status == "published"));
 
@@ -151,6 +157,12 @@ namespace Repository.Repositories
             if (authorId.HasValue)
             {
                 q = q.Where(s => s.author_id == authorId.Value);
+            }
+
+            // filter language
+            if (!string.IsNullOrWhiteSpace(languageCode))
+            {
+                q = q.Where(s => s.language.lang_code == languageCode.Trim());
             }
 
             // filter premium

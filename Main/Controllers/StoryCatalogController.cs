@@ -35,6 +35,7 @@ namespace Main.Controllers
             [FromQuery] string? query = null,
             [FromQuery] Guid? tagId = null,
             [FromQuery] Guid? authorId = null,
+            [FromQuery] string? languageCode = null,
             CancellationToken ct = default)
         {
             var queryObj = new StoryCatalogQuery
@@ -43,7 +44,8 @@ namespace Main.Controllers
                 PageSize = pageSize,
                 Query = query,
                 TagId = tagId,
-                AuthorId = authorId
+                AuthorId = authorId,
+                LanguageCode = languageCode
             };
 
             var result = await _storyCatalogService.GetStoriesAsync(queryObj, ct);
@@ -59,6 +61,7 @@ namespace Main.Controllers
             [FromQuery(Name = "Query")] string? queryText = null,
             [FromQuery] Guid? tagId = null,
             [FromQuery] Guid? authorId = null,
+            [FromQuery] string? languageCode = null,
             [FromQuery] bool? isPremium = null,
             [FromQuery] double? minAvgRating = null,
             [FromQuery] string? sortBy = null,
@@ -72,6 +75,7 @@ namespace Main.Controllers
                 Query = queryText,
                 TagId = tagId,
                 AuthorId = authorId,
+                LanguageCode = languageCode,
                 IsPremium = isPremium,
                 MinAvgRating = minAvgRating,
             };

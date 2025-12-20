@@ -9,6 +9,8 @@ namespace Contract.DTOs.Response.Story
         public Guid StoryId { get; set; }
         public Guid AuthorId { get; set; }
         public string Title { get; set; } = null!;
+        public string? LanguageCode { get; set; }
+        public string? LanguageName { get; set; }
         public string? Description { get; set; }
         public string AuthorUsername { get; set; } = null!;
         public string? CoverUrl { get; set; }
