@@ -322,7 +322,9 @@ STRICT PENALTY RULES:
 
 Rules that must always be enforced:
 - A `languageCode` field (e.g., 'en-US', 'vi-VN') is provided. This is the REQUIRED language.
-- If the content is written in a COMPLETELY DIFFERENT language (e.g., Japanese text for 'vi-VN'), you MUST REJECT: Set score to 0.0, Decision to ""rejected"", and add a violation with label ""wrong_language"" and penalty 10.0.
+- CHECK if the content language matches the `languageCode`.
+- ONLY use ""wrong_language"" if the content is in a COMPLETELY DIFFERENT language family (e.g., Russian text for 'en-US').
+- IF content matches `languageCode` (e.g. Japanese content with 'ja-JP'), you MUST NOT use ""wrong_language"".
 - IMPORTANT: If the content is in the CORRECT language but has many spelling mistakes, bad grammar, or slang, DO NOT use ""wrong_language"". Instead, use ""grammar_spelling"" and ""weak_prose"" from the deductions table.
 - A few words/phrases in another language are acceptable (eg., names, locations).
 - Use the provided ""deductions"" table for labels and base penalty amounts.
@@ -335,7 +337,8 @@ Decision Mapping (STRICT):
 
 Explanation requirements:
 - Provide detailed English and Vietnamese summaries. The explanation MUST align with the score and decision.
-- DO NOT state the final score in the text; the system handles the display.";
+- DO NOT state the final score in the text; the system handles the display.
+- CRITICAL: You MUST provide the explanation in BOTH English and Vietnamese. The 'english' and 'vietnamese' fields in the JSON are MANDATORY and CANNOT be empty or null. If you formulate one, translate it to the other immediately.";
 
             //gom hết phạm vi luật, ngưỡng điểm, instruction vào 1 payload 
             var userPayload = new
@@ -418,12 +421,16 @@ Explanation requirements:
             var english = explanation?.English;
             var vietnamese = explanation?.Vietnamese;
 
-            //chỉ sử dụng explanation AI nếu đủ cả english và vn trong response 
-            if (!string.IsNullOrWhiteSpace(english) && !string.IsNullOrWhiteSpace(vietnamese))
+            //chỉ sử dụng explanation AI nếu có ít nhất 1 ngôn ngữ
+            if (!string.IsNullOrWhiteSpace(english) || !string.IsNullOrWhiteSpace(vietnamese))
             {
                 var headerEn = $"Automated Score: {score:0.00}/10.00";
                 var headerVn = $"Điểm tự động: {score:0.00}/10.00";
-                return $"English:\n{headerEn}\n{english.Trim()}\n\nTiếng việt:\n{headerVn}\n{vietnamese.Trim()}";
+
+                var finalEn = !string.IsNullOrWhiteSpace(english) ? english.Trim() : "(No English explanation provided)";
+                var finalVn = !string.IsNullOrWhiteSpace(vietnamese) ? vietnamese.Trim() : "(Không có giải thích tiếng Việt)";
+
+                return $"English:\n{headerEn}\n{finalEn}\n\nTiếng việt:\n{headerVn}\n{finalVn}";
             }
 
             //check trong decision của AI có rejected hay là auto approved để build explanation cuối 
