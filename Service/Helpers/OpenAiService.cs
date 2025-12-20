@@ -48,80 +48,132 @@ namespace Service.Helpers
         {
             new
             {
-                category = "Explicit sexual content",
-                labels = new[] { "sexual_explicit", "sexual_minor", "sexual_transaction", "fetish_extreme" },
-                penalties = new[] { "-3.0 severe (graphic sex, minors, non-consensual)", "-1.5 moderate (nudity, heavy innuendo)", "-0.5 mild borderline romance" },
-                note = "Any minors + sexual context must be labelled and usually rejected."
+                category = "Language Compliance",
+                labels = new[] { "wrong_language" },
+                penalties = new[] { "-10.0: The primary language of the content does not match the required languageCode." },
+                examples = "E.g.: Content is in English but languageCode is 'vi-VN'.",
+                rules = "Strictly enforced. If the main body is in the wrong language, set score to 0.0 and reject. A few loanwords or names are okay.",
+                note = "This is an immediate rejection case."
             },
             new
             {
-                category = "Violent / extremist",
-                labels = new[] { "violent_gore", "extremist_rhetoric" },
-                penalties = new[] { "-3.0 graphic gore or propaganda", "-1.5 praising violence", "-0.5 contextual combat" },
-                note = "Genocide/terror support should never be auto approved."
-            },
-            new
-            {
-                category = "URL / redirect",
+                category = "URL / External Redirect",
                 labels = new[] { "url_redirect" },
-                penalties = new[] { "-1.5 per link or CTA to leave IOSRA" },
-                note = "Plain brand mentions without link = 0."
+                penalties = new[] { "-1.5: Per unique link, social media invite, or call-to-action to leave the platform." },
+                examples = "E.g.: http, https, www, .com, .net, bit.ly, telegram, discord.gg, invite codes, 'Follow me on Facebook/Patreon'.",
+                rules = "Detect any attempt to redirect readers. Brand mentions without links are usually 0.",
+                note = "Subtract 1.5 points for every instance found."
             },
             new
             {
-                category = "Spam / gibberish",
+                category = "Spam / Nonsense / Gibberish",
                 labels = new[] { "spam_repetition" },
-                penalties = new[] { "-1.5 heavy spam or nonsense", "-0.5 short bursts" },
-                note = "Use when chapter lacks meaningful prose or contains random keyboard smashing (e.g. 'xyzba abznx', 'asdfgh')."
-            }, 
+                penalties = new[] { 
+                    "-1.5: Heavy spam, long sequences of nonsense, or filler text.",
+                    "-0.5: Short bursts of repetitive tokens."
+                },
+                examples = "E.g.: 'up up up', 'aaaaaaaa', 'test test test', 'next next next... aaaaa...', 'xyzba abznx', 'asdfghjkl'.",
+                rules = "Detect placeholder text, keyboard smashing, or repetitive phrases used to inflate word count.",
+                note = "Ensures content has meaningful prose."
+            },
             new
             {
-                category = "Hate speech / harassment",
+                category = "Explicit Sexual Content",
+                labels = new[] { "sexual_explicit", "sexual_minor", "sexual_transaction", "fetish_extreme" },
+                penalties = new[] { 
+                    "-3.0: Graphic sexual acts, explicit NSFW descriptions, or non-consensual content.",
+                    "-1.5: Detailed nudity, heavy sexual innuendo, or fetish focus.",
+                    "-0.5: Mild romantic intimacy with borderline sexual descriptions."
+                },
+                examples = "E.g.: Descriptions of intercourse, sexual organs, or forced acts.",
+                note = "CRITICAL: Any sexual content involving minors results in immediate rejection (score < 5)."
+            },
+            new
+            {
+                category = "Violent / Extremist",
+                labels = new[] { "violent_gore", "extremist_rhetoric" },
+                penalties = new[] { 
+                    "-3.0: Graphic torture, excessive gore, or terrorist/extremist propaganda.",
+                    "-1.5: Praising violence, glorifying murder, or encouraging harm.",
+                    "-0.5: Narrative combat with moderate blood or injury descriptions."
+                },
+                examples = "E.g.: Terrorist manifestos, detailed descriptions of dismemberment, or glorifying mass shootings.",
+                note = "Narrative action is allowed, but glorification of extremist violence is not."
+            },
+            new
+            {
+                category = "Hate Speech / Harassment",
                 labels = new[] { "hate_speech", "harassment_targeted", "mild_insult" },
-                penalties = new[] { "-3.0 protected-class slurs", "-2.0 repeated harassment", "-0.5 mild insults" },
-                note = "Protected class attacks should drop score below 5."
+                penalties = new[] { 
+                    "-3.0: Hate speech against protected classes (race, religion, gender, etc.) or slurs.",
+                    "-2.0: Targeted harassment or cyberbullying.",
+                    "-0.5: Mild insults or toxic behavior."
+                },
+                examples = "E.g.: Racial slurs, calls for discrimination, or attacking real-world individuals.",
+                note = "Zero tolerance for hate speech against protected groups."
             },
             new
             {
-                category = "Self-harm & suicide",
+                category = "Self-harm & Suicide",
                 labels = new[] { "self_harm_promotion", "self_harm_instruction", "self_harm_neutral" },
-                penalties = new[] { "-3.0 promotion/instructions", "-1.0 neutral mention needing caution" },
-                note = "Never glorify or teach self-harm."
+                penalties = new[] { 
+                    "-3.0: Promoting, glorifying, or providing instructions for self-harm or suicide.",
+                    "-1.0: Neutral/narrative mention in an encouraging context."
+                },
+                examples = "E.g.: 'How to cut yourself...', glorifying suicide as a solution.",
+                note = "Never allow content that encourages or teaches self-harm."
             },
             new
             {
-                category = "Illegal activities",
+                category = "Illegal Activities",
                 labels = new[] { "illegal_instruction", "illegal_promotion" },
-                penalties = new[] { "-2.5 actionable how-to guides", "-1.0 glorifying crimes", "-0.5 incidental mention" },
-                note = "Differentiate narrative vs instructions."
+                penalties = new[] { 
+                    "-2.5: Actionable 'how-to' guides for drugs, hacking, or weapons.",
+                    "-1.0: Glorifying criminal behavior.",
+                    "-0.5: Incidental narrative mention."
+                },
+                examples = "E.g.: Drug manufacturing recipes, instructions on how to bypass security/locks.",
+                note = "Distinguish between narrative fiction and real-world illegal instructions."
             },
             new
             {
-                category = "Personal data / doxxing",
+                category = "Personal Data / Doxxing",
                 labels = new[] { "personal_data" },
-                penalties = new[] { "-2.5 exposing private info or urging doxxing" },
-                note = "Mask or paraphrase sensitive numbers."
+                penalties = new[] { "-2.5: Exposing real-world private info (phone, address, ID, bank info)." },
+                examples = "E.g.: 'Call me at 0901234567', 'My home address is...', 'ID number: 123...'.",
+                note = "Applies to real-world sensitive data exposure."
             },
             new
             {
-                category = "Low quality / irrelevant",
+                category = "Low Quality / Irrelevant",
                 labels = new[] { "low_quality", "irrelevant_ad" },
-                penalties = new[] { "-1.5 advertisements/placeholder text", "-0.5 mild off-topic content" },
-                note = "Apply to chapters with <100 useful words."
+                penalties = new[] { 
+                    "-1.5: Advertisements, promotional text, or placeholder text.",
+                    "-0.5: Mildly off-topic content."
+                },
+                examples = "E.g.: 'Buy Bitcoin now', 'Visit this shop for 50% off'.",
+                note = "Target content used for external advertising."
             },
             new
             {
                 category = "Writing Quality",
                 labels = new[] { "grammar_spelling", "poor_formatting", "weak_prose" },
-                penalties = new[] { "-0.5 frequent typos/grammar errors", "-0.5 poor formatting (wall of text, capitalization)", "-0.25 basic/repetitive prose" },
-                note = "Penalize amateur writing styles even if content is safe."
+                penalties = new[] { 
+                    "-0.5: Frequent typos, lack of proper tone/accents (e.g., 'toi di choi').",
+                    "-0.5: Poor formatting, 'wall of text' (long paragraphs), or excessive capitalization.",
+                    "-0.25: Extremely weak or excessively repetitive prose."
+                },
+                examples = "E.g.: No line breaks for 500+ words, constant misspelling, or 'ALL CAPS' text.",
+                note = "Penalize amateurish writing that degrades the reading experience."
             },
             new
             {
                 category = "Inconsistent Content",
                 labels = new[] { "inconsistent_content" },
-                penalties = new[] { "-3.0 title, description, and outline are unrelated" },
-                note = "Apply only when title, description, and outline are provided but do not match conceptually."
+                penalties = new[] { "-3.0: Title, description, and outline are unrelated or contradictory." },
+                examples = "E.g.: Title is 'Modern High School' but outline is about 'Ancient Space Cults'.",
+                rules = "Check if all provided elements (Title, Description, Outline) match conceptually.",
+                note = "Apply only when story elements do not match."
             }
         };
 
@@ -258,30 +310,27 @@ namespace Service.Helpers
         {
             //define system openAI 
             var moderationInstructions = @"Return JSON only with shape { ""score"": number, ""decision"": ""auto_approved|pending_manual_review|rejected"", ""violations"": [{ ""label"": string, ""evidence"": [string], ""penalty"": number }], ""explanation"": { ""english"": string, ""vietnamese"": string } }.
-Start from base score = 10.00 and subtract penalties exactly as defined in ""deductions"". Every time you subtract points you MUST add a violation entry (label must match the table), set the ""penalty"" field to the positive number of points deducted (e.g. 1.5), and quote the offending snippet inside ""evidence"".
+Start from base score = 10.00. You MUST subtract penalties by looking up the EXACT values defined in the provided ""deductions"" table. Every time you subtract points you MUST add a violation entry (label must match the table), set the ""penalty"" field to the positive number of points deducted, and quote the offending snippet inside ""evidence"".
+
 Rules that must always be enforced:
-- A `languageCode` field (e.g., 'en-US', 'vi-VN') is provided. This is the REQUIRED language. You MUST determine the primary language of the submitted `content`.
-- If the primary language of the `content` does NOT strictly match the language specified in `languageCode`, you MUST REJECT the submission.
-    - Set score to 0.0.
-    - Decision MUST be ""rejected"".
-    - Add a single violation with the label ""wrong_language"" and a penalty of 10.0.
-    - The explanation MUST clearly state that the content language does not match the required language. Example: ""The chapter is written in Japanese, but the required language is Vietnamese (vi-VN).""
-- A few words/phrases in another language are acceptable (eg., names, locations), but if the main body of text is in the wrong language, it's an immediate rejection.
-- Any URL, external link, or redirect CTA (http, https, www, .com, bit.ly, telegram, discord.gg, invite codes, etc.) => label ""url_redirect"" and subtract at least 1.5 points per link.
-- Spam, nonsense, or repeated tokens (""up up up"", ""aaaaaaaa"", ""test test"", placeholder text) OR random keyboard smashing/gibberish (e.g., ""xyzba abznx"", ""asdfghjkl"") => label ""spam_repetition"" and subtract at least 1.5 points.
-- If the content is a story (contains title, description, and outline), check for consistency. If they are unrelated or contradictory => label ""inconsistent_content"" and subtract 3.0 points. (example: the description talk about character A and B in a C scenario, but the outline is not related to A, B, or C)
-- Explicit sexual content, violence, hate speech, self-harm, illegal instructions, personal data, and irrelevant ads must follow the deduction table. Protected-class hate or sexual content with minors should reduce the score below 5 and typically be rejected.
-- If ANY violation exists, the violation must be listed with its penalty. Never return 10.00 when a deduction was applied.
-- Even if no violations are found, the maximum score allowed is 9.5. Never return a perfect 10.00.
-- Decision mapping: score >= 7 and no forced rejection => auto_approved; 5 <= score < 7 => pending_manual_review; score < 5 or forced labels => rejected.
+- A `languageCode` field is provided. If the primary language of the `content` does NOT strictly match this, you MUST REJECT immediately: Set score to 0.0, Decision to ""rejected"", and use label ""wrong_language"" with penalty 10.0.
+- For issues like ""url_redirect"", ""spam_repetition"", and ""inconsistent_content"", refer to the ""deductions"" table for the correct labels and penalty amounts.
+- For ""inconsistent_content"", check if the title, description, and outline match conceptually. If they are unrelated, apply the penalty from the table.
+- Explicit sexual content, violence, hate speech, self-harm, and illegal activities MUST follow the deduction table strictly.
+- If ANY violation exists, it MUST be listed. Never return 10.00 if a deduction was applied.
+- Maximum allowed score for any submission is 9.5 (even with no violations).
+
+Decision Mapping (STRICT):
+- score >= 7.0 AND no forced rejection labels => ""auto_approved"".
+- 5.0 <= score < 7.0 => ""pending_manual_review"".
+- score < 5.0 OR any forced rejection labels => ""rejected"".
+
 Explanation requirements:
-- Always provide both English and Vietnamese summaries.
-- The explanation MUST be detailed and constructive. Do not just list violations; explain WHY the content was flagged and cite specific quotes or examples from the text.
-- For the Vietnamese explanation, provide clear, actionable advice on how the author can improve the content to comply with policies.
-- DO NOT state the final calculated score in the text summary; the system will display it based on the penalties.
-- Paraphrase slurs rather than repeating them verbatim.
-- For inconsistent_content, specifically point out the names or details that do not match.;
-If no policy issue exists, state clearly that no deductions were applied but provide a brief positive remark on the writing style.";
+- Provide detailed English and Vietnamese summaries.
+- The explanation MUST align with the decision: If auto_approved, do NOT mention manual review. If pending_manual_review, explain what needs checking.
+- For the Vietnamese part, provide actionable advice for the author.
+- DO NOT state the final score in the text; the system handles the display.
+If no issues exist, give a brief positive remark on the writing style.";
 
             //gom hết phạm vi luật, ngưỡng điểm, instruction vào 1 payload 
             var userPayload = new
@@ -305,7 +354,7 @@ If no policy issue exists, state clearly that no deductions were applied but pro
             {
                 Model = _settings.ChatModel,
                 Temperature = 0,
-                MaxTokens = 700,
+                MaxTokens = 1000,
                 Messages = new[]
                 {
                     new ChatMessage
