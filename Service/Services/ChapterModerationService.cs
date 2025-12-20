@@ -216,10 +216,31 @@ namespace Service.Services
                 ContentPath = chapter.content_url,
                 AiScore = aiScore,
                 AiFeedback = aiFeedback,
+                AiResult = ResolveAiDecision(review),
                 Status = chapter.status,
                 SubmittedAt = submittedAt,
                 CreatedAt = chapter.created_at
             };
+        }
+
+        private static string? ResolveAiDecision(content_approve? approval)
+        {
+            if (approval == null || approval.ai_score is not decimal score)
+            {
+                return null;
+            }
+
+            if (score < 5m)
+            {
+                return "rejected";
+            }
+
+            if (score >= 7m)
+            {
+                return "approved";
+            }
+
+            return "flagged";
         }
     }
 }

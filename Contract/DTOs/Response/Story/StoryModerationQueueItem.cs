@@ -15,6 +15,7 @@ namespace Contract.DTOs.Response.Story
         public string AuthorUsername { get; set; } = null!;
         public string? CoverUrl { get; set; }
         public decimal? AiScore { get; set; }
+        public string? AiFeedback { get; set; }
         public string? AiResult { get; set; }
         public string Status { get; set; } = null!;
         public string Outline { get; set; } = null!;

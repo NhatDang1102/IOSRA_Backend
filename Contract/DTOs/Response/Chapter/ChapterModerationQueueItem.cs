@@ -20,6 +20,7 @@ namespace Contract.DTOs.Response.Chapter
         public string? ContentPath { get; set; }
         public decimal? AiScore { get; set; }
         public string? AiFeedback { get; set; }
+        public string? AiResult { get; set; }
         public string Status { get; set; } = null!;
         public DateTime SubmittedAt { get; set; }
         public DateTime CreatedAt { get; set; }

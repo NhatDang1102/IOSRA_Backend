@@ -211,6 +211,7 @@ namespace Service.Services
                 AuthorUsername = story.author.account.username,
                 CoverUrl = story.cover_url,
                 AiScore = approval.ai_score,
+                AiFeedback = approval.ai_feedback,
                 AiResult = ResolveAiDecision(approval),
                 Status = story.status,
                 Outline = story.outline,
