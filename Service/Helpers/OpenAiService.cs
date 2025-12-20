@@ -309,7 +309,7 @@ namespace Service.Helpers
         private async Task<ModerationAiResponse?> RequestModerationAsync(ModerationProfile profile, string content, string? languageCode, CancellationToken ct)
         {
             //define system openAI 
-            var moderationInstructions = @"Return JSON only with shape { ""score"": number, ""decision"": ""auto_approved|pending_manual_review|rejected"", ""violations"": [{ ""label"": string, ""evidence"": [string], ""penalty"": number }], ""explanation"": { ""english"": string, ""vietnamese"": string } }.
+            var moderationInstructions = @"Return JSON only with shape { ""score"": number, ""decision"": ""auto_approved|pending_manual_review|rejected"", ""violations"": [{ ""label"": string, ""evidence"": [string], ""penalty"": number }], ""explanation"": { ""vietnamese"": string } }.
 Start from base score = 10.00. 
 
 STRICT PENALTY RULES:
@@ -336,9 +336,9 @@ Decision Mapping (STRICT):
 - score < 5.0 OR any forced rejection labels => ""rejected"".
 
 Explanation requirements:
-- Provide detailed English and Vietnamese summaries. The explanation MUST align with the score and decision.
+- Provide a detailed Vietnamese summary. The explanation MUST align with the score and decision.
 - DO NOT state the final score in the text; the system handles the display.
-- CRITICAL: You MUST provide the explanation in BOTH English and Vietnamese. The 'english' and 'vietnamese' fields in the JSON are MANDATORY and CANNOT be empty or null. If you formulate one, translate it to the other immediately.";
+- CRITICAL: The 'vietnamese' field in the JSON is MANDATORY and CANNOT be empty or null.";
 
             //gom hết phạm vi luật, ngưỡng điểm, instruction vào 1 payload 
             var userPayload = new
@@ -418,19 +418,13 @@ Explanation requirements:
         //dựng response từ AI 
         private static string? BuildExplanationFromAi(ModerationProfile profile, double score, string? decision, ModerationAiExplanation? explanation)
         {
-            var english = explanation?.English;
             var vietnamese = explanation?.Vietnamese;
 
-            //chỉ sử dụng explanation AI nếu có ít nhất 1 ngôn ngữ
-            if (!string.IsNullOrWhiteSpace(english) || !string.IsNullOrWhiteSpace(vietnamese))
+            //chỉ sử dụng explanation AI nếu có tiếng Việt
+            if (!string.IsNullOrWhiteSpace(vietnamese))
             {
-                var headerEn = $"Automated Score: {score:0.00}/10.00";
                 var headerVn = $"Điểm tự động: {score:0.00}/10.00";
-
-                var finalEn = !string.IsNullOrWhiteSpace(english) ? english.Trim() : "(No English explanation provided)";
-                var finalVn = !string.IsNullOrWhiteSpace(vietnamese) ? vietnamese.Trim() : "(Không có giải thích tiếng Việt)";
-
-                return $"English:\n{headerEn}\n{finalEn}\n\nTiếng việt:\n{headerVn}\n{finalVn}";
+                return $"{headerVn}\n{vietnamese.Trim()}";
             }
 
             //check trong decision của AI có rejected hay là auto approved để build explanation cuối 
@@ -441,19 +435,13 @@ Explanation requirements:
         //cái này để hard response khi AI failed hoặc response sai format 
         private static string BuildDecisionExplanation(ModerationProfile profile, double score, bool shouldReject, bool autoApproved)
         {
-            var english = shouldReject
-                ? $"Automated moderation scored {score:0.00}/10 after policy deductions (details unavailable), which is below {ManualReviewThreshold:0.00}, so this {profile.ContentType} was rejected."
-                : autoApproved
-                    ? $"Automated moderation scored {score:0.00}/10 after policy deductions (details unavailable), meeting the auto-approval threshold of {AutoApproveThreshold:0.00}, so the {profile.ContentType} was published."
-                    : $"Automated moderation scored {score:0.00}/10 after policy deductions (details unavailable), which is below {AutoApproveThreshold:0.00} but at or above {ManualReviewThreshold:0.00}, so the {profile.ContentType} requires manual review.";
+            if (shouldReject)
+                return $"Điểm kiểm duyệt tự động là {score:0.00}/10 sau khi áp dụng các mức trừ (không có chi tiết), thấp hơn {ManualReviewThreshold:0.00} nên nội dung {profile.ContentType} bị từ chối.";
+            
+            if (autoApproved)
+                return $"Điểm kiểm duyệt tự động là {score:0.00}/10 sau khi áp dụng các mức trừ (không có chi tiết), đạt ngưỡng tự duyệt {AutoApproveThreshold:0.00} nên nội dung {profile.ContentType} được xuất bản.";
 
-            var vietnamese = shouldReject
-                   ? $"Điểm kiểm duyệt tự động là {score:0.00}/10 sau khi áp dụng các mức trừ (không có chi tiết), thấp hơn {ManualReviewThreshold:0.00} nên nội dung {profile.ContentType} bị từ chối."
-                : autoApproved
-                         ? $"Điểm kiểm duyệt tự động là {score:0.00}/10 sau khi áp dụng các mức trừ (không có chi tiết), đạt ngưỡng tự duyệt {AutoApproveThreshold:0.00} nên nội dung {profile.ContentType} được xuất bản."
-                    : $"Điểm kiểm duyệt tự động là {score:0.00}/10 sau khi áp dụng các mức trừ (không có chi tiết), thấp hơn {AutoApproveThreshold:0.00} nhưng không dưới {ManualReviewThreshold:0.00} nên nội dung {profile.ContentType} chuyển cho moderator.";
-
-            return $"English:\n{english}\n\nTiếng việt:\n{vietnamese}";
+            return $"Điểm kiểm duyệt tự động là {score:0.00}/10 sau khi áp dụng các mức trừ (không có chi tiết), thấp hơn {AutoApproveThreshold:0.00} nhưng không dưới {ManualReviewThreshold:0.00} nên nội dung {profile.ContentType} chuyển cho moderator.";
         }
 
         //tạo hình AI cover 
