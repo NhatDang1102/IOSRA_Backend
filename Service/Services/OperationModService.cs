@@ -69,14 +69,13 @@ namespace Service.Implementations
             }
 
             //bóc rank id trong bảng author_rank ra 
-            var casualRankId = await _opRepo.GetRankIdByNameAsync("Casual", ct);
+            var casualRankId = await _opRepo.GetRankIdByNameAsync("Tân Thủ", ct);
             if (casualRankId is null || casualRankId == Guid.Empty)
             {
-                throw new AppException("SeedMissing", "Hạng tác giả 'Casual' chưa được khởi tạo.", 500);
-            }
-
-            //bước nghiệp vụ qtr nhất của method này: update từ reader sang author, gán bảng author rank Casual
-            await _opRepo.EnsureAuthorUpgradedAsync(request.requester_id, casualRankId.Value, ct);
+                                throw new AppException("SeedMissing", "Hạng tác giả 'Tân Thủ' chưa được khởi tạo.", 500);
+                            }
+                            //bước nghiệp vụ qtr nhất của method này: update từ reader sang author, gán bảng author rank Tân Thủ
+                            await _opRepo.EnsureAuthorUpgradedAsync(request.requester_id, casualRankId.Value, ct);
 
             //xong author rank thì bóc role author trong bảng role ra 
             var authorRoleId = await _opRepo.GetRoleIdByCodeAsync("author", ct);

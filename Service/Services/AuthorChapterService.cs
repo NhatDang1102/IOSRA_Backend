@@ -491,7 +491,7 @@ namespace Service.Services
 
             var rankName = author.rank?.rank_name;
             return !string.IsNullOrWhiteSpace(rankName) &&
-                   !string.Equals(rankName, "casual", StringComparison.OrdinalIgnoreCase);
+                   !string.Equals(rankName, "Tân Thủ", StringComparison.OrdinalIgnoreCase);
         }
 
         private static string ResolveAccessTypeForCreate(string? requestedAccessType, bool canLockChapters, bool storyIsPremium)

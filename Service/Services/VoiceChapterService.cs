@@ -235,7 +235,7 @@ namespace Service.Services
         private void EnsureVoiceEligibleChapter(chapter chapter)
         {
             var authorRank = chapter.story?.author?.rank?.rank_name;
-            if (string.IsNullOrWhiteSpace(authorRank) || string.Equals(authorRank, "Casual", StringComparison.OrdinalIgnoreCase))
+            if (string.IsNullOrWhiteSpace(authorRank) || string.Equals(authorRank, "Tân Thủ", StringComparison.OrdinalIgnoreCase))
             {
                 throw new AppException("VoiceNotAllowed", "Rank đồng trở lên mới được tạo voice.", 403);
             }

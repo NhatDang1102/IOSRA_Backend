@@ -109,8 +109,9 @@ namespace Service.Services
             {
                 story.status = "published";
                 story.published_at ??= TimezoneConverter.VietnamNow;
-                var authorRank = story.author.rank?.rank_name;
-                story.is_premium = !string.IsNullOrWhiteSpace(authorRank) && !string.Equals(authorRank, "Casual", StringComparison.OrdinalIgnoreCase);
+                // Auto-set premium based on author rank
+                var authorRank = story.author?.rank?.rank_name;
+                story.is_premium = !string.IsNullOrWhiteSpace(authorRank) && !string.Equals(authorRank, "Tân Thủ", StringComparison.OrdinalIgnoreCase);
                 if (!wasPublished)
                 {
                     var storyAuthor = story.author ?? throw new InvalidOperationException("Story author navigation was not loaded.");

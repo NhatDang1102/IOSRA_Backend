@@ -59,7 +59,7 @@ CREATE TABLE author_rank (
   UNIQUE KEY ux_author_rank_name (rank_name)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
-INSERT INTO `author_rank` VALUES ('a7814236-b7bf-11f0-9007-e27119d7eafa','Casual',0.00,0),('a7815277-b7bf-11f0-9007-e27119d7eafa','Bronze',50.00,5),('a781563b-b7bf-11f0-9007-e27119d7eafa','Gold',60.00,10),('a7815711-b7bf-11f0-9007-e27119d7eafa','Diamond',70.00,15);
+INSERT INTO `author_rank` VALUES ('a7814236-b7bf-11f0-9007-e27119d7eafa','Tân Thủ',0.00,0),('a7815277-b7bf-11f0-9007-e27119d7eafa','Đồng',50.00,5),('a781563b-b7bf-11f0-9007-e27119d7eafa','Vàng',60.00,10),('a7815711-b7bf-11f0-9007-e27119d7eafa','Kim Cương',70.00,15);
 
 
 CREATE TABLE author (
