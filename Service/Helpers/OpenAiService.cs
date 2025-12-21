@@ -165,7 +165,7 @@ namespace Service.Helpers
             {
                 category = "Personal Data",
                 labels = new[] { "personal_data" },
-                penalties = new[] { "-2.5: Real-world phone numbers, addresses." },
+                penalties = new[] { "-2.5: Real-world phone numbers, addresses, bank number, credit card number" },
                 examples = "E.g.: 0901234567.",
                 note = "Privacy violation."
             },
