@@ -194,7 +194,7 @@ namespace Service.Services
             //làm tròn điểm AI 
             var aiScore = (decimal)Math.Round(aiResult.Score, 2, MidpointRounding.AwayFromZero);
 
-            var aiViolationsJson = aiResult.Violations?.Length > 0
+            var aiViolationsJson = aiResult.Violations?.Count > 0
                 ? JsonSerializer.Serialize(aiResult.Violations, new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase })
                 : null;
 

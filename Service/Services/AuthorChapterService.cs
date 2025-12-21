@@ -238,7 +238,7 @@ namespace Service.Services
             var moderation = await _openAiModerationService.ModerateChapterAsync(chapter.title, content, langCode, ct);
             var aiScoreDecimal = (decimal)Math.Round(moderation.Score, 2, MidpointRounding.AwayFromZero);
             
-            var aiViolationsJson = moderation.Violations?.Length > 0
+            var aiViolationsJson = moderation.Violations?.Count > 0
                 ? JsonSerializer.Serialize(moderation.Violations, new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase })
                 : null;
 
