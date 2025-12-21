@@ -14,5 +14,7 @@ namespace Contract.DTOs.Response.Report
         public string? ContentPath { get; set; }
         public string? LanguageCode { get; set; }
         public string? LanguageName { get; set; }
+        public Guid AuthorId { get; set; }
+        public string AuthorUsername { get; set; } = string.Empty;
     }
 }

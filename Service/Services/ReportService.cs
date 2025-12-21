@@ -364,7 +364,9 @@ namespace Service.Services
                                 PriceDias = chapter.dias_price,
                                 ContentPath = chapter.content_url,
                                 LanguageCode = chapter.story?.language?.lang_code,
-                                LanguageName = chapter.story?.language?.lang_name
+                                LanguageName = chapter.story?.language?.lang_name,
+                                AuthorId = chapter.story?.author_id ?? Guid.Empty,
+                                AuthorUsername = chapter.story?.author?.account?.username ?? string.Empty
                             };
                         }
                         break;
