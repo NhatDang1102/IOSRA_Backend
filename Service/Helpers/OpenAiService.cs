@@ -172,6 +172,15 @@ namespace Service.Helpers
             },
             new
             {
+                category = "Advertising / Promotion",
+                labels = new[] { "advertising_content" },
+                penalties = new[] { "-10.0: Content that is primarily an advertisement, solicitation, or call-to-action unrelated to the story." },
+                examples = "E.g.: 'Buy my course', 'Donate at paypal', 'Vote 5 stars please', 'Join my group for more'.",
+                rules = "Flag any content whose MAIN purpose is to sell, solicit, or promote, rather than tell a story. Author notes at the end are fine, but if the whole chapter is an ad -> REJECT.",
+                note = "Commercial spam violation."
+            },
+            new
+            {
                 category = "Low Quality - Template",
                 labels = new[] { "low_quality_template" },
                 penalties = new[] { "-10.0: Raw templates, placeholders like 'Content updating', 'Coming soon', 'Insert Text Here'." },
