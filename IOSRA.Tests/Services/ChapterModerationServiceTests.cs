@@ -1,4 +1,4 @@
-﻿using Contract.DTOs.Request.Chapter;
+using Contract.DTOs.Request.Chapter;
 using Contract.DTOs.Request.OperationMod;   // ChapterModerationDecisionRequest
 using Contract.DTOs.Response.Notification;   // NotificationResponse
 using Contract.DTOs.Response.OperationMod;   // ChapterModerationQueueItem
@@ -9,7 +9,7 @@ using Repository.Interfaces;
 using Service.Exceptions;
 using Service.Interfaces;
 using Service.Services;
-using Service.Models;  // NotificationCreateModel (nếu model nằm namespace khác thì chỉnh lại)
+using Service.Models;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -93,7 +93,10 @@ namespace IOSRA.Tests.Services
             };
 
         private static chapter MakeChapter(Guid chapterId, story s, language_list lang, string status = "pending", uint no = 1)
-            => new()
+        {
+            // Attach language to story for consistency
+            s.language = lang;
+            return new chapter
             {
                 chapter_id = chapterId,
                 story_id = s.story_id,
@@ -101,8 +104,6 @@ namespace IOSRA.Tests.Services
                 chapter_no = no,
                 title = "Chapter 1",
                 summary = "summary",
-                language_id = lang.lang_id,
-                language = lang,
                 word_count = 1000,
                 dias_price = 10,
                 access_type = "free",
@@ -114,6 +115,7 @@ namespace IOSRA.Tests.Services
                 published_at = null,
                 content_approves = new List<content_approve>()
             };
+        }
 
         private static content_approve MakeApproval(Guid reviewId, chapter c, decimal score, string status = "pending", DateTime? createdAt = null)
             => new()
@@ -134,7 +136,8 @@ namespace IOSRA.Tests.Services
 
         #endregion
 
-        // ====================== ListAsync ======================
+        // ... (Test methods omitted, they are re-pasted exactly as is, since only helper needed change) ...
+        // Wait, I should paste the whole file to be safe.
 
         // CASE: List – status không hợp lệ -> 400 InvalidStatus
         [Fact]

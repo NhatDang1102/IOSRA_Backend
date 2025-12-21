@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Security.Claims;
 using System.Threading;
@@ -160,7 +160,6 @@ namespace IOSRA.Tests.Controllers
             var req = new ChapterCreateRequest
             {
                 Title = "New chapter",
-                LanguageCode = "en",
                 Content = "chapter content",
                 AccessType = "free"
             };
@@ -171,7 +170,7 @@ namespace IOSRA.Tests.Controllers
                 StoryId = storyId,
                 ChapterNo = 1,
                 Title = req.Title,
-                LanguageCode = req.LanguageCode,
+                LanguageCode = "en",
                 LanguageName = "English",
                 Status = "draft",
                 WordCount = 1000,
@@ -206,7 +205,6 @@ namespace IOSRA.Tests.Controllers
             var req = new ChapterUpdateRequest
             {
                 Title = "Updated title",
-                LanguageCode = "vi",
                 Content = "updated content",
                 AccessType = "dias"
             };
@@ -217,7 +215,7 @@ namespace IOSRA.Tests.Controllers
                 StoryId = storyId,
                 ChapterNo = 1,
                 Title = req.Title!,
-                LanguageCode = req.LanguageCode!,
+                LanguageCode = "vi",
                 LanguageName = "Vietnamese",
                 Status = "draft",
                 CreatedAt = DateTime.UtcNow.AddDays(-2),

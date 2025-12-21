@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
@@ -37,7 +37,8 @@ namespace IOSRA.Tests.Controllers
             var s1 = BuildStory("S1", "u1");
             var s2 = BuildStory("S2", "u2");
 
-            _storyRepo.Setup(r => r.SearchPublishedStoriesAsync(q.Query, q.TagId, q.AuthorId, q.Page, q.PageSize, It.IsAny<CancellationToken>()))
+            // Added null for languageCode parameter
+            _storyRepo.Setup(r => r.SearchPublishedStoriesAsync(q.Query, q.TagId, q.AuthorId, null, q.Page, q.PageSize, It.IsAny<CancellationToken>()))
                       .ReturnsAsync((new List<story> { s1, s2 }, 10));
 
             _chapterRepo.Setup(r => r.GetPublishedChapterCountsByStoryIdsAsync(
@@ -63,7 +64,8 @@ namespace IOSRA.Tests.Controllers
         {
             var q = new StoryCatalogQuery { Page = 1, PageSize = 5 };
 
-            _storyRepo.Setup(r => r.SearchPublishedStoriesAsync(null, null, null, 1, 5, It.IsAny<CancellationToken>()))
+            // Added null for languageCode parameter
+            _storyRepo.Setup(r => r.SearchPublishedStoriesAsync(null, null, null, null, 1, 5, It.IsAny<CancellationToken>()))
                       .ReturnsAsync((new List<story>(), 0));
 
             var res = await _svc.GetStoriesAsync(q, CancellationToken.None);
@@ -83,7 +85,8 @@ namespace IOSRA.Tests.Controllers
             var s1 = BuildStory("A", "aa");
             var s2 = BuildStory("B", "bb");
 
-            _storyRepo.Setup(r => r.SearchPublishedStoriesAsync(null, null, null, 1, 10, It.IsAny<CancellationToken>()))
+            // Added null for languageCode parameter
+            _storyRepo.Setup(r => r.SearchPublishedStoriesAsync(null, null, null, null, 1, 10, It.IsAny<CancellationToken>()))
                       .ReturnsAsync((new List<story> { s1, s2 }, 2));
 
             // chỉ trả count cho s1, thiếu s2

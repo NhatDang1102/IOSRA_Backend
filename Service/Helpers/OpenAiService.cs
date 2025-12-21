@@ -59,7 +59,7 @@ namespace Service.Helpers
             {
                 category = "URL / External Redirect",
                 labels = new[] { "url_redirect" },
-                penalties = new[] { "-1.5: Per unique link, social media invite, or call-to-action to leave the platform." },
+                penalties = new[] { "-3: Per unique link, social media invite, or call-to-action to leave the platform." },
                 examples = "E.g.: http, https, www, .com, .net, bit.ly, telegram, discord.gg.",
                 rules = "Detect any attempt to redirect readers. Brand mentions without links are usually 0.",
                 note = "Subtract 1.5 points for every instance found."
@@ -322,7 +322,7 @@ Start from base score = 10.00.
 STRICT PENALTY RULES:
 - For each violation, the ""penalty"" field MUST be the **BASE PENALTY** for a SINGLE occurrence (from the table).
 - DO NOT multiply by the number of occurrences. The system will automatically multiply (Base Penalty * Evidence Count).
-- Example: If ""url_redirect"" is 1.5 and you find 2 links, set ""penalty"" to 1.5 (NOT 3.0).
+- Example: If ""url_redirect"" is 1.5 and you find 2 links, set ""penalty"" to 3.0 (NOT 6.0).
 - You MUST list all offending snippets in the ""evidence"" array.
 - The final ""score"" field in the JSON is for display only; the system will recalculate it.
 

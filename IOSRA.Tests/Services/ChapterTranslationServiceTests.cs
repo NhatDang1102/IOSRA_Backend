@@ -44,8 +44,10 @@ namespace IOSRA.Tests.Services
             { 
                 chapter_id = chapterId, 
                 access_type = "free", 
-                language = new language_list { lang_code = "en" },
-                story = new story { }
+                story = new story 
+                { 
+                    language = new language_list { lang_code = "en" }
+                }
             };
             
             var loc = new chapter_localization { content_url = "url", word_count = 100 };

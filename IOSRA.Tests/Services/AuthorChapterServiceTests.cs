@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -72,7 +72,7 @@ namespace IOSRA.Tests.Services
             };
         }
 
-        private static story MakeStory(Guid storyId, author a, bool published = true, bool isPremium = false)
+        private static story MakeStory(Guid storyId, author a, bool published = true, bool isPremium = false, language_list? lang = null)
         {
             return new story
             {
@@ -83,7 +83,8 @@ namespace IOSRA.Tests.Services
                 is_premium = isPremium,
                 status = published ? "published" : "draft",
                 created_at = DateTime.UtcNow.AddDays(-1),
-                updated_at = DateTime.UtcNow
+                updated_at = DateTime.UtcNow,
+                language = lang ?? MakeLanguage()
             };
         }
 
@@ -97,7 +98,7 @@ namespace IOSRA.Tests.Services
             };
         }
 
-        private static chapter MakeChapter(Guid chapterId, story s, language_list lang, string status = "draft")
+        private static chapter MakeChapter(Guid chapterId, story s, string status = "draft")
         {
             return new chapter
             {
@@ -105,8 +106,7 @@ namespace IOSRA.Tests.Services
                 story_id = s.story_id,
                 story = s,
                 chapter_no = 1,
-                language_id = lang.lang_id,
-                language = lang,
+                // Removed direct language link as it's now on story
                 title = "Chapter 1",
                 summary = null,
                 dias_price = 10,
@@ -139,7 +139,6 @@ namespace IOSRA.Tests.Services
             var req = new ChapterCreateRequest
             {
                 Title = "Chap 1",
-                LanguageCode = "vi",
                 Content = LongContent()
             };
 
@@ -165,7 +164,6 @@ namespace IOSRA.Tests.Services
             var req = new ChapterCreateRequest
             {
                 Title = "Chap 1",
-                LanguageCode = "vi",
                 Content = LongContent()
             };
 
@@ -194,7 +192,6 @@ namespace IOSRA.Tests.Services
             var req = new ChapterCreateRequest
             {
                 Title = "Chap 1",
-                LanguageCode = "vi",
                 Content = LongContent()
             };
 
@@ -221,7 +218,6 @@ namespace IOSRA.Tests.Services
             var req = new ChapterCreateRequest
             {
                 Title = "   ",
-                LanguageCode = "vi",
                 Content = LongContent()
             };
 
@@ -244,71 +240,6 @@ namespace IOSRA.Tests.Services
         }
 
         [Fact]
-        public async Task CreateAsync_Should_Throw_When_LanguageCode_Missing()
-        {
-            var accId = Guid.NewGuid();
-            var author = MakeAuthor(accId);
-            var story = MakeStory(Guid.NewGuid(), author, published: true);
-            var req = new ChapterCreateRequest
-            {
-                Title = "Chap 1",
-                LanguageCode = "   ",
-                Content = LongContent()
-            };
-
-            _storyRepo.Setup(r => r.GetAuthorAsync(accId, It.IsAny<CancellationToken>()))
-                      .ReturnsAsync(author);
-
-            _storyRepo.Setup(r => r.GetByIdForAuthorAsync(story.story_id, author.account_id, It.IsAny<CancellationToken>()))
-                      .ReturnsAsync(story);
-
-            _chapterRepo.Setup(r => r.GetLastAuthorChapterRejectedAtAsync(author.account_id, It.IsAny<CancellationToken>()))
-                        .ReturnsAsync((DateTime?)null);
-
-            var act = () => _svc.CreateAsync(accId, story.story_id, req, CancellationToken.None);
-
-            await act.Should().ThrowAsync<AppException>()
-                     .WithMessage("*Language code must not be empty*");
-
-            _storyRepo.VerifyAll();
-            _chapterRepo.VerifyAll();
-        }
-
-        [Fact]
-        public async Task CreateAsync_Should_Throw_When_Language_Not_Supported()
-        {
-            var accId = Guid.NewGuid();
-            var author = MakeAuthor(accId);
-            var story = MakeStory(Guid.NewGuid(), author, published: true);
-            var req = new ChapterCreateRequest
-            {
-                Title = "Chap 1",
-                LanguageCode = "xx",
-                Content = LongContent()
-            };
-
-            _storyRepo.Setup(r => r.GetAuthorAsync(accId, It.IsAny<CancellationToken>()))
-                      .ReturnsAsync(author);
-
-            _storyRepo.Setup(r => r.GetByIdForAuthorAsync(story.story_id, author.account_id, It.IsAny<CancellationToken>()))
-                      .ReturnsAsync(story);
-
-            _chapterRepo.Setup(r => r.GetLastAuthorChapterRejectedAtAsync(author.account_id, It.IsAny<CancellationToken>()))
-                        .ReturnsAsync((DateTime?)null);
-
-            _chapterRepo.Setup(r => r.GetLanguageByCodeAsync("xx", It.IsAny<CancellationToken>()))
-                        .ReturnsAsync((language_list?)null);
-
-            var act = () => _svc.CreateAsync(accId, story.story_id, req, CancellationToken.None);
-
-            await act.Should().ThrowAsync<AppException>()
-                     .WithMessage("*Language 'xx' is not supported*");
-
-            _storyRepo.VerifyAll();
-            _chapterRepo.VerifyAll();
-        }
-
-        [Fact]
         public async Task CreateAsync_Should_Throw_When_Content_Too_Short()
         {
             var accId = Guid.NewGuid();
@@ -319,8 +250,7 @@ namespace IOSRA.Tests.Services
             var req = new ChapterCreateRequest
             {
                 Title = "Chap 1",
-                LanguageCode = "vi",
-                Content = "too short" // < 50 chars
+                Content = "too short" // < 200 chars
             };
 
             _storyRepo.Setup(r => r.GetAuthorAsync(accId, It.IsAny<CancellationToken>()))
@@ -332,13 +262,10 @@ namespace IOSRA.Tests.Services
             _chapterRepo.Setup(r => r.GetLastAuthorChapterRejectedAtAsync(author.account_id, It.IsAny<CancellationToken>()))
                         .ReturnsAsync((DateTime?)null);
 
-            _chapterRepo.Setup(r => r.GetLanguageByCodeAsync("vi", It.IsAny<CancellationToken>()))
-                        .ReturnsAsync(lang);
-
             var act = () => _svc.CreateAsync(accId, story.story_id, req, CancellationToken.None);
 
             await act.Should().ThrowAsync<AppException>()
-                     .WithMessage("*must contain at least 50 characters*");
+                     .WithMessage("*must have at least  200 characters*"); // Adjusted expectation for 200 chars
 
             _storyRepo.VerifyAll();
             _chapterRepo.VerifyAll();
@@ -351,12 +278,12 @@ namespace IOSRA.Tests.Services
             var author = MakeAuthor(accId);
             var story = MakeStory(Guid.NewGuid(), author, published: true, isPremium: true);
             var lang = MakeLanguage("vi", "Vietnamese");
-            var content = LongContent(80); // đủ dài
+            story.language = lang;
+            var content = LongContent(80); // > 200 chars if "word " is 5 chars * 80 = 400
 
             var req = new ChapterCreateRequest
             {
                 Title = "  Chapter 1  ",
-                LanguageCode = "vi",
                 Content = content
             };
 
@@ -368,9 +295,6 @@ namespace IOSRA.Tests.Services
 
             _chapterRepo.Setup(r => r.GetLastAuthorChapterRejectedAtAsync(author.account_id, It.IsAny<CancellationToken>()))
                         .ReturnsAsync((DateTime?)null);
-
-            _chapterRepo.Setup(r => r.GetLanguageByCodeAsync("vi", It.IsAny<CancellationToken>()))
-                        .ReturnsAsync(lang);
 
             _pricing.Setup(p => p.GetPriceAsync(It.IsAny<int>(), It.IsAny<CancellationToken>()))
                     .ReturnsAsync(25);
@@ -433,7 +357,8 @@ namespace IOSRA.Tests.Services
             var author = MakeAuthor(accId);
             var story = MakeStory(Guid.NewGuid(), author, published: true);
             var lang = MakeLanguage();
-            var ch = MakeChapter(Guid.NewGuid(), story, lang, status: "draft");
+            story.language = lang;
+            var ch = MakeChapter(Guid.NewGuid(), story, status: "draft");
 
             _storyRepo.Setup(r => r.GetAuthorAsync(accId, It.IsAny<CancellationToken>()))
                       .ReturnsAsync(author);
@@ -481,9 +406,10 @@ namespace IOSRA.Tests.Services
             var author = MakeAuthor(accId);
             var story = MakeStory(Guid.NewGuid(), author, published: true);
             var lang = MakeLanguage();
+            story.language = lang;
             var chapterId = Guid.NewGuid();
 
-            var chapter = MakeChapter(chapterId, story, lang, status: "draft");
+            var chapter = MakeChapter(chapterId, story, status: "draft");
             chapter.content_url = "content-key";
 
             var req = new ChapterSubmitRequest();
@@ -512,7 +438,7 @@ namespace IOSRA.Tests.Services
 
             var violations = new List<ModerationViolation>
             {
-                new("badword", 2, new List<string> { "sample 1" })
+                new("badword", 2, new List<string> { "sample 1" }, 2.0)
             };
 
             var aiResult = new OpenAiModerationResult(
@@ -534,11 +460,14 @@ namespace IOSRA.Tests.Services
 
             _chapterRepo.Setup(r => r.AddContentApproveAsync(It.IsAny<content_approve>(), It.IsAny<CancellationToken>()))
                         .Returns(Task.CompletedTask);
+                        
+            _chapterRepo.Setup(r => r.GetContentApprovalsForChapterAsync(chapter.chapter_id, It.IsAny<CancellationToken>()))
+                        .ReturnsAsync(new List<content_approve>());
 
             var act = () => _svc.SubmitAsync(accId, chapterId, req, CancellationToken.None);
 
-            var ex = await act.Should().ThrowAsync<AppException>();
-            ex.Which.Message.Should().Contain("Chapter đã bị từ chối bởi AI.");
+            var res = await act.Should().NotThrowAsync();
+            res.Subject.Status.Should().Be("rejected");
 
             chapter.status.Should().Be("rejected");
             chapter.published_at.Should().BeNull();
@@ -555,8 +484,9 @@ namespace IOSRA.Tests.Services
             var author = MakeAuthor(accId);
             var story = MakeStory(Guid.NewGuid(), author, published: true);
             var lang = MakeLanguage();
+            story.language = lang;
             var chapterId = Guid.NewGuid();
-            var chapter = MakeChapter(chapterId, story, lang, status: "draft");
+            var chapter = MakeChapter(chapterId, story, status: "draft");
             chapter.content_url = "content-key";
 
             var req = new ChapterSubmitRequest();
@@ -633,8 +563,9 @@ namespace IOSRA.Tests.Services
             var author = MakeAuthor(accId);
             var story = MakeStory(Guid.NewGuid(), author, published: true);
             var lang = MakeLanguage();
+            story.language = lang;
             var chapterId = Guid.NewGuid();
-            var chapter = MakeChapter(chapterId, story, lang, status: "draft");
+            var chapter = MakeChapter(chapterId, story, status: "draft");
             chapter.content_url = "content-key";
 
             var req = new ChapterSubmitRequest();
@@ -702,7 +633,8 @@ namespace IOSRA.Tests.Services
             var author = MakeAuthor(accId);
             var story = MakeStory(Guid.NewGuid(), author);
             var lang = MakeLanguage();
-            var chapter = MakeChapter(Guid.NewGuid(), story, lang, status: "draft");
+            story.language = lang;
+            var chapter = MakeChapter(Guid.NewGuid(), story, status: "draft");
 
             _storyRepo.Setup(r => r.GetAuthorAsync(accId, It.IsAny<CancellationToken>()))
                       .ReturnsAsync(author);
@@ -716,7 +648,7 @@ namespace IOSRA.Tests.Services
             var act = () => _svc.WithdrawAsync(accId, chapter.chapter_id, CancellationToken.None);
 
             await act.Should().ThrowAsync<AppException>()
-                     .WithMessage("*Only rejected chapters can be withdrawn*");
+                     .WithMessage("*Only rejected chapters can be withdrawn*"); // Adjusted message expected from service code
 
             _storyRepo.VerifyAll();
             _chapterRepo.VerifyAll();
@@ -731,7 +663,8 @@ namespace IOSRA.Tests.Services
             var author = MakeAuthor(accId);
             var story = MakeStory(Guid.NewGuid(), author);
             var lang = MakeLanguage();
-            var chapter = MakeChapter(Guid.NewGuid(), story, lang, status: "draft");
+            story.language = lang;
+            var chapter = MakeChapter(Guid.NewGuid(), story, status: "draft");
 
             _storyRepo.Setup(r => r.GetAuthorAsync(accId, It.IsAny<CancellationToken>()))
                       .ReturnsAsync(author);
@@ -760,7 +693,8 @@ namespace IOSRA.Tests.Services
             var author = MakeAuthor(accId);
             var story = MakeStory(Guid.NewGuid(), author);
             var lang = MakeLanguage();
-            var chapter = MakeChapter(Guid.NewGuid(), story, lang, status: "draft");
+            story.language = lang;
+            var chapter = MakeChapter(Guid.NewGuid(), story, status: "draft");
             chapter.content_url = "old-key";
 
             _storyRepo.Setup(r => r.GetAuthorAsync(accId, It.IsAny<CancellationToken>()))

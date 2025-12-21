@@ -1,4 +1,4 @@
-﻿using Contract.DTOs.Request.Chapter;
+using Contract.DTOs.Request.Chapter;
 using Contract.DTOs.Response.Chapter;
 using Contract.DTOs.Response.Common;
 using FluentAssertions;
@@ -117,6 +117,13 @@ namespace IOSRA.Tests.Services
             var ch2Id = Guid.NewGuid();
             var now = DateTime.UtcNow;
 
+            var lang1 = new language_list
+            {
+                lang_id = Guid.NewGuid(),
+                lang_code = "vi",
+                lang_name = "Vietnamese"
+            };
+
             var ch1 = new chapter
             {
                 chapter_id = ch1Id,
@@ -126,11 +133,10 @@ namespace IOSRA.Tests.Services
                 word_count = 1000,
                 access_type = "free",
                 published_at = now,
-                language = new language_list
+                story = new story
                 {
-                    lang_id = Guid.NewGuid(),
-                    lang_code = "vi",
-                    lang_name = "Vietnamese"
+                    story_id = storyId,
+                    language = lang1
                 }
             };
 
@@ -143,7 +149,11 @@ namespace IOSRA.Tests.Services
                 word_count = 2000,
                 access_type = "Premium", // test case-insensitive IsLocked
                 published_at = now.AddMinutes(5),
-                // language = null -> LanguageCode = ""
+                story = new story
+                {
+                    story_id = storyId,
+                    language = null // language null -> LanguageCode = ""
+                }
             };
 
             _chapterRepo
@@ -247,22 +257,27 @@ namespace IOSRA.Tests.Services
         public async Task GetChapterAsync_Should_Throw_When_Content_Missing()
         {
             var chapterId = Guid.NewGuid();
+            var storyId = Guid.NewGuid();
 
             var ch = new chapter
             {
                 chapter_id = chapterId,
-                story_id = Guid.NewGuid(),
+                story_id = storyId,
                 chapter_no = 3,
                 title = "Broken Chapter",
                 access_type = "free",
                 content_url = "", // hoặc null
                 word_count = 800,
                 published_at = DateTime.UtcNow,
-                language = new language_list
+                story = new story
                 {
-                    lang_id = Guid.NewGuid(),
-                    lang_code = "en",
-                    lang_name = "English"
+                    story_id = storyId,
+                    language = new language_list
+                    {
+                        lang_id = Guid.NewGuid(),
+                        lang_code = "en",
+                        lang_name = "English"
+                    }
                 }
             };
 
@@ -298,11 +313,15 @@ namespace IOSRA.Tests.Services
                 content_url = "https://cdn/chapters/free-10.html",
                 word_count = 2500,
                 published_at = now,
-                language = new language_list
+                story = new story
                 {
-                    lang_id = Guid.NewGuid(),
-                    lang_code = "jp",
-                    lang_name = "Japanese"
+                    story_id = storyId,
+                    language = new language_list
+                    {
+                        lang_id = Guid.NewGuid(),
+                        lang_code = "jp",
+                        lang_name = "Japanese"
+                    }
                 }
             };
 
