@@ -134,7 +134,7 @@ namespace Service.Services
 
             var voices = new List<PurchasedVoiceResponse>();
             var moodResponse = (ChapterMoodResponse?)null;
-            var moodMusicPaths = Array.Empty<MoodMusicTrackResponse>();
+            string[] moodMusicPaths = Array.Empty<string>();
             if (viewerAccountId.HasValue)
             {
                 if (viewerIsAuthor)
@@ -283,13 +283,13 @@ namespace Service.Services
             };
         }
 
-        private async Task<(ChapterMoodResponse? Mood, MoodMusicTrackResponse[] Paths)> ResolveMoodAsync(chapter chapter, CancellationToken ct)
+        private async Task<(ChapterMoodResponse? Mood, string[] MusicPaths)> ResolveMoodAsync(chapter chapter, CancellationToken ct)
         {
             var moodCode = string.IsNullOrWhiteSpace(chapter.mood_code) ? "neutral" : chapter.mood_code!;
             var mood = await _moodMusicRepository.GetMoodAsync(moodCode, ct);
             if (mood == null)
             {
-                return (null, Array.Empty<MoodMusicTrackResponse>());
+                return (null, Array.Empty<string>());
             }
 
             var tracks = await _moodMusicRepository.GetTracksByMoodAsync(mood.mood_code, ct);
@@ -304,14 +304,7 @@ namespace Service.Services
                 Name = mood.mood_name
             };
 
-            var paths = tracks
-                .Select(t => new MoodMusicTrackResponse
-                {
-                    Title = t.title,
-                    StoragePath = t.storage_path
-                })
-                .Where(t => !string.IsNullOrWhiteSpace(t.StoragePath))
-                .ToArray();
+            var paths = tracks.Select(t => t.storage_path).Where(p => !string.IsNullOrWhiteSpace(p)).ToArray();
 
             return (moodDto, paths);
         }
