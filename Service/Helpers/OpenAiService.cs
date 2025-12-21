@@ -36,7 +36,7 @@ namespace Service.Helpers
             "Detect hate speech or harassment toward protected classes or individuals.",
             "Detect self-harm or suicide promotion/instructions.",
             "Detect instructions or promotion of illegal activities (drugs, hacking, weapons, etc.).",
-            "Detect sharing of personal data/doxxing (phone, address, bank info).",
+            "Detect any sharing of sensitive numbers like phone numbers, bank accounts, or addresses, even if they appear fictional or part of a story.",
             "Detect low-quality/irrelevant filler or advertising masquerading as a chapter.",
             "Detect frequent grammar, spelling, or punctuation errors.",
             "Detect poor formatting, excessive capitalization, or 'wall of text' paragraphs.",
@@ -165,24 +165,27 @@ namespace Service.Helpers
             {
                 category = "Personal Data",
                 labels = new[] { "personal_data" },
-                penalties = new[] { "-2.5: Real-world phone numbers, addresses, bank number, credit card number" },
-                examples = "E.g.: 0901234567.",
+                penalties = new[] { "-2.5: Any numeric strings resembling phone numbers, bank accounts, or credit cards." },
+                examples = "E.g.: 0901234567, 123456789.",
+                rules = "Trigger this for ANY sensitive-looking numbers. DO NOT allow them even if they are described as fictional or as part of a dialogue. Zero tolerance for exposing numeric identifiers.",
                 note = "Privacy violation."
             },
             new
             {
                 category = "Low Quality - Template",
                 labels = new[] { "low_quality_template" },
-                penalties = new[] { "-10.0: Raw templates, 'Insert Text Here'." },
-                examples = "E.g.: Lorem Ipsum.",
+                penalties = new[] { "-10.0: Raw templates, placeholders like 'Content updating', 'Coming soon', 'Insert Text Here'." },
+                examples = "E.g.: 'Nội dung đang cập nhật', 'Chương này sẽ có sau', 'Lorem Ipsum'.",
+                rules = "REJECT if the content is just a placeholder promise (e.g., 'will update later', 'chưa có nội dung') instead of actual story content. Short announcements are NOT valid chapters.",
                 note = "Immediate rejection."
             },
              new
             {
                 category = "Low Quality - Filler",
                 labels = new[] { "low_quality_filler" },
-                penalties = new[] { "-5.0: Extremely short, list of keywords only." },
-                examples = "E.g.: Just tags, no story.",
+                penalties = new[] { "-5.0: Extremely short (< 50 words) without substance, or just a list of keywords." },
+                examples = "E.g.: Just tags, 'abc xyz', or very short meaningless text.",
+                rules = "If content is too short to be a story chapter (< 30 words) and lacks narrative/dialogue, flag as filler. A story chapter implies narration.",
                 note = "Rejection."
             },
              new
