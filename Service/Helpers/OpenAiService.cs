@@ -262,7 +262,7 @@ namespace Service.Helpers
 
             //gắn hết content vô 1 chuỗi để request cho openai 
             var combined = ComposeContent(primary, secondary, tertiary);
-            var ai = await RequestModerationAsync(profile, combined, languageCode, ct);
+            var ai = await RequestModerationAsync(profile, primary, secondary, tertiary, languageCode, ct);
 
             //tính điểm trực tiếp (ko để AI tính vì tính sai)
             //Logic mới: AI trả về base penalty, Code tự nhân với số lượng bằng chứng (Evidence Count)
@@ -313,7 +313,7 @@ namespace Service.Helpers
         }
 
         //hàm request gửi cho OpenAI để chấm điểm trc 
-        private async Task<ModerationAiResponse?> RequestModerationAsync(ModerationProfile profile, string content, string? languageCode, CancellationToken ct)
+        private async Task<ModerationAiResponse?> RequestModerationAsync(ModerationProfile profile, string primary, string? secondary, string? tertiary, string? languageCode, CancellationToken ct)
         {
             //define system openAI 
             var moderationInstructions = @"Return JSON only with shape { ""score"": number, ""decision"": ""auto_approved|pending_manual_review|rejected"", ""violations"": [{ ""label"": string, ""evidence"": [string], ""penalty"": number }], ""explanation"": { ""vietnamese"": string } }.
@@ -328,12 +328,22 @@ STRICT PENALTY RULES:
 
 Rules that must always be enforced:
 - A `languageCode` field (e.g., 'en-US', 'vi-VN', 'ja-JP') is provided. This is the REQUIRED language.
-- STEP 1: DETECT the **DOMINANT** language of the provided content.
-- STEP 2: COMPARE the **DOMINANT** language with `languageCode`.
-- IF the **DOMINANT** language is completely different (e.g. `languageCode` is 'ja-JP' but content is Vietnamese), you MUST trigger the ""wrong_language"" violation (-10.0 points).
-- **CRITICAL EXCEPTION**: If the content contains Proper Nouns, **BRANDS** (e.g. 'Facebook', 'Google', 'YouTube'), loanwords, or short phrases, but the **DOMINANT** grammar matches `languageCode`, THIS IS VALID. DO NOT flag as ""wrong_language"".
-- IMPORTANT: If the content is in the CORRECT language but has many spelling mistakes, bad grammar, or slang, DO NOT use ""wrong_language"". Instead, use ""grammar_spelling"" and ""weak_prose"".
-- Use the provided ""deductions"" table for labels and base penalty amounts.
+- The input `content` is a JSON object.
+- **FIELD DEFINITIONS**: 
+  - 'Title': The title of the work.
+  - 'Body', 'Description', 'Outline': Considered **MAIN CONTENT**.
+
+- STEP 1: DETECT the language of 'Title' and **MAIN CONTENT** separately.
+- STEP 2: COMPARE both with `languageCode`.
+
+- **MAIN CONTENT CHECK**: IF the **MAIN CONTENT** (Body/Description/Outline) language is completely different from `languageCode` (e.g. Vietnamese content for `ja-JP` code), you MUST trigger the ""wrong_language"" violation (-10.0 points).
+  - Exception: Valid loanwords, short phrases, brands in correct grammar context are allowed.
+
+- **TITLE CHECK**: If the 'Title' is entirely in a different language than `languageCode` (e.g. English title ""The Beautiful Lady"" for `vi-VN`), you MUST trigger the ""wrong_language"" violation with a penalty of **-10.0**.
+  - **CRITICAL EXCEPTION**: Proper Nouns, Character Names, or Brand Names integrated into the target language context are VALID (e.g. ""Quý bà Smith"", ""Thám tử Sherlock Holmes"", ""Review phim One Piece"" for `vi-VN`). These do NOT trigger any penalty.
+
+- IMPORTANT: If content has many spelling mistakes/bad grammar but is in the CORRECT language, use ""grammar_spelling"" or ""weak_prose"", DO NOT use ""wrong_language"".
+- Use the provided ""deductions"" table for other violations.
 - Maximum allowed score for any submission is 9.5 (even with no violations).
 
 CONSISTENCY CHECK: 
@@ -349,11 +359,17 @@ Decision Mapping (STRICT):
 
 Explanation requirements:
 - Provide a detailed Vietnamese summary. The explanation MUST align with the score and decision.
-- IMPORTANT: Do NOT use English labels/tags (e.g. 'url_redirect', 'violent_moderate') in the explanation text. Translate them into natural Vietnamese descriptions (e.g. 'chứa liên kết ngoài', 'nội dung bạo lực').
+- IMPORTANT: Do NOT use English labels/tags (e.g. 'url_redirect', 'violent_moderate') in the explanation text. Translate them into natural Vietnamese descriptions (e.g. 'chứa liên kết ngoài', 'nội dung bạo lực', 'sai ngôn ngữ tiêu đề').
 - Translate the final decision status into Vietnamese context naturally. 
 - CRITICAL: If decision is 'rejected', the explanation MUST conclude with 'bị từ chối' or 'không được duyệt'. DO NOT say 'cần xem xét' (needs review) for rejected content.
 - DO NOT state the final score in the text; the system handles the display.
 - CRITICAL: The 'vietnamese' field in the JSON is MANDATORY and CANNOT be empty or null.";
+
+            // Xây dựng structured content
+            var contentData = new Dictionary<string, string>();
+            if (!string.IsNullOrWhiteSpace(primary)) contentData[profile.PrimaryLabel] = primary;
+            if (!string.IsNullOrWhiteSpace(secondary)) contentData[profile.SecondaryLabel] = secondary;
+            if (profile.TertiaryLabel != null && !string.IsNullOrWhiteSpace(tertiary)) contentData[profile.TertiaryLabel] = tertiary;
 
             //gom hết phạm vi luật, ngưỡng điểm, instruction vào 1 payload 
             var userPayload = new
@@ -368,7 +384,7 @@ Explanation requirements:
                 policies = PolicyStatements,
                 deductions = DeductionTable,
                 instructions = moderationInstructions,
-                content
+                content = contentData
             };
 
 
