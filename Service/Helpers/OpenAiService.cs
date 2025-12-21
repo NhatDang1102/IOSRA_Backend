@@ -52,7 +52,7 @@ namespace Service.Helpers
                 labels = new[] { "wrong_language" },
                 penalties = new[] { "-10.0: The primary language of the content DOES NOT MATCH the required languageCode." },
                 examples = "E.g.: Content is Vietnamese but languageCode is 'ja-JP'.",
-                rules = "CRITICAL: Check if the content's language matches the provided 'languageCode'. If they are different families (e.g. Latin vs Kanji, or Vietnamese vs English), you MUST deduct 10.0 points immediately. Ignore minor loanwords/proper nouns.",
+                rules = "ONLY trigger if the DOMINANT language is wrong (e.g. Japanese text for Vietnamese code). ABSOLUTELY ALLOW Proper Nouns, BRANDS (e.g. Facebook, Google, iPhone), and loanwords. If the text is readable in the target language, DO NOT PENALIZE.",
                 note = "Mismatching the language results in immediate 0.0 score."
             },
             new
@@ -316,10 +316,10 @@ STRICT PENALTY RULES:
 
 Rules that must always be enforced:
 - A `languageCode` field (e.g., 'en-US', 'vi-VN', 'ja-JP') is provided. This is the REQUIRED language.
-- STEP 1: DETECT the language of the provided content.
-- STEP 2: COMPARE the detected language with `languageCode`.
-- IF they do not match (e.g. `languageCode` is 'ja-JP' but content is Vietnamese), you MUST trigger the ""wrong_language"" violation (-10.0 points) and score it 0.00.
-- EXCEPTION: If the content contains Proper Nouns (names, places e.g. 'Harry Potter', 'Tokyo'), loanwords, short phrases (e.g. 'another world', 'status window', 'level up'), or occasional code-switching, but the DOMINANT grammar matches `languageCode`, DO NOT flag this as ""wrong_language"".
+- STEP 1: DETECT the **DOMINANT** language of the provided content.
+- STEP 2: COMPARE the **DOMINANT** language with `languageCode`.
+- IF the **DOMINANT** language is completely different (e.g. `languageCode` is 'ja-JP' but content is Vietnamese), you MUST trigger the ""wrong_language"" violation (-10.0 points).
+- **CRITICAL EXCEPTION**: If the content contains Proper Nouns, **BRANDS** (e.g. 'Facebook', 'Google', 'YouTube'), loanwords, or short phrases, but the **DOMINANT** grammar matches `languageCode`, THIS IS VALID. DO NOT flag as ""wrong_language"".
 - IMPORTANT: If the content is in the CORRECT language but has many spelling mistakes, bad grammar, or slang, DO NOT use ""wrong_language"". Instead, use ""grammar_spelling"" and ""weak_prose"".
 - Use the provided ""deductions"" table for labels and base penalty amounts.
 - Maximum allowed score for any submission is 9.5 (even with no violations).
