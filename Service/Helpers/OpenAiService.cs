@@ -51,8 +51,8 @@ namespace Service.Helpers
                 category = "Language Compliance",
                 labels = new[] { "wrong_language" },
                 penalties = new[] { "-10.0: The primary language of the content DOES NOT MATCH the required languageCode." },
-                examples = "E.g.: Content is Vietnamese but languageCode is 'ja-JP'. Content is English but languageCode is 'vi-VN'.",
-                rules = "CRITICAL: Check if the content's language matches the provided 'languageCode'. If they are different families (e.g. Latin vs Kanji, or Vietnamese vs English), you MUST deduct 10.0 points immediately. Ignore minor loanwords, but reject if the main text is in the wrong language.",
+                examples = "E.g.: Content is Vietnamese but languageCode is 'ja-JP'.",
+                rules = "CRITICAL: Check if the content's language matches the provided 'languageCode'. If they are different families (e.g. Latin vs Kanji, or Vietnamese vs English), you MUST deduct 10.0 points immediately. Ignore minor loanwords/proper nouns.",
                 note = "Mismatching the language results in immediate 0.0 score."
             },
             new
@@ -60,127 +60,147 @@ namespace Service.Helpers
                 category = "URL / External Redirect",
                 labels = new[] { "url_redirect" },
                 penalties = new[] { "-1.5: Per unique link, social media invite, or call-to-action to leave the platform." },
-                examples = "E.g.: http, https, www, .com, .net, bit.ly, telegram, discord.gg, invite codes, 'Follow me on Facebook/Patreon'.",
+                examples = "E.g.: http, https, www, .com, .net, bit.ly, telegram, discord.gg.",
                 rules = "Detect any attempt to redirect readers. Brand mentions without links are usually 0.",
                 note = "Subtract 1.5 points for every instance found."
             },
             new
             {
-                category = "Spam / Nonsense / Gibberish",
+                category = "Spam / Gibberish",
                 labels = new[] { "spam_repetition" },
-                penalties = new[] { 
-                    "-10.0: The content is primarily gibberish, keyboard smashing, or has NO meaningful prose.",
-                    "-10.0: Repetitive placeholder text (e.g., 'string string', 'text text', 'content content', 'test test') or repeating the same word/phrase > 3 times consecutively without narrative reason.",
-                    "-10.0: Repeating the same sentence or paragraph multiple times to fill space (copy-paste spam).",
-                    "-10.0: 'Lorem Ipsum' or standard dummy text.",
-                    "-5.0: Heavy spam, long sequences of nonsense, or filler text blocks."
-                },
-                examples = "E.g.: 'string string string', 'text text text', 'Lorem ipsum dolor sit amet', 'abc abc abc', copy-pasting the same paragraph 5 times, 'asdf asdf asdf'.",
-                rules = "AGGRESSIVELY penalize any repetitive patterns used to inflate word count. If it looks like a test payload or copy-paste spam, REJECT IT immediately.",
-                note = "Ensures content has meaningful prose."
+                penalties = new[] { "-10.0: Gibberish, keyboard smashing, or excessive repetition." },
+                examples = "E.g.: 'xybza', 'asdfgh', 'string string', 'un ummm unnn', 'hả hả hả'.",
+                rules = "AGGRESSIVELY penalize random character strings (e.g. 'xybza'), excessive meaningless filler sounds (e.g. 'un ummm unnn' repeated), or copying the same paragraph >3 times. If it looks like test data, REJECT.",
+                note = "Zero tolerance for gibberish or low-effort filler."
             },
             new
             {
-                category = "Explicit Sexual Content",
-                labels = new[] { "sexual_explicit", "sexual_minor", "sexual_transaction", "fetish_extreme", "sexual_degradation" },
-                penalties = new[] { 
-                    "-10.0: Sexual content involving minors (CSAM), sexual violence (rape), sexual transactions, or severe degradation.",
-                    "-3.0: Graphic sexual acts, explicit NSFW descriptions.",
-                    "-1.5: Detailed nudity, heavy sexual innuendo, or fetish focus.",
-                    "-0.5: Mild romantic intimacy with borderline sexual descriptions."
-                },
-                examples = "E.g.: Descriptions of intercourse, sexual organs, or forced acts.",
-                note = "CRITICAL: Any sexual content involving minors results in immediate deduction of 10.0 points."
+                category = "Sexual - Minor / Violence",
+                labels = new[] { "sexual_forbidden" },
+                penalties = new[] { "-10.0: Sexual content involving minors (CSAM), rape, or severe degradation." },
+                examples = "E.g.: Child abuse, non-consensual acts.",
+                note = "Immediate rejection."
             },
             new
             {
-                category = "Violent / Extremist",
-                labels = new[] { "violent_gore", "extremist_rhetoric" },
-                penalties = new[] { 
-                    "-10.0: Terrorist propaganda, extremist rhetoric, or glorifying mass harm.",
-                    "-3.0: Graphic torture, excessive gore.",
-                    "-1.5: Praising violence, glorifying murder, or encouraging harm.",
-                    "-0.5: Narrative combat with moderate blood or injury descriptions."
-                },
-                examples = "E.g.: Terrorist manifestos, detailed descriptions of dismemberment, or glorifying mass shootings.",
-                note = "Narrative action is allowed, but glorification of extremist violence is strictly penalized."
+                category = "Sexual - Explicit",
+                labels = new[] { "sexual_explicit" },
+                penalties = new[] { "-3.0: Graphic sexual acts, explicit NSFW descriptions." },
+                examples = "E.g.: Detailed intercourse descriptions.",
+                note = "Heavy penalty for explicit content."
             },
             new
             {
-                category = "Hate Speech / Harassment",
-                labels = new[] { "hate_speech", "harassment_targeted", "mild_insult" },
-                penalties = new[] { 
-                    "-3.0: Hate speech against protected classes (race, religion, gender, etc.) or slurs.",
-                    "-2.0: Targeted harassment or cyberbullying.",
-                    "-0.5: Mild insults or toxic behavior."
-                },
-                examples = "E.g.: Racial slurs, calls for discrimination, or attacking real-world individuals.",
-                note = "Zero tolerance for hate speech against protected groups."
+                category = "Sexual - Borderline",
+                labels = new[] { "sexual_borderline" },
+                penalties = new[] { "-1.0: Heavy innuendo, fetish focus, or detailed nudity without explicit acts." },
+                examples = "E.g.: Intense make-out sessions, focus on body parts.",
+                note = "Moderate penalty."
             },
             new
             {
-                category = "Self-harm & Suicide",
-                labels = new[] { "self_harm_promotion", "self_harm_instruction", "self_harm_neutral" },
-                penalties = new[] { 
-                    "-10.0: Promoting, glorifying, or providing instructions for self-harm or suicide.",
-                    "-1.0: Neutral/narrative mention in an encouraging context."
-                },
-                examples = "E.g.: 'How to cut yourself...', glorifying suicide as a solution.",
-                note = "Never allow content that encourages or teaches self-harm."
+                category = "Violent - Extremist",
+                labels = new[] { "violent_extremist" },
+                penalties = new[] { "-10.0: Terrorist propaganda, glorifying mass harm." },
+                examples = "E.g.: Manifestos, hate crimes.",
+                note = "Immediate rejection."
             },
             new
             {
-                category = "Illegal Activities",
-                labels = new[] { "illegal_instruction", "illegal_promotion" },
-                penalties = new[] { 
-                    "-2.5: Actionable 'how-to' guides for drugs, hacking, or weapons.",
-                    "-1.0: Glorifying criminal behavior.",
-                    "-0.5: Incidental narrative mention."
-                },
-                examples = "E.g.: Drug manufacturing recipes, instructions on how to bypass security/locks.",
-                note = "Distinguish between narrative fiction and real-world illegal instructions."
+                category = "Violent - Graphic",
+                labels = new[] { "violent_graphic" },
+                penalties = new[] { "-3.0: Detailed torture, excessive gore, or sadism." },
+                examples = "E.g.: Slow dismemberment descriptions.",
+                note = "Heavy penalty."
+            },
+             new
+            {
+                category = "Violent - Moderate",
+                labels = new[] { "violent_moderate" },
+                penalties = new[] { "-1.0: Excessive blood in combat, or glorifying injury." },
+                examples = "E.g.: Detailed fight scenes with heavy bleeding.",
+                note = "Moderate penalty."
             },
             new
             {
-                category = "Personal Data / Doxxing",
+                category = "Hate Speech - Severe",
+                labels = new[] { "hate_speech_severe" },
+                penalties = new[] { "-3.0: Slurs, hate speech against protected classes." },
+                examples = "E.g.: Racial slurs, religious hatred.",
+                note = "Strictly penalized."
+            },
+            new
+            {
+                category = "Harassment - Targeted",
+                labels = new[] { "harassment_targeted" },
+                penalties = new[] { "-2.0: Bullying or attacking specific individuals." },
+                examples = "E.g.: Doxxing threats, cyberbullying.",
+                note = "Targeted attacks."
+            },
+             new
+            {
+                category = "Insults - Mild",
+                labels = new[] { "insult_mild" },
+                penalties = new[] { "-0.5: Toxic behavior, name-calling." },
+                examples = "E.g.: 'Idiot', 'Stupid'.",
+                note = "Minor penalty."
+            },
+            new
+            {
+                category = "Self-harm - Promotion",
+                labels = new[] { "self_harm_promo" },
+                penalties = new[] { "-10.0: Encouraging or instructing on self-harm/suicide." },
+                examples = "E.g.: 'How to cut veins'.",
+                note = "Immediate rejection."
+            },
+            new
+            {
+                category = "Illegal - Instruction",
+                labels = new[] { "illegal_instruction" },
+                penalties = new[] { "-2.5: Guides for crimes (drugs, bombs, hacking)." },
+                examples = "E.g.: Meth recipes.",
+                note = "Safety violation."
+            },
+            new
+            {
+                category = "Personal Data",
                 labels = new[] { "personal_data" },
-                penalties = new[] { "-2.5: Exposing real-world private info (phone, address, ID, bank info)." },
-                examples = "E.g.: 'Call me at 0901234567', 'My home address is...', 'ID number: 123...'.",
-                note = "Applies to real-world sensitive data exposure."
+                penalties = new[] { "-2.5: Real-world phone numbers, addresses." },
+                examples = "E.g.: 0901234567.",
+                note = "Privacy violation."
             },
             new
             {
-                category = "Low Quality / Irrelevant",
-                labels = new[] { "low_quality", "irrelevant_ad", "template_placeholder" },
-                penalties = new[] { 
-                    "-10.0: Content appears to be a raw template, form filler, or default value (e.g., 'Insert Story Here', 'Title goes here', 'Description...').",
-                    "-5.0: Content is extremely short, lacks narrative structure, or is just a list of keywords/tags.",
-                    "-2.0: Advertisements, promotional text, or placeholder text.",
-                    "-1.0: Mildly off-topic content."
-                },
-                examples = "E.g.: 'Buy Bitcoin now', 'Insert body text here', 'Author Name: [Name]', just a list of random tags, 'story description'.",
-                note = "Target content used for external advertising or lazy template submissions."
+                category = "Low Quality - Template",
+                labels = new[] { "low_quality_template" },
+                penalties = new[] { "-10.0: Raw templates, 'Insert Text Here'." },
+                examples = "E.g.: Lorem Ipsum.",
+                note = "Immediate rejection."
             },
-            new
+             new
             {
-                category = "Writing Quality",
-                labels = new[] { "grammar_spelling", "poor_formatting", "weak_prose" },
-                penalties = new[] { 
-                    "-0.5: Frequent typos, lack of proper tone/accents (e.g., 'toi di choi').",
-                    "-0.5: Poor formatting, 'wall of text' (long paragraphs), or excessive capitalization.",
-                    "-0.25: Extremely weak or excessively repetitive prose."
-                },
-                examples = "E.g.: No line breaks for 500+ words, constant misspelling, or 'ALL CAPS' text.",
-                note = "Penalize amateurish writing that degrades the reading experience."
+                category = "Low Quality - Filler",
+                labels = new[] { "low_quality_filler" },
+                penalties = new[] { "-5.0: Extremely short, list of keywords only." },
+                examples = "E.g.: Just tags, no story.",
+                note = "Rejection."
+            },
+             new
+            {
+                category = "Writing - Formatting",
+                labels = new[] { "poor_formatting" },
+                penalties = new[] { "-0.5: Wall of text, no line breaks, all caps." },
+                examples = "E.g.: 500 words in one block.",
+                note = "Quality control."
             },
             new
             {
                 category = "Inconsistent Content",
                 labels = new[] { "inconsistent_content" },
-                penalties = new[] { "-3.0: Title, description, and outline are unrelated or contradictory." },
-                examples = "E.g.: Title is 'Modern High School' but outline is about 'Ancient Space Cults'.",
+                penalties = new[] { "-3.0: Title/Outline contradictory." },
+                examples = "E.g.: Title 'Space' vs Outline 'Farming'.",
                 rules = "Check if all provided elements (Title, Description, Outline) match conceptually.",
-                note = "Apply only when story elements do not match."
+                note = "Coherence check."
             }
         };
 
@@ -233,7 +253,13 @@ namespace Service.Helpers
             var ai = await RequestModerationAsync(profile, combined, languageCode, ct);
 
             //tính điểm trực tiếp (ko để AI tính vì tính sai)
-            var totalDeduction = ai?.Violations?.Sum(v => Math.Abs(v.Penalty ?? 0)) ?? 0;
+            //Logic mới: AI trả về base penalty, Code tự nhân với số lượng bằng chứng (Evidence Count)
+            var totalDeduction = ai?.Violations?.Sum(v => 
+            {
+                var count = (v.Evidence != null && v.Evidence.Length > 0) ? v.Evidence.Length : 1;
+                return Math.Abs(v.Penalty ?? 0) * count;
+            }) ?? 0;
+
             var rawScore = 10.0 - totalDeduction;
             
             if (rawScore > 9.5) rawScore = 9.5;
@@ -255,8 +281,10 @@ namespace Service.Helpers
                 {
                     var label = string.IsNullOrWhiteSpace(v.Label) ? "violation" : v.Label;
                     var evidence = v.Evidence ?? Array.Empty<string>();
-                    var penalty = v.Penalty ?? 0.0;
-                    return new ModerationViolation(label, Math.Max(1, evidence.Length), evidence, penalty);
+                    var count = Math.Max(1, evidence.Length);
+                    var basePenalty = v.Penalty ?? 0.0;
+                    // Penalty trả về client là tổng phạt cho nhóm vi phạm này
+                    return new ModerationViolation(label, count, evidence, basePenalty * count);
                 })
                 .ToArray() ?? Array.Empty<ModerationViolation>();
 
@@ -280,22 +308,27 @@ namespace Service.Helpers
 Start from base score = 10.00. 
 
 STRICT PENALTY RULES:
-- Penalties are CUMULATIVE and PER OCCURRENCE.
-- For each violation, the ""penalty"" field MUST be calculated as: (Penalty Amount from table) * (Number of occurrences in the content).
-- Example: If ""spam_repetition"" is 1.5 and you find 3 snippets of spam, the ""penalty"" MUST be 4.5.
-- Example: If ""url_redirect"" is 1.5 and you find 2 links, the ""penalty"" MUST be 3.0.
+- For each violation, the ""penalty"" field MUST be the **BASE PENALTY** for a SINGLE occurrence (from the table).
+- DO NOT multiply by the number of occurrences. The system will automatically multiply (Base Penalty * Evidence Count).
+- Example: If ""url_redirect"" is 1.5 and you find 2 links, set ""penalty"" to 1.5 (NOT 3.0).
 - You MUST list all offending snippets in the ""evidence"" array.
-- The final ""score"" field in the JSON MUST be exactly 10.00 minus the sum of all ""penalty"" values in the ""violations"" array.
+- The final ""score"" field in the JSON is for display only; the system will recalculate it.
 
 Rules that must always be enforced:
 - A `languageCode` field (e.g., 'en-US', 'vi-VN', 'ja-JP') is provided. This is the REQUIRED language.
 - STEP 1: DETECT the language of the provided content.
 - STEP 2: COMPARE the detected language with `languageCode`.
 - IF they do not match (e.g. `languageCode` is 'ja-JP' but content is Vietnamese), you MUST trigger the ""wrong_language"" violation (-10.0 points) and score it 0.00.
-- ONLY exception is if the content contains names/places in another language but the grammar/sentences are correct for `languageCode`.
+- EXCEPTION: If the content contains Proper Nouns (names, places e.g. 'Harry Potter', 'Tokyo'), loanwords, short phrases (e.g. 'another world', 'status window', 'level up'), or occasional code-switching, but the DOMINANT grammar matches `languageCode`, DO NOT flag this as ""wrong_language"".
 - IMPORTANT: If the content is in the CORRECT language but has many spelling mistakes, bad grammar, or slang, DO NOT use ""wrong_language"". Instead, use ""grammar_spelling"" and ""weak_prose"".
 - Use the provided ""deductions"" table for labels and base penalty amounts.
 - Maximum allowed score for any submission is 9.5 (even with no violations).
+
+CONSISTENCY CHECK: 
+- Your calculated ""score"" and your ""explanation"" MUST mathematically align with the ""violations"" array.
+- NEVER write a positive explanation (e.g. ""Good content"") if you have included a -10.0 penalty in ""violations"".
+- If you decide the content is valid (e.g. valid use of loanwords per the exception), you MUST NOT include the ""wrong_language"" violation in the array at all.
+- If violations exist, the score MUST reflect the deduction.
 
 Decision Mapping (STRICT):
 - score > 7.0 => ""auto_approved"".
