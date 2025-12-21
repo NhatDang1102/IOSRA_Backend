@@ -98,15 +98,16 @@ namespace Service.Services
 
         public async Task<ChapterCatalogDetailResponse> GetChapterAsync(Guid chapterId, CancellationToken ct = default, Guid? viewerAccountId = null)
         {
-            var chapter = await _chapterRepository.GetPublishedChapterByIdAsync(chapterId, ct)
+            var chapter = await _chapterRepository.GetPublishedChapterWithVoicesAsync(chapterId, ct)
                            ?? throw new AppException("ChapterNotFound", "Không tìm thấy chương hoặc chương không khả dụng.", 404);
 
             var isLocked = !string.Equals(chapter.access_type, "free", StringComparison.OrdinalIgnoreCase);
             var isOwned = false;
+            var viewerIsAuthor = false;
             if (viewerAccountId.HasValue)
             {
                 var storyAuthorId = chapter.story?.author_id;
-                var viewerIsAuthor = storyAuthorId.HasValue && storyAuthorId.Value == viewerAccountId.Value;
+                viewerIsAuthor = storyAuthorId.HasValue && storyAuthorId.Value == viewerAccountId.Value;
                 if (viewerIsAuthor)
                 {
                     isOwned = true;
@@ -131,36 +132,55 @@ namespace Service.Services
                 throw new AppException("ChapterContentMissing", "Nội dung chương không khả dụng.", 500);
             }
 
-            var voices = Array.Empty<PurchasedVoiceResponse>();
+            var voices = new List<PurchasedVoiceResponse>();
             var moodResponse = (ChapterMoodResponse?)null;
             string[] moodMusicPaths = Array.Empty<string>();
             if (viewerAccountId.HasValue)
             {
-                var purchasedVoices = await _chapterPurchaseRepository.GetPurchasedVoicesAsync(viewerAccountId.Value, chapterId, ct);
-                if (purchasedVoices.Count > 0)
+                if (viewerIsAuthor)
                 {
-                    voices = purchasedVoices.Select(v => new PurchasedVoiceResponse
+                    if (chapter.chapter_voices != null)
                     {
-                        PurchaseVoiceId = v.PurchaseVoiceId,
-                        ChapterId = v.ChapterId,
-                        StoryId = v.StoryId,
-                        VoiceId = v.VoiceId,
-                        VoiceName = v.VoiceName,
-                        VoiceCode = v.VoiceCode,
-                        PriceDias = (int)v.PriceDias,
-                        AudioUrl = v.AudioUrl,
-                        PurchasedAt = v.PurchasedAt
-                    }).ToArray();
+                        voices = chapter.chapter_voices
+                            .Where(v => string.Equals(v.status, "ready", StringComparison.OrdinalIgnoreCase))
+                            .Select(v => new PurchasedVoiceResponse
+                            {
+                                PurchaseVoiceId = Guid.Empty, // No purchase record for author
+                                ChapterId = v.chapter_id,
+                                StoryId = chapter.story_id,
+                                VoiceId = v.voice_id,
+                                VoiceName = v.voice?.voice_name ?? string.Empty,
+                                VoiceCode = v.voice?.voice_code ?? string.Empty,
+                                PriceDias = (int)v.dias_price,
+                                AudioUrl = v.storage_path,
+                                PurchasedAt = chapter.published_at ?? DateTime.UtcNow
+                            }).ToList();
+                    }
+                }
+                else
+                {
+                    var purchasedVoices = await _chapterPurchaseRepository.GetPurchasedVoicesAsync(viewerAccountId.Value, chapterId, ct);
+                    if (purchasedVoices.Count > 0)
+                    {
+                        voices = purchasedVoices.Select(v => new PurchasedVoiceResponse
+                        {
+                            PurchaseVoiceId = v.PurchaseVoiceId,
+                            ChapterId = v.ChapterId,
+                            StoryId = v.StoryId,
+                            VoiceId = v.VoiceId,
+                            VoiceName = v.VoiceName,
+                            VoiceCode = v.VoiceCode,
+                            PriceDias = (int)v.PriceDias,
+                            AudioUrl = v.AudioUrl,
+                            PurchasedAt = v.PurchasedAt
+                        }).ToList();
+                    }
                 }
 
-                if (await HasPremiumAsync(viewerAccountId.Value, ct))
+                if (viewerIsAuthor || await HasPremiumAsync(viewerAccountId.Value, ct))
                 {
                     (moodResponse, moodMusicPaths) = await ResolveMoodAsync(chapter, ct);
                 }
-            }
-            else if (!isLocked)
-            {
-                // anonymous users cannot access mood music
             }
 
             return new ChapterCatalogDetailResponse
@@ -174,12 +194,13 @@ namespace Service.Services
                 AccessType = chapter.access_type,
                 IsLocked = isLocked,
                 IsOwned = !isLocked || isOwned,
+                IsAuthor = viewerIsAuthor,
                 PriceDias = (int)chapter.dias_price,
                 PublishedAt = chapter.published_at,
                 ContentUrl = chapter.content_url,
                 Mood = moodResponse,
                 MoodMusicPaths = moodMusicPaths,
-                Voices = voices
+                Voices = voices.ToArray()
             };
         }
 
@@ -188,10 +209,12 @@ namespace Service.Services
             var chapter = await _chapterRepository.GetPublishedChapterWithVoicesAsync(chapterId, ct)
                            ?? throw new AppException("ChapterNotFound", "Không tìm thấy chương hoặc chương không khả dụng.", 404);
 
-            var ownedVoiceIds = Array.Empty<Guid>();
-            if (viewerAccountId.HasValue)
+            var viewerIsAuthor = viewerAccountId.HasValue && chapter.story?.author_id == viewerAccountId.Value;
+            var ownedVoiceIds = new HashSet<Guid>();
+            if (viewerAccountId.HasValue && !viewerIsAuthor)
             {
-                ownedVoiceIds = (await _chapterPurchaseRepository.GetPurchasedVoiceIdsAsync(chapterId, viewerAccountId.Value, ct)).ToArray();
+                var purchased = await _chapterPurchaseRepository.GetPurchasedVoiceIdsAsync(chapterId, viewerAccountId.Value, ct);
+                ownedVoiceIds = new HashSet<Guid>(purchased);
             }
 
             if (chapter.chapter_voices == null || chapter.chapter_voices.Count == 0)
@@ -199,53 +222,64 @@ namespace Service.Services
                 return Array.Empty<ChapterCatalogVoiceResponse>();
             }
 
-            var ownedSet = ownedVoiceIds.Length > 0 ? new HashSet<Guid>(ownedVoiceIds) : null;
-
             return chapter.chapter_voices
                 .OrderBy(v => v.voice?.voice_name)
-                .Select(v => new ChapterCatalogVoiceResponse
+                .Select(v =>
                 {
-                    VoiceId = v.voice_id,
-                    VoiceName = v.voice?.voice_name ?? string.Empty,
-                    VoiceCode = v.voice?.voice_code ?? string.Empty,
-                    Status = v.status,
-                    PriceDias = (int)v.dias_price,
-                    HasAudio = string.Equals(v.status, "ready", StringComparison.OrdinalIgnoreCase),
-                    Owned = ownedSet?.Contains(v.voice_id) ?? false,
-                    AudioUrl = (ownedSet?.Contains(v.voice_id) ?? false) && string.Equals(v.status, "ready", StringComparison.OrdinalIgnoreCase)
-                        ? v.storage_path
-                        : null
+                    var isOwned = viewerIsAuthor || ownedVoiceIds.Contains(v.voice_id);
+                    var isReady = string.Equals(v.status, "ready", StringComparison.OrdinalIgnoreCase);
+                    return new ChapterCatalogVoiceResponse
+                    {
+                        VoiceId = v.voice_id,
+                        VoiceName = v.voice?.voice_name ?? string.Empty,
+                        VoiceCode = v.voice?.voice_code ?? string.Empty,
+                        Status = v.status,
+                        PriceDias = (int)v.dias_price,
+                        HasAudio = isReady,
+                        Owned = isOwned,
+                        AudioUrl = isOwned && isReady ? v.storage_path : null
+                    };
                 })
                 .ToArray();
         }
 
         public async Task<ChapterCatalogVoiceResponse> GetChapterVoiceAsync(Guid chapterId, Guid voiceId, Guid? viewerAccountId, CancellationToken ct = default)
         {
-            var voice = await _chapterRepository.GetChapterVoiceAsync(chapterId, voiceId, ct)
+            var chapterVoice = await _chapterRepository.GetChapterVoiceAsync(chapterId, voiceId, ct)
                        ?? throw new AppException("VoiceNotFound", "Không tìm thấy giọng đọc cho chương này.", 404);
+
+            var storyAuthorId = chapterVoice.chapter?.story?.author_id;
+            var viewerIsAuthor = viewerAccountId.HasValue && storyAuthorId.HasValue && storyAuthorId.Value == viewerAccountId.Value;
 
             var owned = false;
             if (viewerAccountId.HasValue)
             {
-                var ownedVoiceIds = await _chapterPurchaseRepository.GetPurchasedVoiceIdsAsync(chapterId, viewerAccountId.Value, ct);
-                if (ownedVoiceIds.Count > 0)
+                if (viewerIsAuthor)
                 {
-                    owned = ownedVoiceIds.Contains(voiceId);
+                    owned = true;
+                }
+                else
+                {
+                    var ownedVoiceIds = await _chapterPurchaseRepository.GetPurchasedVoiceIdsAsync(chapterId, viewerAccountId.Value, ct);
+                    if (ownedVoiceIds.Count > 0)
+                    {
+                        owned = ownedVoiceIds.Contains(voiceId);
+                    }
                 }
             }
 
-            var ready = string.Equals(voice.status, "ready", StringComparison.OrdinalIgnoreCase);
+            var ready = string.Equals(chapterVoice.status, "ready", StringComparison.OrdinalIgnoreCase);
 
             return new ChapterCatalogVoiceResponse
             {
-                VoiceId = voice.voice_id,
-                VoiceName = voice.voice?.voice_name ?? string.Empty,
-                VoiceCode = voice.voice?.voice_code ?? string.Empty,
-                Status = voice.status,
-                PriceDias = (int)voice.dias_price,
+                VoiceId = chapterVoice.voice_id,
+                VoiceName = chapterVoice.voice?.voice_name ?? string.Empty,
+                VoiceCode = chapterVoice.voice?.voice_code ?? string.Empty,
+                Status = chapterVoice.status,
+                PriceDias = (int)chapterVoice.dias_price,
                 HasAudio = ready,
                 Owned = owned,
-                AudioUrl = owned && ready ? voice.storage_path : null
+                AudioUrl = owned && ready ? chapterVoice.storage_path : null
             };
         }
 

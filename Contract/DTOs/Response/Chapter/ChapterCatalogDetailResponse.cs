@@ -13,6 +13,7 @@ namespace Contract.DTOs.Response.Chapter
         public string AccessType { get; set; } = null!;
         public bool IsLocked { get; set; }
         public bool IsOwned { get; set; }
+        public bool IsAuthor { get; set; }
         public int PriceDias { get; set; }
         public DateTime? PublishedAt { get; set; }
         public string ContentUrl { get; set; } = null!;
