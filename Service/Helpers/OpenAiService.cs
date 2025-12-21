@@ -52,7 +52,7 @@ namespace Service.Helpers
                 labels = new[] { "wrong_language" },
                 penalties = new[] { "-10.0: The primary language of the content DOES NOT MATCH the required languageCode." },
                 examples = "E.g.: Content is Vietnamese but languageCode is 'ja-JP'.",
-                rules = "ONLY trigger if the DOMINANT language is wrong (e.g. Japanese text for Vietnamese code). ABSOLUTELY ALLOW Proper Nouns, BRANDS (e.g. Facebook, Google, iPhone), and loanwords. If the text is readable in the target language, DO NOT PENALIZE.",
+                rules = "STRICTLY RESERVED for cases where the **MAJORITY (>80%)** of the text is in the wrong language. IF the narrative flow is in the correct language but contains English loanwords, slang, UI terms, or short phrases, **DO NOT** trigger this violation. Mismatching language results in immediate rejection, so use with EXTREME CAUTION.",
                 note = "Mismatching the language results in immediate 0.0 score."
             },
             new
