@@ -193,6 +193,10 @@ namespace Service.Services
             //làm tròn điểm AI 
             var aiScore = (decimal)Math.Round(aiResult.Score, 2, MidpointRounding.AwayFromZero);
 
+            var aiViolationsJson = aiResult.Violations?.Length > 0
+                ? JsonSerializer.Serialize(aiResult.Violations, new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase })
+                : null;
+
             //explanation của AI 
             var aiNote = aiResult.Explanation;
             var now = TimezoneConverter.VietnamNow;
@@ -209,7 +213,7 @@ namespace Service.Services
                 story.published_at = null;
                 await _storyRepository.UpdateAsync(story, ct);
 
-                await UpsertStoryApprovalAsync(story.story_id, "rejected", aiScore, aiNote, ct);
+                await UpsertStoryApprovalAsync(story.story_id, "rejected", aiScore, aiNote, aiViolationsJson, ct);
                 
                 var savedAfterReject = await _storyRepository.GetByIdForAuthorAsync(story.story_id, author.account_id, ct)
                             ?? throw new InvalidOperationException("Failed to load story after rejection.");
@@ -236,7 +240,7 @@ namespace Service.Services
                 }
                 await _storyRepository.UpdateAsync(story, ct);
 
-                await UpsertStoryApprovalAsync(story.story_id, "approved", aiScore, aiNote, ct);
+                await UpsertStoryApprovalAsync(story.story_id, "approved", aiScore, aiNote, aiViolationsJson, ct);
                 notifyFollowers = !string.Equals(initialStatus, "published", StringComparison.OrdinalIgnoreCase);
             }
             else //nếu từ >=5 và <7 thì pending đợi cmod check
@@ -245,7 +249,7 @@ namespace Service.Services
                 story.published_at = null;
                 await _storyRepository.UpdateAsync(story, ct);
 
-                await UpsertStoryApprovalAsync(story.story_id, "pending", aiScore, aiNote, ct);
+                await UpsertStoryApprovalAsync(story.story_id, "pending", aiScore, aiNote, aiViolationsJson, ct);
             }
 
             //kiểm duyệt xong hết thì gọi repo lấy full thông tin story *sau khi đc moderation để đc submit
@@ -516,7 +520,7 @@ namespace Service.Services
             return author;
         }
 
-        private async Task<content_approve> UpsertStoryApprovalAsync(Guid storyId, string status, decimal aiScore, string? aiNote, CancellationToken ct)
+        private async Task<content_approve> UpsertStoryApprovalAsync(Guid storyId, string status, decimal aiScore, string? aiNote, string? aiViolationsJson, CancellationToken ct)
         {
             var approval = await _storyRepository.GetContentApprovalForStoryAsync(storyId, ct);
             var timestamp = TimezoneConverter.VietnamNow;
@@ -530,6 +534,7 @@ namespace Service.Services
                     status = status,
                     ai_score = aiScore,
                     ai_feedback = aiNote,
+                    ai_violations = aiViolationsJson,
                     moderator_feedback = null,
                     moderator_id = null,
                     created_at = timestamp
@@ -542,6 +547,7 @@ namespace Service.Services
                 approval.status = status;
                 approval.ai_score = aiScore;
                 approval.ai_feedback = aiNote;
+                approval.ai_violations = aiViolationsJson;
                 approval.moderator_feedback = null;
                 approval.moderator_id = null;
                 approval.created_at = timestamp;
@@ -575,6 +581,19 @@ namespace Service.Services
             var moderatorStatus = approval?.moderator_id.HasValue == true ? approval.status : null;
             var moderatorNote = approval?.moderator_id.HasValue == true ? approval.moderator_feedback : null;
 
+            object? violations = immediateViolations;
+            if (violations == null && !string.IsNullOrWhiteSpace(approval?.ai_violations))
+            {
+                try
+                {
+                    violations = JsonSerializer.Deserialize<object>(approval.ai_violations);
+                }
+                catch
+                {
+                    // Fail silently on corrupt JSON
+                }
+            }
+
             return new StoryResponse
             {
                 StoryId = story.story_id,
@@ -594,7 +613,7 @@ namespace Service.Services
                 AiScore = approval?.ai_score,
                 AiResult = ResolveAiDecision(approval),
                 AiFeedback = approval?.ai_feedback,
-                AiViolations = immediateViolations,
+                AiViolations = violations,
                 ModeratorStatus = moderatorStatus,
                 ModeratorNote = moderatorNote
             };

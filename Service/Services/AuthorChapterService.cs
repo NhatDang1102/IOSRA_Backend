@@ -236,6 +236,11 @@ namespace Service.Services
             var langCode = chapter.story?.language?.lang_code ?? "vi-VN";
             var moderation = await _openAiModerationService.ModerateChapterAsync(chapter.title, content, langCode, ct);
             var aiScoreDecimal = (decimal)Math.Round(moderation.Score, 2, MidpointRounding.AwayFromZero);
+            
+            var aiViolationsJson = moderation.Violations?.Length > 0
+                ? JsonSerializer.Serialize(moderation.Violations, new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase })
+                : null;
+
             var timestamp = TimezoneConverter.VietnamNow;
 
             chapter.updated_at = timestamp;
@@ -251,7 +256,7 @@ namespace Service.Services
                 chapter.published_at = null;
                 await _chapterRepository.UpdateAsync(chapter, ct);
 
-                await UpsertChapterApprovalAsync(chapter, "rejected", aiScoreDecimal, moderation.Explanation, ct);
+                await UpsertChapterApprovalAsync(chapter, "rejected", aiScoreDecimal, moderation.Explanation, aiViolationsJson, ct);
 
                 var approvalsAfterReject = await _chapterRepository.GetContentApprovalsForChapterAsync(chapter.chapter_id, ct);
                 
@@ -268,7 +273,7 @@ namespace Service.Services
                 chapter.status = "published";
                 chapter.published_at ??= TimezoneConverter.VietnamNow;
                 await _chapterRepository.UpdateAsync(chapter, ct);
-                await UpsertChapterApprovalAsync(chapter, "approved", aiScoreDecimal, moderation.Explanation, ct);
+                await UpsertChapterApprovalAsync(chapter, "approved", aiScoreDecimal, moderation.Explanation, aiViolationsJson, ct);
                 notifyFollowers = true;
             }
             else
@@ -277,7 +282,7 @@ namespace Service.Services
                 chapter.published_at = null;
                 await _chapterRepository.UpdateAsync(chapter, ct);
 
-                await UpsertChapterApprovalAsync(chapter, "pending", aiScoreDecimal, moderation.Explanation, ct);
+                await UpsertChapterApprovalAsync(chapter, "pending", aiScoreDecimal, moderation.Explanation, aiViolationsJson, ct);
             }
 
             var approvals = await _chapterRepository.GetContentApprovalsForChapterAsync(chapter.chapter_id, ct);
@@ -515,6 +520,19 @@ namespace Service.Services
             var moderatorStatus = approval?.moderator_id.HasValue == true ? approval.status : null;
             var moderatorNote = approval?.moderator_id.HasValue == true ? approval.moderator_feedback : null;
 
+            object? violations = immediateViolations;
+            if (violations == null && !string.IsNullOrWhiteSpace(approval?.ai_violations))
+            {
+                try
+                {
+                    violations = JsonSerializer.Deserialize<object>(approval.ai_violations);
+                }
+                catch
+                {
+                    // Ignore
+                }
+            }
+
             return new ChapterResponse
             {
                 ChapterId = chapter.chapter_id,
@@ -531,7 +549,7 @@ namespace Service.Services
                 Status = chapter.status,
                 AiScore = approval?.ai_score,
                 AiFeedback = approval?.ai_feedback,
-                AiViolations = immediateViolations,
+                AiViolations = violations,
                 AiResult = ResolveAiDecision(approval),
                 ModeratorStatus = moderatorStatus,
                 ModeratorNote = moderatorNote,
@@ -622,7 +640,7 @@ namespace Service.Services
             return "flagged";
         }
 
-        private async Task<content_approve> UpsertChapterApprovalAsync(chapter chapter, string status, decimal aiScore, string? aiNote, CancellationToken ct)
+        private async Task<content_approve> UpsertChapterApprovalAsync(chapter chapter, string status, decimal aiScore, string? aiNote, string? aiViolationsJson, CancellationToken ct)
         {
             var approval = await _chapterRepository.GetContentApprovalForChapterAsync(chapter.chapter_id, ct);
             var timestamp = TimezoneConverter.VietnamNow;
@@ -637,6 +655,7 @@ namespace Service.Services
                     status = status,
                     ai_score = aiScore,
                     ai_feedback = aiNote,
+                    ai_violations = aiViolationsJson,
                     moderator_feedback = null,
                     moderator_id = null,
                     created_at = timestamp
@@ -649,6 +668,7 @@ namespace Service.Services
                 approval.status = status;
                 approval.ai_score = aiScore;
                 approval.ai_feedback = aiNote;
+                approval.ai_violations = aiViolationsJson;
                 approval.moderator_feedback = null;
                 approval.moderator_id = null;
                 approval.created_at = timestamp;

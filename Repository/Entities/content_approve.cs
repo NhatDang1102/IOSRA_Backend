@@ -31,6 +31,9 @@ public partial class content_approve
     [Column(TypeName = "text")]
     public string? ai_feedback { get; set; }
 
+    [Column(TypeName = "json")]
+    public string? ai_violations { get; set; }
+
     [Column(TypeName = "enum('pending','approved','rejected')")]
     public string status { get; set; } = null!;
 
