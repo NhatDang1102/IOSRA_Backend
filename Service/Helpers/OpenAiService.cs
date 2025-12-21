@@ -340,6 +340,8 @@ Decision Mapping (STRICT):
 
 Explanation requirements:
 - Provide a detailed Vietnamese summary. The explanation MUST align with the score and decision.
+- IMPORTANT: Do NOT use English labels/tags (e.g. 'url_redirect', 'violent_moderate') in the explanation text. Translate them into natural Vietnamese descriptions (e.g. 'chứa liên kết ngoài', 'nội dung bạo lực').
+- Translate the final decision status into Vietnamese context naturally (e.g. 'bị từ chối', 'cần xem xét', 'đã duyệt').
 - DO NOT state the final score in the text; the system handles the display.
 - CRITICAL: The 'vietnamese' field in the JSON is MANDATORY and CANNOT be empty or null.";
 
