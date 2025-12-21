@@ -322,7 +322,7 @@ Start from base score = 10.00.
 STRICT PENALTY RULES:
 - For each violation, the ""penalty"" field MUST be the **BASE PENALTY** for a SINGLE occurrence (from the table).
 - DO NOT multiply by the number of occurrences. The system will automatically multiply (Base Penalty * Evidence Count).
-- Example: If ""url_redirect"" is 1.5 and you find 2 links, set ""penalty"" to 3.0 (NOT 6.0).
+- Example: If ""url_redirect"" is 3.0 and you find 2 links, set ""penalty"" to 3.0 (NOT 6.0).
 - You MUST list all offending snippets in the ""evidence"" array.
 - The final ""score"" field in the JSON is for display only; the system will recalculate it.
 
