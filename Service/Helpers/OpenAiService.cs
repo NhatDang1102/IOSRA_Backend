@@ -174,9 +174,9 @@ namespace Service.Helpers
             {
                 category = "Advertising / Promotion",
                 labels = new[] { "advertising_content" },
-                penalties = new[] { "-10.0: Content that is primarily an advertisement, solicitation, or call-to-action unrelated to the story." },
-                examples = "E.g.: 'Buy my course', 'Donate at paypal', 'Vote 5 stars please', 'Join my group for more'.",
-                rules = "Flag any content whose MAIN purpose is to sell, solicit, or promote, rather than tell a story. Author notes at the end are fine, but if the whole chapter is an ad -> REJECT.",
+                penalties = new[] { "-10.0: Content that is primarily an advertisement, seeding (soft-ad), financial solicitation, or success story designed to sell a specific solution." },
+                examples = "E.g.: 'Buy my course', 'Donate at paypal', 'Vote 5 stars please', 'Investment X changed my life', 'Join my group'.",
+                rules = "Flag any content whose MAIN purpose is to sell, solicit, or promote. This includes 'Seeding' stories (narratives written solely to praise a product/service/investment) or 'Get Rich Quick' schemes. If the plot serves only to highlight a product's efficacy, REJECT.",
                 note = "Commercial spam violation."
             },
             new
@@ -350,7 +350,8 @@ Decision Mapping (STRICT):
 Explanation requirements:
 - Provide a detailed Vietnamese summary. The explanation MUST align with the score and decision.
 - IMPORTANT: Do NOT use English labels/tags (e.g. 'url_redirect', 'violent_moderate') in the explanation text. Translate them into natural Vietnamese descriptions (e.g. 'chứa liên kết ngoài', 'nội dung bạo lực').
-- Translate the final decision status into Vietnamese context naturally (e.g. 'bị từ chối', 'cần xem xét', 'đã duyệt').
+- Translate the final decision status into Vietnamese context naturally. 
+- CRITICAL: If decision is 'rejected', the explanation MUST conclude with 'bị từ chối' or 'không được duyệt'. DO NOT say 'cần xem xét' (needs review) for rejected content.
 - DO NOT state the final score in the text; the system handles the display.
 - CRITICAL: The 'vietnamese' field in the JSON is MANDATORY and CANNOT be empty or null.";
 
