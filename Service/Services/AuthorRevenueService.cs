@@ -134,7 +134,7 @@ namespace Service.Services
 
             if (await _opRequestRepository.HasPendingWithdrawRequestAsync(authorAccountId, ct))
             {
-                throw new AppException("WithdrawPending", "Bạn đang có một yêu cầu rút tiền đang chờ xử lý.", 409);
+                throw new AppException("WithdrawPending", "Bạn đang có một yêu cầu đối soát đang chờ xử lý.", 409);
             }
 
             var payload = new AuthorWithdrawPayload
@@ -179,11 +179,11 @@ namespace Service.Services
         public async Task ConfirmReceiptAsync(Guid authorAccountId, Guid requestId, CancellationToken ct = default)
         {
             var request = await _opRequestRepository.GetWithdrawRequestAsync(requestId, ct)
-                          ?? throw new AppException("RequestNotFound", "Không tìm thấy yêu cầu rút tiền.", 404);
+                          ?? throw new AppException("RequestNotFound", "Không tìm thấy yêu cầu đối soát.", 404);
 
             if (request.requester_id != authorAccountId)
             {
-                throw new AppException("RequestNotFound", "Không tìm thấy yêu cầu rút tiền.", 404);
+                throw new AppException("RequestNotFound", "Không tìm thấy yêu cầu đối soát.", 404);
             }
 
             if (!string.Equals(request.status, "approved", StringComparison.OrdinalIgnoreCase))

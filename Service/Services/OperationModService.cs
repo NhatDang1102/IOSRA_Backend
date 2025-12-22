@@ -183,8 +183,8 @@ namespace Service.Implementations
             await _notificationService.CreateAsync(new NotificationCreateModel(
                 entity.requester_id,
                 NotificationTypes.OperationRequest,
-                "Yêu cầu rút tiền được chấp thuận",
-                "Yêu cầu rút tiền của bạn đã được xử lý thành công.",
+                "Yêu cầu đối soát được chấp thuận",
+                "Yêu cầu đối soát của bạn đã được xử lý thành công.",
                 new
                 {
                     requestId = entity.request_id,
@@ -196,7 +196,7 @@ namespace Service.Implementations
         public async Task RejectWithdrawAsync(Guid requestId, Guid omodAccountId, RejectWithdrawRequest request, CancellationToken ct = default)
         {
             var entity = await _opRepo.GetWithdrawRequestAsync(requestId, ct)
-                         ?? throw new AppException("WithdrawRequestNotFound", "Không tìm thấy yêu cầu rút tiền.", 404);
+                         ?? throw new AppException("WithdrawRequestNotFound", "Không tìm thấy yêu cầu đối soát.", 404);
 
             if (!string.Equals(entity.status, "pending", StringComparison.OrdinalIgnoreCase))
             {
@@ -252,7 +252,7 @@ namespace Service.Implementations
             await _notificationService.CreateAsync(new NotificationCreateModel(
                 entity.requester_id,
                 NotificationTypes.OperationRequest,
-                "Yêu cầu rút tiền bị từ chối",
+                "Yêu cầu đối soát bị từ chối",
                 reason,
                 new
                 {
