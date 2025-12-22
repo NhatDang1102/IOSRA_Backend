@@ -5,7 +5,7 @@ namespace Contract.DTOs.Request.Chapter
     public class ChapterCreateRequest
     {
         [Required]
-        [StringLength(50, MinimumLength = 20, ErrorMessage = "Tiêu đề phải từ 20-50 kí tự.")]
+        [StringLength(50, MinimumLength = 10, ErrorMessage = "Tiêu đề phải từ 10-50 kí tự.")]
         public string Title { get; set; } = null!;
 
         [Required(ErrorMessage = "Không được để trống nội dung chương.")]
