@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
 using Repository.DataModels;
 using Repository.DBContext;
+using Repository.Entities;
 using Repository.Interfaces;
 using StackExchange.Redis;
 
@@ -32,72 +33,82 @@ namespace Repository.Repositories
 
         public async Task<IReadOnlyList<string>> SearchContentAsync(IEnumerable<string> keywords, int limit = 5, CancellationToken ct = default)
         {
+            // Làm sạch và lọc danh sách từ khóa
             var keywordList = keywords?.Where(k => !string.IsNullOrWhiteSpace(k)).ToList() ?? new List<string>();
             if (keywordList.Count == 0)
             {
                 return new List<string>();
             }
 
-            // Ensure we search for distinct terms to avoid duplicate DB hits logic
             var distinctTerms = keywordList.Select(k => k.Trim()).Distinct().ToList();
-
             var results = new List<string>();
 
-            // 1. Stories
-            // Fetch a bit more to filter in memory safely
-            var stories = await _context.stories
-                .AsNoTracking()
-                .Where(s => s.status == "published")
-                .Select(s => new { s.title, s.desc, AuthorName = s.author.account.username })
-                .OrderByDescending(s => s.title.Length) // heuristic: maybe irrelevant
-                .Take(50) 
-                .ToListAsync(ct);
+            // 1. Tìm kiếm Truyện (Stories)
+            // Xây dựng query động để tìm trong TOÀN BỘ database thay vì giới hạn top 50
+            IQueryable<Story> storyQuery = null;
+            var baseStoryQuery = _context.stories.AsNoTracking().Where(s => s.status == "published");
 
-            var matchingStories = stories
-                .Where(s => distinctTerms.Any(term => 
-                    (s.title != null && s.title.Contains(term, StringComparison.OrdinalIgnoreCase)) ||
-                    (s.desc != null && s.desc.Contains(term, StringComparison.OrdinalIgnoreCase))))
-                .Take(limit)
-                .Select(s => $"[Story] Title: {s.title} | Author: {s.AuthorName} | Description: {s.desc}");
+            foreach (var term in distinctTerms)
+            {
+                // Tìm theo tiêu đề hoặc mô tả truyện
+                var q = baseStoryQuery.Where(s => s.title.Contains(term) || s.desc.Contains(term));
+                storyQuery = storyQuery == null ? q : storyQuery.Union(q);
+            }
 
-            results.AddRange(matchingStories);
+            if (storyQuery != null)
+            {
+                var stories = await storyQuery
+                    .Select(s => new { s.title, s.desc, AuthorName = s.author.account.username })
+                    .Take(limit)
+                    .ToListAsync(ct);
 
-            // 2. Chapters
-            var chapters = await _context.chapter
-                .AsNoTracking()
-                .Where(c => c.status == "published")
-                .Select(c => new { c.title, c.summary, StoryTitle = c.story.title, c.chapter_no })
-                .OrderByDescending(c => c.chapter_no)
-                .Take(100)
-                .ToListAsync(ct);
+                results.AddRange(stories.Select(s => $"[Story] Title: {s.title} | Author: {s.AuthorName} | Description: {s.desc}"));
+            }
 
-            var matchingChapters = chapters
-                .Where(c => distinctTerms.Any(term => 
-                    (c.title != null && c.title.Contains(term, StringComparison.OrdinalIgnoreCase)) ||
-                    (c.summary != null && c.summary.Contains(term, StringComparison.OrdinalIgnoreCase))))
-                .Take(limit)
-                .Select(c => $"[Chapter] Story: {c.StoryTitle} | Chapter {c.chapter_no}: {c.title} | Summary: {c.summary ?? "N/A"}");
+            // 2. Tìm kiếm Chương (Chapters)
+            IQueryable<Chapter> chapterQuery = null;
+            var baseChapterQuery = _context.chapter.AsNoTracking().Where(c => c.status == "published");
 
-            results.AddRange(matchingChapters);
+            foreach (var term in distinctTerms)
+            {
+                // Tìm theo tiêu đề hoặc tóm tắt chương
+                var q = baseChapterQuery.Where(c => c.title.Contains(term) || c.summary.Contains(term));
+                chapterQuery = chapterQuery == null ? q : chapterQuery.Union(q);
+            }
 
-            // 3. Authors
-            // For authors, we can usually trust EF Like for simple containment
-            // But let's stick to the pattern: fetch and filter for consistency if dataset is small.
-            // Assuming author count isn't massive yet.
-            var authors = await _context.authors
-                .AsNoTracking()
-                .Include(a => a.account)
-                .Select(a => new { a.account.username, TotalStories = a.stories.Count(s => s.status == "published") })
-                .Take(50)
-                .ToListAsync(ct);
+            if (chapterQuery != null)
+            {
+                var chapters = await chapterQuery
+                    .Select(c => new { c.title, c.summary, StoryTitle = c.story.title, c.chapter_no })
+                    .OrderByDescending(c => c.chapter_no)
+                    .Take(limit)
+                    .ToListAsync(ct);
 
-            var matchingAuthors = authors
-                .Where(a => distinctTerms.Any(term => a.username != null && a.username.Contains(term, StringComparison.OrdinalIgnoreCase)))
-                .Take(limit)
-                .Select(a => $"[Author] Name: {a.username} | Published Stories: {a.TotalStories}");
+                results.AddRange(chapters.Select(c => $"[Chapter] Story: {c.StoryTitle} | Chapter {c.chapter_no}: {c.title} | Summary: {c.summary ?? "N/A"}"));
+            }
 
-            results.AddRange(matchingAuthors);
+            // 3. Tìm kiếm Tác giả (Authors)
+            IQueryable<Author> authorQuery = null;
+            var baseAuthorQuery = _context.authors.AsNoTracking().Include(a => a.account);
 
+            foreach (var term in distinctTerms)
+            {
+                // Tìm theo tên tài khoản (username) của tác giả
+                var q = baseAuthorQuery.Where(a => a.account.username.Contains(term));
+                authorQuery = authorQuery == null ? q : authorQuery.Union(q);
+            }
+
+            if (authorQuery != null)
+            {
+                var authors = await authorQuery
+                    .Select(a => new { a.account.username, TotalStories = a.stories.Count(s => s.status == "published") })
+                    .Take(limit)
+                    .ToListAsync(ct);
+
+                results.AddRange(authors.Select(a => $"[Author] Name: {a.username} | Published Stories: {a.TotalStories}"));
+            }
+
+            // Trả về danh sách kết quả tổng hợp
             return results.Take(limit * 2).ToList();
         }
 
