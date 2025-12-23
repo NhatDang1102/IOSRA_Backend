@@ -36,6 +36,8 @@ namespace Main.Controllers
             return Ok(result);
         }
 
+        // API Tạo bình luận mới (Có thể là bình luận gốc hoặc trả lời bình luận khác)
+        // Flow: Client gửi nội dung -> Server check quyền -> Lưu comment -> Gửi thông báo cho tác giả/người được rep
         [HttpPost("{chapterId:guid}")]
         [Authorize]
         public async Task<IActionResult> Create(Guid chapterId, [FromBody] ChapterCommentCreateRequest request, CancellationToken ct = default)
@@ -44,6 +46,8 @@ namespace Main.Controllers
             return Ok(comment);
         }
 
+        // API Chỉnh sửa bình luận
+        // Chỉ cho phép sửa khi comment chưa bị khóa (locked) bởi admin/mod
         [HttpPut("{chapterId:guid}/{commentId:guid}")]
         [Authorize]
         public async Task<IActionResult> Update(Guid chapterId, Guid commentId, [FromBody] ChapterCommentUpdateRequest request, CancellationToken ct = default)
@@ -52,6 +56,7 @@ namespace Main.Controllers
             return Ok(comment);
         }
 
+        // API Xóa bình luận (Soft delete - chuyển status sang 'removed')
         [HttpDelete("{chapterId:guid}/{commentId:guid}")]
         [Authorize]
         public async Task<IActionResult> Delete(Guid chapterId, Guid commentId, CancellationToken ct = default)
@@ -60,6 +65,7 @@ namespace Main.Controllers
             return NoContent();
         }
 
+        // API Thả cảm xúc (Like/Dislike) vào bình luận
         [HttpPost("{chapterId:guid}/{commentId:guid}/reaction")]
         [Authorize]
         public async Task<IActionResult> React(Guid chapterId, Guid commentId, [FromBody] ChapterCommentReactRequest request, CancellationToken ct = default)
@@ -68,6 +74,7 @@ namespace Main.Controllers
             return Ok(response);
         }
 
+        // API Hủy thả cảm xúc
         [HttpDelete("{chapterId:guid}/{commentId:guid}/reaction")]
         [Authorize]
         public async Task<IActionResult> RemoveReaction(Guid chapterId, Guid commentId, CancellationToken ct = default)

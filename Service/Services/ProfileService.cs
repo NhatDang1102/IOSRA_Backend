@@ -175,36 +175,44 @@ namespace Service.Implementations
             return url;
         }
 
+        // Bước 1: Gửi OTP xác nhận đổi Email
+        // Flow: User nhập email mới -> Hệ thống check email mới hợp lệ và chưa ai dùng -> Gửi OTP về email mới đó
         public async Task SendChangeEmailOtpAsync(Guid accountId, ChangeEmailRequest req, CancellationToken ct = default)
         {
             var acc = await _profileRepo.GetAccountByIdAsync(accountId, ct)
                       ?? throw new AppException("AccountNotFound", "Không tìm thấy tài khoản.", 404);
 
+            // Email mới phải khác email hiện tại
             if (string.Equals(acc.email, req.NewEmail, StringComparison.OrdinalIgnoreCase))
             {
                 throw new AppException("ValidationFailed", "New email must be different from the current email.", 400);
             }
 
+            // Check xem email mới đã có ai đăng ký chưa
             if (await _profileRepo.ExistsByEmailAsync(req.NewEmail, ct))
             {
                 throw new AppException("AccountExists", "Email đã được sử dụng.", 409);
             }
 
+            // Chống spam OTP (Rate limit trong Redis)
             if (!await _otpStore.CanSendAsync(req.NewEmail))
             {
                 throw new AppException("OtpRateLimit", "Đã vượt quá giới hạn yêu cầu OTP.", 429);
             }
 
             var otp = Random.Shared.Next(100000, 1000000).ToString();
+            // Lưu OTP vào Redis với TTL ngắn
             await _otpStore.SaveEmailChangeAsync(accountId, req.NewEmail, otp);
             await _mail.SendChangeEmailOtpAsync(req.NewEmail, otp);
         }
 
+        // Bước 2: Xác thực OTP và cập nhật Email chính thức
         public async Task VerifyChangeEmailAsync(Guid accountId, VerifyChangeEmailRequest req, CancellationToken ct = default)
         {
             var acc = await _profileRepo.GetAccountByIdAsync(accountId, ct)
                       ?? throw new AppException("AccountNotFound", "Không tìm thấy tài khoản.", 404);
 
+            // Lấy OTP từ Redis
             var entry = await _otpStore.GetEmailChangeAsync(accountId);
             if (entry is null)
             {
@@ -212,11 +220,13 @@ namespace Service.Implementations
             }
 
             var (newEmail, otp) = entry.Value;
+            // So sánh OTP user nhập
             if (!string.Equals(req.Otp, otp, StringComparison.Ordinal))
             {
                 throw new AppException("InvalidOtp", "OTP không hợp lệ hoặc đã hết hạn.", 400);
             }
 
+            // Check lại lần nữa cho chắc (Trường hợp có người đăng ký email đó trong lúc user đang verify)
             if (await _profileRepo.ExistsByEmailAsync(newEmail, ct))
             {
                 throw new AppException("AccountExists", "Email đã được sử dụng.", 409);
@@ -224,9 +234,11 @@ namespace Service.Implementations
 
             var oldEmail = acc.email;
 
+            // Cập nhật email mới vào DB
             await _profileRepo.UpdateEmailAsync(accountId, newEmail, ct);
             await _otpStore.DeleteEmailChangeAsync(accountId);
 
+            // Gửi email thông báo cho email cũ/mới về việc thay đổi thành công
             _ = _mail.SendChangeEmailSuccessAsync(oldEmail, newEmail);
         }
 

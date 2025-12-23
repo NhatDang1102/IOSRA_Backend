@@ -16,9 +16,17 @@ using Service.Models;
 
 namespace Service.Background
 {
+    // Background Service xử lý việc tạo giọng đọc AI (Text-to-Speech)
+    // Flow: 
+    // 1. Lấy tin nhắn từ hàng đợi (Queue).
+    // 2. Tải nội dung văn bản của chương truyện.
+    // 3. Chia nhỏ văn bản (Chunking) vì API ElevenLabs giới hạn ký tự mỗi lần gọi.
+    // 4. Gọi ElevenLabs API để chuyển text thành audio cho từng đoạn.
+    // 5. Ghép các đoạn audio lại thành file hoàn chỉnh.
+    // 6. Upload file audio lên Cloud (R2) và cập nhật trạng thái "Ready" vào DB.
     public class VoiceSynthesisWorker : BackgroundService
     {
-        private const int MaxChunkCharacters = 4800;
+        private const int MaxChunkCharacters = 4800; // Giới hạn ký tự an toàn cho 1 lần gọi API
 
         private readonly IVoiceSynthesisQueue _queue;
         private readonly IServiceScopeFactory _scopeFactory;
@@ -38,6 +46,7 @@ namespace Service.Background
         {
             _logger.LogInformation("Voice synthesis worker started.");
 
+            // Lắng nghe hàng đợi liên tục
             await foreach (var job in _queue.DequeueAsync(stoppingToken))
             {
                 try
@@ -46,7 +55,7 @@ namespace Service.Background
                 }
                 catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
                 {
-                    // shutting down
+                    // Đang tắt service
                 }
                 catch (Exception ex)
                 {
@@ -65,6 +74,7 @@ namespace Service.Background
             var voiceStorage = scope.ServiceProvider.GetRequiredService<IVoiceAudioStorage>();
             var elevenLabs = scope.ServiceProvider.GetRequiredService<IElevenLabsClient>();
 
+            // 1. Tìm bản ghi yêu cầu tạo voice trong DB
             var row = await db.chapter_voice
                 .Include(cv => cv.voice)
                 .Include(cv => cv.chapter)
@@ -77,6 +87,7 @@ namespace Service.Background
                 return;
             }
 
+            // 2. Kiểm tra tính hợp lệ của dữ liệu
             if (row.chapter == null)
             {
                 row.status = "failed";
@@ -107,28 +118,37 @@ namespace Service.Background
 
             try
             {
+                // Cập nhật trạng thái đang xử lý
                 row.status = "processing";
                 row.error_message = null;
                 row.completed_at = null;
                 await db.SaveChangesAsync(ct);
 
+                // 3. Tải text từ Cloud Storage
                 var content = (await contentStorage.DownloadAsync(row.chapter.content_url, ct)).Trim();
                 if (content.Length == 0)
                 {
                     throw new InvalidOperationException("Chapter content is empty.");
                 }
 
+                // 4. Chia nhỏ văn bản thành các đoạn (Chunks) dựa trên dấu cách/xuống dòng để tránh cắt ngang từ
                 var chunks = SplitContentIntoChunks(content, MaxChunkCharacters);
                 var audioParts = new List<byte[]>(chunks.Count);
+                
+                // 5. Gọi ElevenLabs API cho từng đoạn
                 foreach (var chunk in chunks)
                 {
                     var audio = await elevenLabs.SynthesizeAsync(providerVoiceId, chunk, ct);
                     audioParts.Add(audio);
                 }
 
+                // 6. Ghép các đoạn mp3 lại thành 1 file duy nhất
                 var merged = MergeAudioChunks(audioParts);
+                
+                // 7. Upload file kết quả lên Cloud (Cloudflare R2)
                 var storageKey = await voiceStorage.UploadAsync(row.chapter.story_id, row.chapter_id, row.voice_id, merged, ct);
 
+                // 8. Hoàn tất: Lưu URL file và đổi trạng thái sang Ready
                 row.storage_path = storageKey;
                 row.status = "ready";
                 row.completed_at = TimezoneConverter.VietnamNow;
@@ -136,6 +156,7 @@ namespace Service.Background
             }
             catch (Exception ex)
             {
+                // Xử lý khi có lỗi (Hết tiền API, lỗi mạng,...)
                 row.status = "failed";
                 row.error_message = ex.Message;
                 row.completed_at = TimezoneConverter.VietnamNow;

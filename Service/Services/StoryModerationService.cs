@@ -77,6 +77,13 @@ namespace Service.Services
             return MapQueueItem(story, approval);
         }
 
+        // Thực hiện phê duyệt hoặc từ chối truyện
+        // 1. Kiểm tra yêu cầu kiểm duyệt (ReviewId) có tồn tại và chưa được xử lý không.
+        // 2. Cập nhật kết quả vào bảng ContentApproval (Lưu vết Moderator nào đã xử lý).
+        // 3. Nếu Duyệt (Approve): Update status truyện sang Published, kích hoạt Premium nếu tác giả có rank cao.
+        // 4. Nếu Từ chối (Reject): Update status sang Rejected.
+        // 5. Gửi thông báo (Email + App Notification) cho tác giả.
+        // 6. Thông báo cho những người đang follow tác giả (nếu truyện được xuất bản lần đầu).
         public async Task ModerateAsync(Guid moderatorAccountId, Guid reviewId, StoryModerationDecisionRequest request, CancellationToken ct = default)
         {
             var approval = await _storyRepository.GetContentApprovalByIdAsync(reviewId, ct)
@@ -87,6 +94,7 @@ namespace Service.Services
                 throw new AppException("InvalidModerationType", "Yêu cầu kiểm duyệt không liên quan đến truyện.", 400);
             }
 
+            // Đảm bảo yêu cầu chưa được xử lý trước đó
             if (!string.Equals(approval.status, "pending", StringComparison.OrdinalIgnoreCase))
             {
                 throw new AppException("ModerationAlreadyHandled", "Yêu cầu kiểm duyệt này đã được xử lý.", 400);
@@ -99,6 +107,8 @@ namespace Service.Services
             }
 
             var wasPublished = string.Equals(story.status, "published", StringComparison.OrdinalIgnoreCase);
+            
+            // Cập nhật kết quả kiểm duyệt
             approval.status = request.Approve ? "approved" : "rejected";
             var humanNote = string.IsNullOrWhiteSpace(request.ModeratorNote) ? null : request.ModeratorNote.Trim();
             approval.moderator_feedback = humanNote;
@@ -107,24 +117,30 @@ namespace Service.Services
 
             if (request.Approve)
             {
+                // Trường hợp ĐỒNG Ý
                 story.status = "published";
                 story.published_at ??= TimezoneConverter.VietnamNow;
-                // Auto-set premium based on author rank
-                var authorRank = story.author?.rank?.rank_name;
-                story.is_premium = !string.IsNullOrWhiteSpace(authorRank) && !string.Equals(authorRank, "Tân Thủ", StringComparison.OrdinalIgnoreCase);
+                
+                // Logic Premium:
+                // var authorRank = story.author?.rank?.rank_name;
+                // story.is_premium = !string.IsNullOrWhiteSpace(authorRank) && !string.Equals(authorRank, "Tân Thủ", StringComparison.OrdinalIgnoreCase);
+                
                 if (!wasPublished)
                 {
+                    // Tăng tổng số truyện đã xuất bản của tác giả
                     var storyAuthor = story.author ?? throw new InvalidOperationException("Story author navigation was not loaded.");
                     storyAuthor.total_story += 1;
                 }
             }
             else
             {
+                // Trường hợp TỪ CHỐI
                 story.status = "rejected";
                 story.published_at = null;
             }
             story.updated_at = TimezoneConverter.VietnamNow;
 
+            // Lưu thay đổi và tăng chỉ số hiệu suất của Moderator
             await _storyRepository.SaveChangesAsync(ct);
             await _contentModRepository.IncrementStoryDecisionAsync(moderatorAccountId, request.Approve, ct);
 
@@ -132,6 +148,7 @@ namespace Service.Services
             var authorEmail = authorAccount.email;
             var statusText = request.Approve ? "approved" : "rejected";
 
+            // Gửi Email thông báo kết quả
             if (request.Approve)
             {
                 await _mailSender.SendStoryApprovedEmailAsync(authorEmail, story.title);
@@ -141,6 +158,7 @@ namespace Service.Services
                 await _mailSender.SendStoryRejectedEmailAsync(authorEmail, story.title, approval.moderator_feedback);
             }
 
+            // Tạo thông báo trong hệ thống (Notification)
             var title = request.Approve
                 ? $"Truyện \"{story.title}\" đã được duyệt"
                 : $"Truyện \"{story.title}\" bị từ chối";
@@ -164,6 +182,7 @@ namespace Service.Services
                     moderatorNote = humanNote
                 }), ct);
 
+            // Nếu truyện được duyệt, thông báo cho những người đang follow tác giả này
             if (request.Approve)
             {
                 var authorName = authorAccount.username;

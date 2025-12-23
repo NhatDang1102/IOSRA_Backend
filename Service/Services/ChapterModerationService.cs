@@ -74,7 +74,12 @@ namespace Service.Services
             var chapter = approval.chapter ?? throw new InvalidOperationException("Chapter navigation was not loaded for moderation entry.");
             return MapQueueItem(chapter, approval);
         }
-        //quyết định kiểm duyệt 
+        // Thực hiện phê duyệt hoặc từ chối chương truyện
+        // 1. Validate yêu cầu kiểm duyệt (ReviewId) và trạng thái của chương.
+        // 2. Lưu kết quả xử lý của Moderator.
+        // 3. Nếu Duyệt (Approve): Chương chuyển trạng thái Published và hiển thị công khai.
+        // 4. Nếu Từ chối (Reject): Chương bị đẩy về Rejected, tác giả cần sửa lại để submit lại.
+        // 5. Gửi thông báo kết quả cho tác giả và độc giả đang theo dõi (nếu được duyệt).
         public async Task ModerateAsync(Guid moderatorAccountId, Guid reviewId, ChapterModerationDecisionRequest request, CancellationToken ct = default)
         {
             var approval = await _chapterRepository.GetContentApprovalByIdAsync(reviewId, ct)
@@ -96,6 +101,7 @@ namespace Service.Services
                 throw new AppException("ChapterNotPending", "Chương không ở trạng thái chờ kiểm duyệt.", 400);
             }
 
+            // Ghi nhận quyết định
             approval.status = request.Approve ? "approved" : "rejected";
             var humanNote = string.IsNullOrWhiteSpace(request.ModeratorNote) ? null : request.ModeratorNote.Trim();
             approval.moderator_feedback = humanNote;
@@ -124,6 +130,7 @@ namespace Service.Services
 
             var statusText = request.Approve ? "approved" : "rejected";
 
+            // Gửi thông báo kết quả qua Email
             if (request.Approve)
             {
                 await _mailSender.SendChapterApprovedEmailAsync(authorAccount.email, story.title, chapter.title);
@@ -133,6 +140,7 @@ namespace Service.Services
                 await _mailSender.SendChapterRejectedEmailAsync(authorAccount.email, story.title, chapter.title, approval.moderator_feedback);
             }
 
+            // Gửi thông báo qua hệ thống Notification
             var title = request.Approve
                 ? $"Chương \"{chapter.title}\" đã được duyệt"
                 : $"Chương \"{chapter.title}\" bị từ chối";
@@ -157,6 +165,7 @@ namespace Service.Services
                     moderatorNote = humanNote
                 }), ct);
 
+            // Nếu chương được duyệt -> Thông báo cho những người đang follow tác giả
             if (request.Approve)
             {
                 var authorName = authorAccount.username;

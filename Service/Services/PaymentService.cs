@@ -47,7 +47,10 @@ public class PaymentService : IPaymentService
 
     public Task<CreatePaymentLinkResponse> CreateSubscriptionLinkAsync(Guid accountId, CreateSubscriptionPaymentLinkRequest request, CancellationToken ct = default)
         => CreateSubscriptionPaymentLinkAsync(accountId, request, ct);
-    //tạo link payos từ amount (bóc trong db ra), tạo luôn ordercode rồi gọi api _payOS.createPaymentLink
+    // Tạo link thanh toán nạp Kim cương
+    // 1. Kiểm tra gói nạp có hợp lệ không.
+    // 2. Tạo mã đơn hàng (OrderCode) và gọi PayOS để lấy link thanh toán.
+    // 3. Lưu thông tin giao dịch vào DB với trạng thái "Pending" (Chờ thanh toán).
     private async Task<CreatePaymentLinkResponse> CreateDiaTopupLinkAsync(Guid accountId, ulong amount, CancellationToken ct)
     {
         if (amount == 0)
@@ -63,6 +66,7 @@ public class PaymentService : IPaymentService
 
             var wallet = await _billingRepository.GetOrCreateDiaWalletAsync(accountId, ct);
 
+        // Tạo OrderCode unique theo thời gian (Unix timestamp) để gửi sang PayOS
         var orderCode = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
         var topupId = Guid.NewGuid();
 
@@ -70,8 +74,10 @@ public class PaymentService : IPaymentService
         var item = new ItemData(description, 1, (int)amount);
         var paymentData = BuildPaymentData(orderCode, (int)amount, description, item);
 
+        // Gọi API PayOS tạo link
         var result = await _payOS.createPaymentLink(paymentData);
 
+        // Lưu log giao dịch vào DB (Status = Pending)
         var diaPayment = new dia_payment
         {
             topup_id = topupId,
@@ -93,6 +99,10 @@ public class PaymentService : IPaymentService
         };
     }
 
+        // Tạo link thanh toán cho gói Hội viên (Subscription)
+        // 1. Kiểm tra gói subscription có tồn tại và giá hợp lệ không.
+        // 2. Tạo OrderCode và gọi PayOS.
+        // 3. Lưu log giao dịch vào DB với trạng thái "Pending".
         private async Task<CreatePaymentLinkResponse> CreateSubscriptionPaymentLinkAsync(Guid accountId, CreateSubscriptionPaymentLinkRequest request, CancellationToken ct)
         {
             if (string.IsNullOrWhiteSpace(request.PlanCode))
@@ -119,6 +129,7 @@ public class PaymentService : IPaymentService
         var item = new ItemData(description, 1, (int)plan.price_vnd);
         var paymentData = BuildPaymentData(orderCode, (int)plan.price_vnd, description, item);
 
+        // Gọi PayOS
         var result = await _payOS.createPaymentLink(paymentData);
 
         var now = TimezoneConverter.VietnamNow;
@@ -133,6 +144,8 @@ public class PaymentService : IPaymentService
             status = "pending",
             created_at = now
         };
+        
+        // Lưu DB
         await _billingRepository.AddSubscriptionPaymentAsync(record, ct);
         await _billingRepository.SaveChangesAsync(ct);
 
@@ -142,13 +155,19 @@ public class PaymentService : IPaymentService
             TransactionId = orderCode.ToString()
         };
     }
-    //xác minh tính hợp lí của data webhook từ payos, nếu khớp thì gd thành công 
+    // Xử lý Webhook từ PayOS:
+    // 1. Verify chữ ký (Signature) để đảm bảo data từ PayOS là thật.
+    // 2. Kiểm tra trạng thái thanh toán (Success/Fail).
+    // 3. Tìm đơn hàng trong DB dựa vào OrderCode.
+    // 4. Nếu thành công -> Cộng tiền vào ví (nếu là Topup) hoặc Kích hoạt gói (nếu là Subscription).
+    // 5. Lưu lịch sử giao dịch.
     public async Task<bool> HandlePayOSWebhookAsync(WebhookType webhookBody, CancellationToken ct = default)
     {
         WebhookData webhookData;
         try
         {
             _logger.LogInformation("Received webhook: {WebhookBody}", System.Text.Json.JsonSerializer.Serialize(webhookBody));
+            // Bước 1: Verify data integrity
             webhookData = _payOS.verifyPaymentWebhookData(webhookBody);
             _logger.LogInformation("Verified webhook data: {WebhookData}", System.Text.Json.JsonSerializer.Serialize(webhookData));
         }
@@ -159,6 +178,7 @@ public class PaymentService : IPaymentService
         }
 
         var orderCode = webhookData.orderCode.ToString();
+        // Bước 2: Check trạng thái giao dịch (code "00" là thành công)
         var isPaid = webhookBody.success
                       && webhookData.code == "00"
                       && webhookData.desc?.Trim().Equals("success", StringComparison.OrdinalIgnoreCase) == true;
@@ -166,6 +186,7 @@ public class PaymentService : IPaymentService
         var handled = false;
         var now = TimezoneConverter.VietnamNow;
 
+        // Bước 3: Tìm đơn nạp Kim cương tương ứng
         var diaPayment = await _billingRepository.GetDiaPaymentByOrderCodeAsync(orderCode, ct);
 
         if (diaPayment != null)
@@ -177,11 +198,13 @@ public class PaymentService : IPaymentService
             {
                 try
                 {
+                    // Bước 4a: Nếu nạp thành công -> Cộng tiền vào ví
                     var wallet = diaPayment.wallet;
                                 var newBalance = wallet.balance_dias + (long)diaPayment.diamond_granted;
                                 wallet.balance_dias = newBalance;                    
                     wallet.updated_at = now;
 
+                    // Lưu lịch sử biến động số dư
                     await _billingRepository.AddWalletPaymentAsync(new wallet_payment
                     {
                         trs_id = Guid.NewGuid(),
@@ -193,6 +216,7 @@ public class PaymentService : IPaymentService
                         created_at = now
                     });
 
+                    // Lưu biên lai thanh toán (Receipt)
                     await _billingRepository.AddPaymentReceiptAsync(new payment_receipt
                     {
                         receipt_id = Guid.NewGuid(),
@@ -214,10 +238,12 @@ public class PaymentService : IPaymentService
             }
             else
             {
+                // Nếu thất bại -> Chỉ update status là failed
                 await _billingRepository.SaveChangesAsync(ct);
             }
         }
 
+        // Bước 3b: Tìm đơn mua gói Subscription tương ứng (nếu không phải nạp kim cương)
         var subPayment = await _billingRepository.GetSubscriptionPaymentByOrderCodeAsync(orderCode, ct);
         if (subPayment != null)
         {
@@ -225,7 +251,10 @@ public class PaymentService : IPaymentService
             subPayment.status = isPaid ? "success" : "failed";
             if (isPaid)
             {
+                // Bước 4b: Nếu mua gói thành công -> Kích hoạt subscription
                 await _subscriptionService.ActivateSubscriptionAsync(subPayment.account_id, subPayment.plan_code, ct);
+                
+                // Lưu biên lai
                 await _billingRepository.AddPaymentReceiptAsync(new payment_receipt
                 {
                     receipt_id = Guid.NewGuid(),

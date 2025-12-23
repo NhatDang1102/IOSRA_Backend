@@ -37,6 +37,12 @@ namespace Service.Services
             _subscriptionService = subscriptionService;
         }
 
+        // Dịch nội dung chương sang ngôn ngữ khác
+        // 1. Kiểm tra chương có tồn tại và user có quyền đọc (đã mua chương khóa) không.
+        // 2. Kiểm tra gói Premium (Tính năng dịch tự động chỉ cho Premium).
+        // 3. Tải nội dung gốc từ Cloud Storage.
+        // 4. Gọi OpenAI API để thực hiện dịch thuật.
+        // 5. Upload bản dịch mới lên Cloud Storage và lưu thông tin Localization vào DB.
         public async Task<ChapterTranslationResponse> TranslateAsync(Guid chapterId, ChapterTranslationRequest request, Guid requesterAccountId, CancellationToken ct = default)
         {
             if (request == null || string.IsNullOrWhiteSpace(request.TargetLanguageCode))
@@ -45,12 +51,17 @@ namespace Service.Services
             }
 
             var chapter = await LoadPublishedChapterAsync(chapterId, ct);
+            
+            // Chỉ cho dịch nếu User đã mua chương đó (nếu chương tính phí)
             await EnsureChapterReadableAsync(chapter, requesterAccountId, ct);
+            
+            // Chỉ cho dịch nếu User là Premium
             await EnsurePremiumSubscriptionAsync(requesterAccountId, ct);
 
             var targetLanguage = await GetLanguageOrThrowAsync(request.TargetLanguageCode, ct);
             EnsureNotOriginalLanguage(chapter, targetLanguage);
 
+            // Kiểm tra xem đã có bản dịch ngôn ngữ này chưa để tránh lãng phí chi phí AI
             var existingLocalization = await _chapterRepository.GetLocalizationAsync(chapter.chapter_id, targetLanguage.lang_id, ct);
             if (existingLocalization != null)
             {
@@ -59,15 +70,17 @@ namespace Service.Services
 
             if (string.IsNullOrWhiteSpace(chapter.content_url))
             {
-                throw new AppException("ChapterContentMissing", "nội dung chap bị trống.", 500);
+                throw new AppException("ChapterContentMissing", "Nội dung chương gốc không khả dụng.", 500);
             }
 
+            // Tải nội dung text từ Cloud
             var originalContent = await _contentStorage.DownloadAsync(chapter.content_url, ct);
             if (string.IsNullOrWhiteSpace(originalContent))
             {
-                throw new AppException("ChapterContentEmpty", "nội dung chap bị trống.", 400);
+                throw new AppException("ChapterContentEmpty", "Nội dung chương gốc bị trống.", 400);
             }
 
+            // Gọi OpenAI thực hiện dịch (có truyền ngữ cảnh ngôn ngữ nguồn và đích)
             var translated = await _translationService.TranslateAsync(
                 originalContent,
                 chapter.story?.language?.lang_code ?? "vi-VN",
@@ -76,12 +89,16 @@ namespace Service.Services
 
             if (string.IsNullOrWhiteSpace(translated))
             {
-                throw new AppException("TranslationFailed", "có lỗi trong quá trình dịch.", 500);
+                throw new AppException("TranslationFailed", "Có lỗi trong quá trình dịch tự động.", 500);
             }
 
+            // Tính số chữ của bản dịch mới
             var wordCount = Math.Max(1, CountWords(translated));
+            
+            // Upload bản dịch lên Cloud Storage
             var storageKey = await _contentStorage.UploadLocalizationAsync(chapter.story_id, chapter.chapter_id, targetLanguage.lang_code, translated, ct);
 
+            // Lưu bản ghi vào bảng chapter_localization
             var localization = new chapter_localization
             {
                 chapter_id = chapter.chapter_id,

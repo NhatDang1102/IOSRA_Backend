@@ -23,6 +23,8 @@ public class PaymentController : AppControllerBase
         _logger = logger;
     }
 
+    // API Tạo link thanh toán nạp Kim cương (One-time payment)
+    // Flow: Client gửi số tiền -> Server tạo link PayOS -> Trả về link cho Client redirect
     [HttpPost("create-link")]
     [Authorize]
     public async Task<IActionResult> CreateLink([FromBody] CreatePaymentLinkRequest request, CancellationToken ct = default)
@@ -43,6 +45,7 @@ public class PaymentController : AppControllerBase
         }
     }
 
+    // API Lấy danh sách các gói nạp Kim cương và giá tiền
     [HttpGet("pricing")]
     [AllowAnonymous]
     public async Task<IActionResult> GetDiaPricing(CancellationToken ct)
@@ -51,6 +54,8 @@ public class PaymentController : AppControllerBase
         return Ok(packages);
     }
 
+    // API Tạo link thanh toán đăng ký gói Hội viên (Subscription)
+    // Flow: Client chọn gói -> Server tạo link PayOS tương ứng -> Trả về link
     [HttpPost("create-subscription-link")]
     [Authorize]
     public async Task<IActionResult> CreateSubscriptionLink([FromBody] CreateSubscriptionPaymentLinkRequest request, CancellationToken ct = default)
@@ -71,6 +76,9 @@ public class PaymentController : AppControllerBase
         }
     }
 
+    // API Webhook nhận kết quả từ PayOS (Quan trọng)
+    // PayOS sẽ gọi vào đây khi người dùng thanh toán thành công hoặc thất bại.
+    // Server cần verify data, check signature và cập nhật trạng thái đơn hàng (Cộng tiền/Kích hoạt gói).
     [HttpPost("webhook")]
     [AllowAnonymous]
     public async Task<IActionResult> PayOSWebhook([FromBody] WebhookType webhookBody, CancellationToken ct = default)
@@ -81,6 +89,8 @@ public class PaymentController : AppControllerBase
         return Ok(new { success = handledDia });
     }
 
+    // API Hủy link thanh toán
+    // Dùng khi người dùng bấm "Hủy" hoặc muốn tạo đơn mới khi đơn cũ chưa thanh toán xong.
     [HttpPost("cancel-link")]
     [Authorize]
     public async Task<IActionResult> CancelLink([FromBody] CancelPaymentRequest request, CancellationToken ct = default)

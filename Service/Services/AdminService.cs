@@ -80,6 +80,11 @@ namespace Service.Services
             return Map(updated);
         }
 
+        // Tạo tài khoản Moderator (Content Mod hoặc Operation Mod)
+        // 1. Validate Email/Username xem đã tồn tại chưa.
+        // 2. Tạo Entity Account với password được hash bằng BCrypt.
+        // 3. Tạo Profile tương ứng (ContentModProfile hoặc OperationModProfile).
+        // 4. Gán Role hệ thống (cmod/omod).
         private async Task<AdminAccountResponse> CreateModeratorAsync(
             CreateModeratorRequest? request,
             string roleCode,
@@ -91,6 +96,7 @@ namespace Service.Services
                 throw new AppException("ValidationFailed", "Nội dung yêu cầu là bắt buộc.", 400);
             }
 
+            // Chuẩn hóa và kiểm tra dữ liệu đầu vào
             var (email, username, password, phone) = NormalizeModeratorRequest(request);
 
             if (await _repository.EmailExistsAsync(email, ct))
@@ -105,12 +111,14 @@ namespace Service.Services
 
             var now = Repository.Utils.TimezoneConverter.VietnamNow;
             var accountId = Guid.NewGuid();
+            
+            // Tạo tài khoản mới
             var accountEntity = new account
             {
                 account_id = accountId,
                 username = username,
                 email = email,
-                password_hash = Bc.HashPassword(password),
+                password_hash = Bc.HashPassword(password), // Mã hóa mật khẩu
                 status = "unbanned",
                 strike_status = "none",
                 strike = 0,
@@ -121,10 +129,15 @@ namespace Service.Services
             };
 
             await _repository.AddAccountAsync(accountEntity, ct);
+            
+            // Gọi factory để tạo profile đặc thù cho từng loại mod
             await profileFactory(accountId, phone, ct);
+            
+            // Gán quyền truy cập hệ thống
             await _repository.AddRoleAsync(accountId, roleCode, ct);
             await _repository.SaveChangesAsync(ct);
 
+            // Trả về thông tin tài khoản vừa tạo
             var projection = await _repository.GetAccountAsync(accountId, ct)
                               ?? throw new AppException("AccountNotFound", "Không tìm thấy tài khoản sau khi tạo.", 404);
             return Map(projection);

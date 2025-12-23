@@ -9,12 +9,14 @@ using StackExchange.Redis;
 
 namespace Service.Helpers
 {
+    // Lớp xử lý ghi nhận lượt xem (View Tracking) sử dụng Redis để đạt hiệu suất cao
+    // Cơ chế: Sử dụng Sorted Set để lưu view theo tuần (phục vụ Top Weekly) và StringSet để Deduplication (chống spam view)
     public class StoryViewTracker : IStoryViewTracker
     {
-        //cách nhau 5 phút cho mỗi user/device để tính 1 view
+        // Mỗi User/Thiết bị chỉ được tính 1 view cho 1 truyện trong mỗi 5 phút (Debounce)
         private static readonly TimeSpan DebounceTtl = TimeSpan.FromMinutes(5);
 
-        //key redis sống 21 ngày 
+        // Giữ dữ liệu view tuần trong Redis 21 ngày trước khi tự động xóa
         private static readonly TimeSpan WeeklyKeyTtl = TimeSpan.FromDays(21);
 
         private readonly IConnectionMultiplexer _redis;
@@ -23,32 +25,42 @@ namespace Service.Helpers
         {
             _redis = redis;
         }
-        //method ghi nhận view mới
+
+        // Ghi nhận lượt xem mới
+        // Flow:
+        // 1. Xác định định danh người xem (Account ID hoặc IP Fingerprint).
+        // 2. Kiểm tra trong Redis xem User này đã xem truyện này trong 5 phút gần đây chưa (Dedupe).
+        // 3. Nếu chưa -> Tăng điểm Score trong Sorted Set cho StoryId đó theo tuần hiện tại.
         public async Task RecordViewAsync(Guid storyId, Guid? viewerAccountId, string? viewerFingerprint, CancellationToken ct = default)
         {
-            //kết nối db redis
             var database = _redis.GetDatabase();
-            //xác định key độc nhất cho người xem (lấy từ id tài khoản, nếu ko có thì sang fingerprint device)
+            
+            // Lấy định danh người xem (Ưu tiên Account ID > IP Fingerprint)
             var viewerKey = ResolveViewerKey(viewerAccountId, viewerFingerprint);
 
             if (viewerKey is not null)
             {
-                //tạo key story id + viewerkey để đảm bảo k bị dupe 
+                // Key chống spam: story:view:dedupe:{StoryId}:{ViewerId}
                 var dedupeKey = $"story:view:dedupe:{storyId:N}:{viewerKey}";
-                //đặt thử key vừa tạo vô redis để chắc chắn là ko bị dupe
+                
+                // Đặt key vào Redis với thời gian sống (TTL) 5 phút. 
+                // Nếu key đã tồn tại (StringSetAsync trả về false), nghĩa là user vừa xem xong -> Không tính thêm view.
                 var added = await database.StringSetAsync(dedupeKey, "1", DebounceTtl, When.NotExists);
                 if (!added)
                 {
                     return;
                 }
             }
-            //lấy thời điểm bắt đầu tuần 
+
+            // Lấy thời điểm bắt đầu của tuần hiện tại (UTC) để xác định Key tuần
             var weekStart = StoryViewTimeHelper.GetCurrentWeekStartUtc();
-            //tạo key format: story:views:week:YYYYMMDDHHMM
             var weekKey = GetWeeklyKey(weekStart);
-            //+1 score view cho storyId đó trong sorted set lên 1
+            
+            // Tăng lượt xem cho truyện (Dùng Sorted Set - ZINCRBY)
+            // Cấu trúc: Key="story:views:week:YYYYMMDD", Member=StoryId, Score=Lượt xem
             await database.SortedSetIncrementAsync(weekKey, storyId.ToString("N"), 1);
-            //set time hết hạn cho key 
+            
+            // Đặt thời gian hết hạn cho Key tuần để Redis tự giải phóng bộ nhớ
             await database.KeyExpireAsync(weekKey, WeeklyKeyTtl);
         }
 

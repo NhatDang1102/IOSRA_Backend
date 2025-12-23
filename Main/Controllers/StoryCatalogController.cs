@@ -26,8 +26,7 @@ namespace Main.Controllers
             _storyHighlightService = storyHighlightService;
         }
 
-        // API lấy danh sách truyện với filter: query search, tag, author
-        // Bind từng parameter riêng lẻ để tránh issue với complex model binding
+        // API lấy danh sách truyện cơ bản (Legacy)
         [HttpGet]
         public async Task<ActionResult<PagedResult<StoryCatalogListItemResponse>>> List(
             [FromQuery] int page = 1,
@@ -52,7 +51,8 @@ namespace Main.Controllers
             return Ok(result);
         }
 
-        // API mới: filter + search nâng cao (public)
+        // API Tìm kiếm & Lọc nâng cao (Advanced Filter)
+        // Hỗ trợ lọc theo Premium, Rating, Sort (Newest, Popular, Trending)
         [HttpGet("advance-filter")]
         [AllowAnonymous]
         public async Task<ActionResult<PagedResult<StoryCatalogListItemResponse>>> Filter(
@@ -96,7 +96,7 @@ namespace Main.Controllers
             return Ok(result);
         }
 
-        // API lấy danh sách truyện mới nhất (cached trong Redis)
+        // API lấy danh sách truyện mới nhất (được cache trong Redis để tối ưu tốc độ load trang chủ)
         [HttpGet("latest")]
         public async Task<ActionResult<IReadOnlyList<StoryCatalogListItemResponse>>> Latest([FromQuery] int limit = 10, CancellationToken ct = default)
         {
@@ -104,7 +104,7 @@ namespace Main.Controllers
             return Ok(items);
         }
 
-        // API lấy top truyện có lượt view cao nhất trong tuần (cached trong Redis)
+        // API lấy top truyện thịnh hành trong tuần (dựa trên view count)
         [HttpGet("top-weekly")]
         public async Task<ActionResult<IReadOnlyList<StoryWeeklyHighlightResponse>>> TopWeekly([FromQuery] int limit = 10, CancellationToken ct = default)
         {
@@ -112,7 +112,7 @@ namespace Main.Controllers
             return Ok(items);
         }
 
-        // API lấy chi tiết một truyện theo ID
+        // API lấy chi tiết một truyện theo ID (Trang Detail)
         [HttpGet("{storyId:guid}")]
         public async Task<ActionResult<StoryCatalogDetailResponse>> Get(Guid storyId, CancellationToken ct)
         {
@@ -121,4 +121,3 @@ namespace Main.Controllers
         }
     }
 }
-

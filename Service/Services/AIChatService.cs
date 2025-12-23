@@ -33,6 +33,12 @@ namespace Service.Services
             _subscriptionService = subscriptionService;
         }
 
+        // Gửi tin nhắn cho AI Assistant (Sử dụng luồng RAG - Retrieval-Augmented Generation)
+        // 1. Kiểm tra gói Premium (Tính năng độc quyền).
+        // 2. Bước 1: Trích xuất Keyword từ câu hỏi của user.
+        // 3. Bước 2: Tìm kiếm thông tin liên quan trong DB (Story, Chapter, Author) dựa trên Keyword.
+        // 4. Bước 3: Ghép thông tin tìm được (Context) vào Prompt gửi cho OpenAI.
+        // 5. Bước 4: Lưu lịch sử trò chuyện vào Redis/DB.
         public async Task<AiChatHistoryResponse> SendAsync(Guid accountId, AiChatSendRequest request, CancellationToken ct = default)
         {
             if (request == null || string.IsNullOrWhiteSpace(request.Message))
@@ -40,22 +46,28 @@ namespace Service.Services
                 throw new AppException("ValidationFailed", "Tin nhắn là bắt buộc.", 400);
             }
 
+            // Đảm bảo chỉ người dùng Premium mới được chat với AI
             await EnsurePremiumSubscriptionAsync(accountId, ct);
 
             var sanitized = request.Message.Trim();
 
-            // RAG: 1. Extract keywords via AI
+            // Bước 1: Gọi AI để phân tích câu hỏi và lấy ra các Keyword quan trọng (Ví dụ: "Truyện tiên hiệp", "Tác giả ABC")
             var keywords = await _chatService.ExtractKeywordsAsync(sanitized, ct);
 
-            // RAG: 2. Search DB with keywords
+            // Bước 2: Dò trong Database xem có truyện/chương/tác giả nào khớp với Keyword không
             var searchResults = await _repository.SearchContentAsync(keywords, 3, ct);
             
             var contextString = searchResults.Count > 0 
                 ? "\n\nRelevant Database Content:\n" + string.Join("\n", searchResults) 
                 : string.Empty;
 
+            // Bước 3: Lấy lịch sử chat (History) để AI nắm được ngữ cảnh cuộc trò chuyện
             var history = await _repository.GetHistoryAsync(accountId, ct);
+            
+            // Ghép System Prompt (Luật lệ) + Context (Dữ liệu DB) + History + Câu hỏi mới
             var promptMessages = BuildPrompt(history, sanitized, contextString);
+            
+            // Gọi OpenAI API để lấy câu trả lời
             var reply = await _chatService.ChatAsync(promptMessages, ct);
 
             var now = TimezoneConverter.VietnamNow;
@@ -65,6 +77,7 @@ namespace Service.Services
                 AiChatStoredMessage.Create("assistant", reply, now)
             };
 
+            // Lưu lịch sử chat 
             await _repository.AppendAsync(accountId, stored, ct);
             await _repository.TrimAsync(accountId, MaxHistoryMessages, ct);
 

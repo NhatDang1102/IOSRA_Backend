@@ -44,10 +44,14 @@ namespace Service.Services
             _logger = logger;
         }
 
+        // Xử lý giao dịch mua chương bằng Xu (Dias)
         public async Task<ChapterPurchaseResponse> PurchaseAsync(Guid readerAccountId, Guid chapterId, CancellationToken ct = default)
         {
+            // 1. Bắt đầu Transaction Database (ACID)
+            // Đảm bảo tiền trừ đi và chương được mở khóa phải xảy ra đồng thời. Nếu lỗi thì Rollback hết.
             await using var tx = await _chapterPurchaseRepository.BeginTransactionAsync(ct);
 
+            // 2. Validate thông tin chương và truyện
             var chapter = await _chapterPurchaseRepository.GetChapterForPurchaseAsync(chapterId, ct)
                 ?? throw new AppException("ChapterNotFound", "Không tìm thấy chương.", 404);
 
@@ -59,6 +63,7 @@ namespace Service.Services
             var story = chapter.story
                        ?? throw new AppException("StoryNotFound", "Thông tin truyện bị thiếu.", 404);
 
+            // Truyện phải Published hoặc Completed mới được mua
             var storyIsPublic = string.Equals(story.status, "published", StringComparison.OrdinalIgnoreCase)
                                 || string.Equals(story.status, "completed", StringComparison.OrdinalIgnoreCase);
             if (!storyIsPublic)
@@ -66,6 +71,7 @@ namespace Service.Services
                 throw new AppException("StoryNotPublished", "Truyện phải được xuất bản trước khi có thể mua chương.", 400);
             }
 
+            // Tác giả không thể tự mua chương của mình
             if (story.author_id == readerAccountId)
             {
                 throw new AppException("AuthorCannotPurchase", "Tác giả đã sở hữu chương của họ.", 400);
@@ -73,15 +79,17 @@ namespace Service.Services
 
             if (!string.Equals(chapter.access_type, "dias", StringComparison.OrdinalIgnoreCase))
             {
-                throw new AppException("ChapterFree", "Chương này không yêu cầu mua.", 400);
+                throw new AppException("ChapterFree", "Chương này miễn phí, không yêu cầu mua.", 400);
             }
 
+            // Kiểm tra đã mua chưa (Tránh trừ tiền 2 lần)
             var alreadyPurchased = await _chapterPurchaseRepository.HasReaderPurchasedChapterAsync(chapterId, readerAccountId, ct);
             if (alreadyPurchased)
             {
                 throw new AppException("ChapterPurchased", "Bạn đã sở hữu chương này.", 409);
             }
 
+            // 3. Lấy ví tiền (Wallet) của người mua
             var wallet = await _billingRepository.GetOrCreateDiaWalletAsync(readerAccountId, ct);
 
             var priceDias = (long)chapter.dias_price;
@@ -90,15 +98,18 @@ namespace Service.Services
                 throw new AppException("InvalidPrice", "Giá chương chưa được định cấu hình.", 400);
             }
 
+            // Kiểm tra số dư
             if (wallet.balance_dias < priceDias)
             {
                 throw new AppException("InsufficientBalance", "Không đủ dias trong ví.", 400);
             }
 
+            // 4. Trừ tiền người mua
             var now = TimezoneConverter.VietnamNow;
             wallet.balance_dias -= priceDias;
             wallet.updated_at = now;
 
+            // 5. Ghi log giao dịch mua (Quyền sở hữu chương)
             var purchaseId = Guid.NewGuid();
             await _chapterPurchaseRepository.AddPurchaseLogAsync(new chapter_purchase_log
             {
@@ -109,12 +120,13 @@ namespace Service.Services
                 created_at = now
             }, ct);
 
+            // 6. Ghi log biến động số dư ví (Trừ tiền)
             await _billingRepository.AddWalletPaymentAsync(new wallet_payment
             {
                 trs_id = Guid.NewGuid(),
                 wallet_id = wallet.wallet_id,
                 type = "purchase",
-                dias_delta = -priceDias,
+                dias_delta = -priceDias, // Số âm thể hiện trừ tiền
                 dias_after = wallet.balance_dias,
                 ref_id = purchaseId,
                 created_at = now
@@ -123,8 +135,9 @@ namespace Service.Services
             var author = story.author
                          ?? throw new AppException("AuthorNotFound", "Hồ sơ tác giả bị thiếu.", 404);
 
-            //đổi format: 1 Dia mua = 1 Dia revenue (đơn vị Dias).
-            //author ăn hết số Dias bán được. Việc chia sẻ doanh thu (RewardRate) sẽ tính khi Rút tiền.
+            // 7. Cộng doanh thu cho tác giả (Revenue Share)
+            // Logic mới: Tác giả nhận 100% doanh thu tính bằng KC. 
+            // Tỷ lệ chia sẻ (ví dụ 70/30) sẽ được áp dụng khi quy đổi KC sang tiền thật lúc Rút Tiền (Withdraw).
             var authorShare = priceDias;
             author.revenue_balance += authorShare;
 
@@ -135,6 +148,7 @@ namespace Service.Services
                 buyerId = readerAccountId
             }, JsonOptions);
 
+            // Ghi log doanh thu tác giả
             await _chapterPurchaseRepository.AddAuthorRevenueTransactionAsync(new author_revenue_transaction
             {
                 trans_id = Guid.NewGuid(),
@@ -146,9 +160,11 @@ namespace Service.Services
                 created_at = now
             }, ct);
 
+            // 8. Commit Transaction (Lưu tất cả thay đổi)
             await _chapterPurchaseRepository.SaveChangesAsync(ct);
             await tx.CommitAsync(ct);
 
+            // 9. Gửi thông báo cho tác giả (Fire & Forget, không nằm trong Transaction)
             await NotifyChapterPurchaseAsync(story, chapter, readerAccountId, priceDias, ct);
 
             return new ChapterPurchaseResponse
@@ -165,8 +181,10 @@ namespace Service.Services
             };
         }
 
+        // Xử lý mua Giọng đọc (Voice) cho chương
         public async Task<ChapterVoicePurchaseResponse> PurchaseVoicesAsync(Guid readerAccountId, Guid chapterId, ChapterVoicePurchaseRequest request, CancellationToken ct = default)
         {
+            // Validate input
             if (request?.VoiceIds == null || request.VoiceIds.Count == 0)
             {
                 throw new AppException("VoiceSelectionRequired", "Vui lòng chọn ít nhất một giọng đọc.", 400);
@@ -182,6 +200,7 @@ namespace Service.Services
                 throw new AppException("VoiceSelectionRequired", "Lựa chọn giọng đọc không hợp lệ.", 400);
             }
 
+            // Bắt đầu Transaction
             await using var tx = await _chapterPurchaseRepository.BeginTransactionAsync(ct);
 
             var chapter = await _chapterPurchaseRepository.GetChapterWithVoicesAsync(chapterId, ct)
@@ -207,6 +226,7 @@ namespace Service.Services
                 throw new AppException("AuthorCannotPurchase", "Tác giả đã sở hữu giọng đọc chương của họ.", 400);
             }
 
+            // Logic: Phải mua chương (nếu chương tính phí) trước khi mua Voice
             if (string.Equals(chapter.access_type, "dias", StringComparison.OrdinalIgnoreCase))
             {
                 var hasChapter = await _chapterPurchaseRepository.HasReaderPurchasedChapterAsync(chapterId, readerAccountId, ct);
@@ -216,6 +236,7 @@ namespace Service.Services
                 }
             }
 
+            // Lọc ra các giọng đọc có sẵn (Ready) và khớp với yêu cầu
             var readyVoices = chapter.chapter_voices
                 .Where(v => requestedVoiceIds.Contains(v.voice_id) &&
                             string.Equals(v.status, "ready", StringComparison.OrdinalIgnoreCase))
@@ -226,6 +247,7 @@ namespace Service.Services
                 throw new AppException("VoiceUnavailable", "Một hoặc nhiều giọng đọc được yêu cầu không khả dụng.", 400);
             }
 
+            // Kiểm tra giọng đọc đã mua chưa
             var purchasedVoiceIds = await _chapterPurchaseRepository.GetPurchasedVoiceIdsAsync(chapterId, readerAccountId, ct);
             var newVoices = readyVoices
                 .Where(v => !purchasedVoiceIds.Contains(v.voice_id))
@@ -236,22 +258,26 @@ namespace Service.Services
                 throw new AppException("VoiceAlreadyOwned", "Bạn đã mua các giọng đọc được chọn.", 409);
             }
 
+            // Tính tổng tiền
             var totalDias = newVoices.Sum(v => (long)v.dias_price);
             if (totalDias <= 0)
             {
                 throw new AppException("InvalidVoicePrice", "Giá giọng đọc chưa được định cấu hình.", 500);
             }
 
+            // Kiểm tra số dư ví
             var wallet = await _billingRepository.GetOrCreateDiaWalletAsync(readerAccountId, ct);
             if (wallet.balance_dias < totalDias)
             {
                 throw new AppException("InsufficientBalance", "Không đủ dias trong ví.", 400);
             }
 
+            // Trừ tiền
             var now = TimezoneConverter.VietnamNow;
             wallet.balance_dias -= totalDias;
             wallet.updated_at = now;
 
+            // Tạo log mua Voice
             var purchaseId = Guid.NewGuid();
             var purchaseLog = new voice_purchase_log
             {
@@ -263,6 +289,7 @@ namespace Service.Services
             };
             await _chapterPurchaseRepository.AddVoicePurchaseLogAsync(purchaseLog, ct);
 
+            // Lưu chi tiết từng giọng đọc đã mua
             var purchaseVoices = new List<ChapterPurchasedVoiceResponse>(newVoices.Count);
             foreach (var voice in newVoices)
             {
@@ -287,6 +314,7 @@ namespace Service.Services
                 });
             }
 
+            // Ghi log trừ tiền ví
             await _billingRepository.AddWalletPaymentAsync(new wallet_payment
             {
                 trs_id = Guid.NewGuid(),
@@ -298,10 +326,10 @@ namespace Service.Services
                 created_at = now
             }, ct);
 
+            // Cộng doanh thu cho tác giả (Voice)
             var author = story.author
                          ?? throw new AppException("AuthorNotFound", "Hồ sơ tác giả bị thiếu.", 404);
 
-            // Logic mới: 1 Dia mua = 1 Dia revenue.
             var authorShare = totalDias;
             author.revenue_balance += authorShare;
 
@@ -324,9 +352,11 @@ namespace Service.Services
                 created_at = now
             }, ct);
 
+            // Commit Transaction
             await _chapterPurchaseRepository.SaveChangesAsync(ct);
             await tx.CommitAsync(ct);
 
+            // Gửi thông báo
             await NotifyVoicePurchaseAsync(story, chapter, readerAccountId, newVoices, totalDias, ct);
 
             return new ChapterVoicePurchaseResponse
@@ -351,6 +381,8 @@ namespace Service.Services
 
             var chapterIds = data.Select(d => d.ChapterId).Distinct().ToList();
             var voiceData = await _chapterPurchaseRepository.GetPurchasedVoicesAsync(readerAccountId, chapterIds, ct);
+            
+            // Group voice theo từng chapter để map vào response
             var voicesByChapter = voiceData
                 .GroupBy(v => v.ChapterId)
                 .ToDictionary(
@@ -387,6 +419,7 @@ namespace Service.Services
                 return Array.Empty<PurchasedVoiceHistoryResponse>();
             }
 
+            // Nhóm lịch sử mua Voice theo Truyện -> Chương
             var storyGroups = data
                 .GroupBy(d => new { d.StoryId, d.StoryTitle })
                 .OrderBy(g => g.Key.StoryTitle)

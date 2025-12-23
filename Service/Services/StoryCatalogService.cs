@@ -13,6 +13,7 @@ using Service.Interfaces;
 
 namespace Service.Services
 {
+    // Service xử lý việc hiển thị danh sách truyện cho độc giả (Catalog)
     public class StoryCatalogService : IStoryCatalogService
     {
         private readonly IStoryCatalogRepository _storyRepository;
@@ -24,15 +25,17 @@ namespace Service.Services
             _chapterRepository = chapterRepository;
         }
 
+        // Tìm kiếm nâng cao với nhiều bộ lọc (Tag, Author, Rating, Premium...)
         public async Task<PagedResult<StoryCatalogListItemResponse>> GetStoriesAdvancedAsync(StoryCatalogQuery query, CancellationToken ct = default)
         {
             // validate page info
             if (query.Page < 1 || query.PageSize < 1)
                 throw new AppException("ValidationFailed", "Page and PageSize must be positive integers.", 400);
 
-            // calculate start of week for sorting WeeklyViews
+            // Tính toán thời điểm bắt đầu tuần hiện tại (UTC) để phục vụ việc sort theo Lượt xem tuần (Weekly Views)
             var weekStartUtc = StoryViewTimeHelper.GetCurrentWeekStartUtc();
 
+            // Gọi Repository thực hiện query phức tạp (Join nhiều bảng)
             var (stories, total) = await _storyRepository.SearchPublishedStoriesAdvancedAsync(
                 query.Query,
                 query.TagId,
@@ -59,9 +62,12 @@ namespace Service.Services
                 };
             }
 
+            // Lấy thêm thông tin tổng số chương đã xuất bản cho từng truyện trong danh sách
+            // (Thực hiện query riêng để tối ưu hiệu năng thay vì Count() trong từng dòng SQL chính)
             var storyIds = stories.Select(s => s.story_id).ToArray();
             var chapterCounts = await _chapterRepository.GetPublishedChapterCountsByStoryIdsAsync(storyIds, ct);
 
+            // Map dữ liệu Entity -> DTO trả về cho Client
             var items = stories
                 .Select(s => StoryCatalogMapper.ToListItemResponse(s, chapterCounts))
                 .ToList();
@@ -75,6 +81,7 @@ namespace Service.Services
             };
         }
 
+        // Tìm kiếm cơ bản (Legacy, ít bộ lọc hơn)
         public async Task<PagedResult<StoryCatalogListItemResponse>> GetStoriesAsync(StoryCatalogQuery query, CancellationToken ct = default)
         {
             if (query.Page < 1 || query.PageSize < 1)
@@ -111,13 +118,16 @@ namespace Service.Services
             };
         }
 
+        // Lấy chi tiết một bộ truyện (Trang giới thiệu truyện)
         public async Task<StoryCatalogDetailResponse> GetStoryAsync(Guid storyId, CancellationToken ct = default)
         {
+            // Chỉ lấy truyện đã Publish (hoặc Completed)
             var story = await _storyRepository.GetPublishedStoryByIdAsync(storyId, ct)
                         ?? throw new AppException("StoryNotFound", "Story was not found or not available.", 404);
 
             var totalChapters = await _chapterRepository.GetPublishedChapterCountAsync(story.story_id, ct);
 
+            // Sắp xếp Tags theo tên để hiển thị đẹp hơn
             var tags = story.story_tags?
                 .Where(st => st.tag != null)
                 .Select(st => new StoryTagResponse { TagId = st.tag_id, TagName = st.tag!.tag_name })

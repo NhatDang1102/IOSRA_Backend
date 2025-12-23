@@ -13,6 +13,7 @@ using Service.Interfaces;
 
 namespace Service.Services
 {
+    // Service xử lý việc hiển thị nội dung chương truyện cho độc giả (Đọc, Nghe)
     public class ChapterCatalogService : IChapterCatalogService
     {
         private const string PremiumPlanCode = "premium_month";
@@ -37,6 +38,7 @@ namespace Service.Services
             _subscriptionService = subscriptionService;
         }
 
+        // Lấy danh sách chương của một truyện (Mục lục)
         public async Task<PagedResult<ChapterCatalogListItemResponse>> GetChaptersAsync(ChapterCatalogQuery query, CancellationToken ct = default)
         {
             if (query.Page < 1 || query.PageSize < 1)
@@ -44,21 +46,24 @@ namespace Service.Services
                 throw new AppException("ValidationFailed", "Page và PageSize phải là số nguyên dương.", 400);
             }
 
-            // Ensure story exists and is visible
+            // Đảm bảo truyện tồn tại và đang hiển thị (Published)
             var story = await _storyRepository.GetPublishedStoryByIdAsync(query.StoryId, ct)
                         ?? throw new AppException("StoryNotFound", "Không tìm thấy truyện hoặc truyện không khả dụng.", 404);
 
             var (chapters, total) = await _chapterRepository.GetPublishedChaptersByStoryAsync(query.StoryId, query.Page, query.PageSize, ct);
 
+            // Kiểm tra xem người xem có phải là tác giả không (Tác giả luôn sở hữu truyện của mình)
             var viewerAccountId = query.ViewerAccountId;
             var viewerIsAuthor = viewerAccountId.HasValue && story.author_id == viewerAccountId.Value;
 
             var purchasedChapterIds = new HashSet<Guid>();
+            // Nếu người xem không phải tác giả, kiểm tra các chương họ đã mua
             if (viewerAccountId.HasValue && !viewerIsAuthor)
             {
                 var hasLocked = chapters.Any(ch => !string.Equals(ch.access_type, "free", StringComparison.OrdinalIgnoreCase));
                 if (hasLocked)
                 {
+                    // Lấy danh sách ID các chương đã mua để đánh dấu "Đã sở hữu" trên UI
                     var purchased = await _chapterPurchaseRepository.GetPurchasedChaptersAsync(viewerAccountId.Value, query.StoryId, ct);
                     if (purchased.Count > 0)
                     {
@@ -80,8 +85,8 @@ namespace Service.Services
                     LanguageCode = ch.story?.language?.lang_code ?? string.Empty,
                     WordCount = ch.word_count,
                     AccessType = ch.access_type,
-                    IsLocked = isLocked,
-                    IsOwned = isOwned,
+                    IsLocked = isLocked, // True nếu chương tính phí
+                    IsOwned = isOwned,   // True nếu đã mua hoặc là tác giả
                     PriceDias = (int)ch.dias_price,
                     PublishedAt = ch.published_at
                 };
@@ -96,6 +101,7 @@ namespace Service.Services
             };
         }
 
+        // Lấy nội dung chi tiết của một chương (Để đọc)
         public async Task<ChapterCatalogDetailResponse> GetChapterAsync(Guid chapterId, CancellationToken ct = default, Guid? viewerAccountId = null)
         {
             var chapter = await _chapterRepository.GetPublishedChapterWithVoicesAsync(chapterId, ct)
@@ -104,19 +110,23 @@ namespace Service.Services
             var isLocked = !string.Equals(chapter.access_type, "free", StringComparison.OrdinalIgnoreCase);
             var isOwned = false;
             var viewerIsAuthor = false;
+
+            // Logic kiểm tra quyền truy cập (Access Control)
             if (viewerAccountId.HasValue)
             {
                 var storyAuthorId = chapter.story?.author_id;
                 viewerIsAuthor = storyAuthorId.HasValue && storyAuthorId.Value == viewerAccountId.Value;
                 if (viewerIsAuthor)
                 {
-                    isOwned = true;
+                    isOwned = true; // Tác giả luôn có quyền
                 }
                 else if (isLocked)
                 {
+                    // Nếu chương khóa -> Check xem đã mua chưa
                     var hasPurchased = await _chapterRepository.HasReaderPurchasedChapterAsync(chapterId, viewerAccountId.Value, ct);
                     if (!hasPurchased)
                     {
+                        // Chặn nếu chưa mua
                         throw new AppException("ChapterLocked", "Chương này yêu cầu mua để xem.", 403);
                     }
                     isOwned = true;
@@ -124,6 +134,7 @@ namespace Service.Services
             }
             else if (isLocked)
             {
+                // Khách vãng lai (chưa đăng nhập) không thể xem chương khóa
                 throw new AppException("ChapterLocked", "Chương này yêu cầu mua để xem.", 403);
             }
 
@@ -135,10 +146,14 @@ namespace Service.Services
             var voices = new List<PurchasedVoiceResponse>();
             var moodResponse = (ChapterMoodResponse?)null;
             var moodMusicPaths = Array.Empty<MoodMusicTrackResponse>();
+
+            // Logic lấy các tài nguyên bổ sung (Voice, Nhạc nền)
             if (viewerAccountId.HasValue)
             {
+                // 1. Lấy Voice (Giọng đọc)
                 if (viewerIsAuthor)
                 {
+                    // Tác giả thấy hết voice
                     if (chapter.chapter_voices != null)
                     {
                         voices = chapter.chapter_voices
@@ -159,6 +174,7 @@ namespace Service.Services
                 }
                 else
                 {
+                    // Độc giả chỉ thấy voice đã mua
                     var purchasedVoices = await _chapterPurchaseRepository.GetPurchasedVoicesAsync(viewerAccountId.Value, chapterId, ct);
                     if (purchasedVoices.Count > 0)
                     {
@@ -177,6 +193,8 @@ namespace Service.Services
                     }
                 }
 
+                // 2. Lấy Nhạc nền (Mood Music)
+                // Chỉ dành cho Tác giả hoặc người dùng có gói Premium
                 if (viewerIsAuthor || await HasPremiumAsync(viewerAccountId.Value, ct))
                 {
                     (moodResponse, moodMusicPaths) = await ResolveMoodAsync(chapter, ct);
@@ -197,13 +215,14 @@ namespace Service.Services
                 IsAuthor = viewerIsAuthor,
                 PriceDias = (int)chapter.dias_price,
                 PublishedAt = chapter.published_at,
-                ContentUrl = chapter.content_url,
+                ContentUrl = chapter.content_url, // URL file text (trên R2)
                 Mood = moodResponse,
                 MoodMusicPaths = moodMusicPaths,
                 Voices = voices.ToArray()
             };
         }
 
+        // Lấy danh sách các giọng đọc khả dụng cho chương
         public async Task<IReadOnlyList<ChapterCatalogVoiceResponse>> GetChapterVoicesAsync(Guid chapterId, Guid? viewerAccountId, CancellationToken ct = default)
         {
             var chapter = await _chapterRepository.GetPublishedChapterWithVoicesAsync(chapterId, ct)
@@ -237,7 +256,7 @@ namespace Service.Services
                         PriceDias = (int)v.dias_price,
                         HasAudio = isReady,
                         Owned = isOwned,
-                        AudioUrl = isOwned && isReady ? v.storage_path : null
+                        AudioUrl = isOwned && isReady ? v.storage_path : null // Chỉ trả về URL nếu đã mua
                     };
                 })
                 .ToArray();
@@ -283,6 +302,8 @@ namespace Service.Services
             };
         }
 
+        // Logic chọn nhạc nền phù hợp dựa trên cảm xúc (Mood) của chương
+        // Cảm xúc này đã được AI phân tích lúc submit chương
         private async Task<(ChapterMoodResponse? Mood, MoodMusicTrackResponse[] Paths)> ResolveMoodAsync(chapter chapter, CancellationToken ct)
         {
             var moodCode = string.IsNullOrWhiteSpace(chapter.mood_code) ? "neutral" : chapter.mood_code!;
@@ -293,6 +314,7 @@ namespace Service.Services
             }
 
             var tracks = await _moodMusicRepository.GetTracksByMoodAsync(mood.mood_code, ct);
+            // Fallback về nhạc "neutral" nếu không có nhạc cho mood hiện tại
             if (tracks.Count == 0 && !string.Equals(mood.mood_code, "neutral", StringComparison.OrdinalIgnoreCase))
             {
                 tracks = await _moodMusicRepository.GetTracksByMoodAsync("neutral", ct);
@@ -316,6 +338,7 @@ namespace Service.Services
             return (moodDto, paths);
         }
 
+        // Helper check gói Premium
         private async Task<bool> HasPremiumAsync(Guid accountId, CancellationToken ct)
         {
             try

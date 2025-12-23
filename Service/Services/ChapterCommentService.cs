@@ -40,12 +40,19 @@ namespace Service.Services
             _notificationService = notificationService;
         }
 
+        // Lấy danh sách bình luận của một chương
+        // Kết quả trả về dạng cây (Comment cha và các replies)
         public async Task<PagedResult<ChapterCommentResponse>> GetByChapterAsync(Guid chapterId, int page, int pageSize, CancellationToken ct = default, Guid? viewerAccountId = null)
         {
+            // Chỉ lấy comment của chương đã xuất bản (Published)
             var chapter = await RequirePublishedChapterAsync(chapterId, ct);
             var normalizedPage = NormalizePage(page);
             var normalizedSize = NormalizePageSize(pageSize);
+            
+            // Lấy danh sách comment gốc (Parent comments)
             var (items, total) = await _commentRepository.GetByChapterAsync(chapter.chapter_id, normalizedPage, normalizedSize, ct);
+            
+            // Load thông tin Reaction (Số like/dislike, User hiện tại đã like chưa)
             var aggregates = await LoadAggregatesAsync(items, viewerAccountId, ct);
 
             return new PagedResult<ChapterCommentResponse>
@@ -111,12 +118,19 @@ namespace Service.Services
             };
         }
 
+        // Tạo bình luận mới
+        // 1. Kiểm tra tài khoản user có bị hạn chế (ban/mute) không.
+        // 2. Validate nội dung (không được rỗng).
+        // 3. Nếu là reply (trả lời), kiểm tra comment cha có tồn tại và hợp lệ không.
+        // 4. Lưu vào DB.
+        // 5. Gửi thông báo (Notification) cho tác giả truyện và người được trả lời.
         public async Task<ChapterCommentResponse> CreateAsync(Guid readerAccountId, Guid chapterId, ChapterCommentCreateRequest request, CancellationToken ct = default)
         {
             var reader = await _profileRepository.GetReaderByIdAsync(readerAccountId, ct)
                          ?? throw new AppException("ReaderProfileMissing", "Reader profile is not registered.", 404);
             var chapter = await RequirePublishedChapterAsync(chapterId, ct);
 
+            // Check xem user có bị cấm comment không
             await AccountRestrictionHelper.EnsureCanPublishAsync(reader.account, _profileRepository, ct);
 
             var content = (request.Content ?? string.Empty).Trim();
@@ -127,6 +141,8 @@ namespace Service.Services
 
             Guid? parentCommentId = null;
             chapter_comment? replyTarget = null;
+            
+            // Xử lý logic Reply (Trả lời bình luận)
             if (request.ParentCommentId.HasValue && request.ParentCommentId.Value != Guid.Empty)
             {
                 var parent = await _commentRepository.GetAsync(chapter.chapter_id, request.ParentCommentId.Value, ct)
@@ -142,6 +158,7 @@ namespace Service.Services
                     throw new AppException("ParentCommentNotInChapter", "Parent comment does not belong to this chapter.", 400);
                 }
 
+                // Nếu reply một reply khác, thì comment mới vẫn nằm cùng cấp với reply cũ (Flat structure cho replies)
                 parentCommentId = parent.parent_comment_id ?? parent.comment_id;
                 replyTarget = parent;
             }
@@ -165,8 +182,10 @@ namespace Service.Services
             var saved = await _commentRepository.GetAsync(comment.chapter_id, comment.comment_id, ct)
                         ?? throw new InvalidOperationException("Failed to load comment after creation.");
 
+            // Gửi thông báo bất đồng bộ
             await NotifyAuthorCommentAsync(chapter, reader, saved, ct);
             await NotifyCommentReplyAsync(replyTarget, reader, saved, ct);
+            
             return MapPublicComment(saved);
         }
 
