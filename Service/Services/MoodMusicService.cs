@@ -63,9 +63,9 @@ namespace Service.Services
                        ?? throw new AppException("MoodNotFound", "Mã tâm trạng không được hỗ trợ.", 404);
 
             var prompt = request.Prompt.Trim();
-            if (prompt.Length < 20)
+            if (prompt.Length < 5)
             {
-                throw new AppException("PromptTooShort", "Prompt phải có ít nhất 20 ký tự.", 400);
+                throw new AppException("PromptTooShort", "Prompt phải có ít nhất 5 ký tự.", 400);
             }
 
             var audio = await _elevenLabsClient.ComposeMusicAsync(prompt, ct: ct);
