@@ -45,7 +45,7 @@ namespace Repository.Repositories
 
             // 1. Tìm kiếm Truyện (Stories)
             // Xây dựng query động để tìm trong TOÀN BỘ database thay vì giới hạn top 50
-            IQueryable<Story> storyQuery = null;
+            IQueryable<story> storyQuery = null;
             var baseStoryQuery = _context.stories.AsNoTracking().Where(s => s.status == "published");
 
             foreach (var term in distinctTerms)
@@ -66,7 +66,7 @@ namespace Repository.Repositories
             }
 
             // 2. Tìm kiếm Chương (Chapters)
-            IQueryable<Chapter> chapterQuery = null;
+            IQueryable<chapter> chapterQuery = null;
             var baseChapterQuery = _context.chapter.AsNoTracking().Where(c => c.status == "published");
 
             foreach (var term in distinctTerms)
@@ -88,7 +88,7 @@ namespace Repository.Repositories
             }
 
             // 3. Tìm kiếm Tác giả (Authors)
-            IQueryable<Author> authorQuery = null;
+            IQueryable<author> authorQuery = null;
             var baseAuthorQuery = _context.authors.AsNoTracking().Include(a => a.account);
 
             foreach (var term in distinctTerms)
