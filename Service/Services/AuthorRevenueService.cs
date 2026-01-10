@@ -203,6 +203,74 @@ namespace Service.Services
             return requests.Select(MapWithdrawResponse).ToArray();
         }
 
+        public async Task<ContentRevenueDetailResponse> GetStoryRevenueDetailAsync(Guid authorAccountId, Guid storyId, int page, int pageSize, CancellationToken ct = default)
+        {
+            if (page < 1) throw new AppException("ValidationFailed", "Page phải lớn hơn 0.", 400);
+            if (pageSize < 1 || pageSize > 200) throw new AppException("ValidationFailed", "PageSize phải nằm trong khoảng từ 1 đến 200.", 400);
+
+            if (!await _repository.IsStoryOwnedByAuthorAsync(storyId, authorAccountId, ct))
+            {
+                throw new AppException("AccessDenied", "Bạn không có quyền truy cập thông tin doanh thu của truyện này.", 403);
+            }
+
+            var (items, total, totalRevenue) = await _repository.GetStoryPurchaseLogsAsync(storyId, page, pageSize, ct);
+
+            return new ContentRevenueDetailResponse
+            {
+                ContentId = storyId,
+                Title = items.FirstOrDefault()?.chapter?.story?.title ?? string.Empty,
+                TotalRevenue = totalRevenue,
+                TotalPurchases = total,
+                Purchasers = new PagedResult<PurchaserDetailDto>
+                {
+                    Items = items.Select(MapToPurchaserDto).ToList(),
+                    Total = total,
+                    Page = page,
+                    PageSize = pageSize
+                }
+            };
+        }
+
+        public async Task<ContentRevenueDetailResponse> GetChapterRevenueDetailAsync(Guid authorAccountId, Guid chapterId, int page, int pageSize, CancellationToken ct = default)
+        {
+            if (page < 1) throw new AppException("ValidationFailed", "Page phải lớn hơn 0.", 400);
+            if (pageSize < 1 || pageSize > 200) throw new AppException("ValidationFailed", "PageSize phải nằm trong khoảng từ 1 đến 200.", 400);
+
+            if (!await _repository.IsChapterOwnedByAuthorAsync(chapterId, authorAccountId, ct))
+            {
+                throw new AppException("AccessDenied", "Bạn không có quyền truy cập thông tin doanh thu của chương này.", 403);
+            }
+
+            var (items, total, totalRevenue) = await _repository.GetChapterPurchaseLogsAsync(chapterId, page, pageSize, ct);
+
+            return new ContentRevenueDetailResponse
+            {
+                ContentId = chapterId,
+                Title = items.FirstOrDefault()?.chapter?.title ?? string.Empty,
+                TotalRevenue = totalRevenue,
+                TotalPurchases = total,
+                Purchasers = new PagedResult<PurchaserDetailDto>
+                {
+                    Items = items.Select(MapToPurchaserDto).ToList(),
+                    Total = total,
+                    Page = page,
+                    PageSize = pageSize
+                }
+            };
+        }
+
+        private static PurchaserDetailDto MapToPurchaserDto(chapter_purchase_log log)
+        {
+            return new PurchaserDetailDto
+            {
+                AccountId = log.account_id,
+                Username = log.account?.username ?? "Unknown",
+                AvatarUrl = log.account?.avatar_url,
+                Price = (int)log.dia_price,
+                PurchaseDate = log.created_at
+            };
+        }
+
         private static string? NormalizeType(string? type)
         {
             if (string.IsNullOrWhiteSpace(type))

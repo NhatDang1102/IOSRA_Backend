@@ -15,5 +15,8 @@ namespace Service.Interfaces
         Task<AuthorWithdrawRequestResponse> SubmitWithdrawAsync(Guid authorAccountId, AuthorWithdrawRequest request, CancellationToken ct = default);
         Task ConfirmReceiptAsync(Guid authorAccountId, Guid requestId, CancellationToken ct = default);
         Task<IReadOnlyList<AuthorWithdrawRequestResponse>> GetWithdrawRequestsAsync(Guid authorAccountId, string? status, CancellationToken ct = default);
+
+        Task<ContentRevenueDetailResponse> GetStoryRevenueDetailAsync(Guid authorAccountId, Guid storyId, int page, int pageSize, CancellationToken ct = default);
+        Task<ContentRevenueDetailResponse> GetChapterRevenueDetailAsync(Guid authorAccountId, Guid chapterId, int page, int pageSize, CancellationToken ct = default);
     }
 }

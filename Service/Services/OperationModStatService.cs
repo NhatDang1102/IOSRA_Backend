@@ -11,6 +11,8 @@ using Repository.Utils;
 using Service.Exceptions;
 using Service.Interfaces;
 
+using System.Collections.Generic;
+
 namespace Service.Services
 {
     public class OperationModStatService : IOperationModStatService
@@ -20,6 +22,34 @@ namespace Service.Services
         public OperationModStatService(IOperationModStatRepository repository)
         {
             _repository = repository;
+        }
+
+        public async Task<UserGrowthStatsResponse> GetUserGrowthStatsAsync(StatQueryRequest query, CancellationToken ct = default)
+        {
+            var (period, from, to) = NormalizeQuery(query);
+            return await _repository.GetUserGrowthAsync(from, to, period, ct);
+        }
+
+        public async Task<List<TrendingStoryResponse>> GetTrendingStoriesStatsAsync(StatQueryRequest query, int limit = 10, CancellationToken ct = default)
+        {
+            var (_, from, to) = NormalizeQuery(query); // Period not critical for ranking, just range
+            if (limit < 1) limit = 10;
+            if (limit > 50) limit = 50;
+            return await _repository.GetTrendingStoriesAsync(from, to, limit, ct);
+        }
+
+        public async Task<SystemEngagementResponse> GetSystemEngagementStatsAsync(StatQueryRequest query, CancellationToken ct = default)
+        {
+            var (period, from, to) = NormalizeQuery(query);
+            return await _repository.GetSystemEngagementAsync(from, to, period, ct);
+        }
+
+        public async Task<List<TagTrendResponse>> GetTagTrendsStatsAsync(StatQueryRequest query, int limit = 10, CancellationToken ct = default)
+        {
+            var (_, from, to) = NormalizeQuery(query);
+            if (limit < 1) limit = 10;
+            if (limit > 50) limit = 50;
+            return await _repository.GetTagTrendsAsync(from, to, limit, ct);
         }
 
         public async Task<OperationRevenueResponse> GetRevenueStatsAsync(StatQueryRequest query, CancellationToken ct = default)

@@ -70,6 +70,59 @@ namespace Repository.Repositories
             return (items, total);
         }
 
+        public async Task<bool> IsStoryOwnedByAuthorAsync(Guid storyId, Guid authorId, CancellationToken ct = default)
+        {
+            return await _db.stories.AnyAsync(s => s.story_id == storyId && s.author_id == authorId, ct);
+        }
+
+        public async Task<bool> IsChapterOwnedByAuthorAsync(Guid chapterId, Guid authorId, CancellationToken ct = default)
+        {
+            return await _db.chapter
+                .Include(c => c.story)
+                .AnyAsync(c => c.chapter_id == chapterId && c.story!.author_id == authorId, ct);
+        }
+
+        public async Task<(List<chapter_purchase_log> Items, int Total, long TotalRevenue)> GetStoryPurchaseLogsAsync(Guid storyId, int page, int pageSize, CancellationToken ct = default)
+        {
+            var query = _db.chapter_purchase_logs
+                .AsNoTracking()
+                .Include(log => log.chapter)
+                .Where(log => log.chapter!.story_id == storyId);
+
+            var total = await query.CountAsync(ct);
+            var totalRevenue = await query.SumAsync(log => (long)log.dia_price, ct);
+
+            var items = await query
+                .Include(log => log.account) // Include Buyer info
+                .Include(log => log.chapter) // Ensure chapter info is available
+                .OrderByDescending(log => log.created_at)
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
+                .ToListAsync(ct);
+
+            return (items, total, totalRevenue);
+        }
+
+        public async Task<(List<chapter_purchase_log> Items, int Total, long TotalRevenue)> GetChapterPurchaseLogsAsync(Guid chapterId, int page, int pageSize, CancellationToken ct = default)
+        {
+            var query = _db.chapter_purchase_logs
+                .AsNoTracking()
+                .Where(log => log.chapter_id == chapterId);
+
+            var total = await query.CountAsync(ct);
+            var totalRevenue = await query.SumAsync(log => (long)log.dia_price, ct);
+
+            var items = await query
+                .Include(log => log.account) // Include Buyer info
+                .Include(log => log.chapter) // Include Chapter info
+                .OrderByDescending(log => log.created_at)
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
+                .ToListAsync(ct);
+
+            return (items, total, totalRevenue);
+        }
+
         public Task AddTransactionAsync(author_revenue_transaction transaction, CancellationToken ct = default)
         {
             _db.author_revenue_transaction.Add(transaction);

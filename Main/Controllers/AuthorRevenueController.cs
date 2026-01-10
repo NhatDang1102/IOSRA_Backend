@@ -55,5 +55,19 @@ namespace Main.Controllers
             var result = await _authorRevenueService.GetWithdrawRequestsAsync(AccountId, status, ct);
             return Ok(result);
         }
+
+        [HttpGet("stories/{storyId}")]
+        public async Task<ActionResult<ContentRevenueDetailResponse>> GetStoryRevenue(Guid storyId, [FromQuery] int page = 1, [FromQuery] int pageSize = 20, CancellationToken ct = default)
+        {
+            var result = await _authorRevenueService.GetStoryRevenueDetailAsync(AccountId, storyId, page, pageSize, ct);
+            return Ok(result);
+        }
+
+        [HttpGet("chapters/{chapterId}")]
+        public async Task<ActionResult<ContentRevenueDetailResponse>> GetChapterRevenue(Guid chapterId, [FromQuery] int page = 1, [FromQuery] int pageSize = 20, CancellationToken ct = default)
+        {
+            var result = await _authorRevenueService.GetChapterRevenueDetailAsync(AccountId, chapterId, page, pageSize, ct);
+            return Ok(result);
+        }
     }
 }
