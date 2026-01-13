@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Authorization;
+﻿using Contract.DTOs.Response.Admin;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Service.Interfaces;
 
@@ -15,24 +16,19 @@ public class AdminBackupController : AppControllerBase
         _backupService = backupService;
     }
 
+    [HttpGet("capabilities")]
+    public async Task<ActionResult<BackupCapabilitiesResponse>> Capabilities(CancellationToken ct)
+            => Ok(await _backupService.GetCapabilitiesAsync(ct));
+
     [HttpPost("run")]
-    public async Task<IActionResult> Run(CancellationToken ct)
-    {
-        var result = await _backupService.RunAsync(ct);
-        return Ok(result);
-    }
+    public async Task<ActionResult<BackupRunResponse>> Run(CancellationToken ct)
+        => Ok(await _backupService.RunAsync(ct));
 
     [HttpGet("history")]
-    public async Task<IActionResult> History(CancellationToken ct)
-    {
-        var result = await _backupService.GetHistoryAsync(ct);
-        return Ok(result);
-    }
+    public async Task<ActionResult<List<BackupHistoryItemResponse>>> History(CancellationToken ct)
+        => Ok(await _backupService.GetHistoryAsync(ct));
 
     [HttpPost("restore/{backupId}")]
-    public async Task<IActionResult> Restore(string backupId, CancellationToken ct)
-    {
-        var result = await _backupService.RestoreAsync(backupId, ct);
-        return Ok(result);
-    }
+    public async Task<ActionResult<BackupRunResponse>> Restore(string backupId, CancellationToken ct)
+        => Ok(await _backupService.RestoreAsync(backupId, ct));
 }

@@ -77,15 +77,26 @@ namespace Main.Controllers
 
             // Public nhẹ (chỉ để check uptime API có sống không)
             [HttpGet("uptime")]
-            public IActionResult GetUptime()
+            public ActionResult<UptimeResponse> GetUptime()
             {
-                return Ok(SystemUptimeSnapshot.Current);
+                var snap = new
+                {
+                    StartedAtUtc = SystemUptimeSnapshot.StartedAtUtc,
+                    UptimeSeconds = SystemUptimeSnapshot.UptimeSeconds
+                };
+                // nếu Current đang trả anonymous object => đổi sang typed luôn (phần dưới)
+
+                return Ok(new UptimeResponse
+                {
+                    StartedAtUtc = SystemUptimeSnapshot.StartedAtUtc,
+                    UptimeSeconds = SystemUptimeSnapshot.UptimeSeconds
+                });
             }
 
             // Chi tiết health 
             [Authorize(Roles = "admin,omod,OPERATION_MOD")]
             [HttpGet("health")]
-            public async Task<IActionResult> Health(CancellationToken ct)
+            public async Task<ActionResult<HealthResponse>> Health(CancellationToken ct)
             {
                 var result = await _systemHealthService.CheckAsync(ct);
                 return Ok(result);
