@@ -9,13 +9,10 @@ namespace Service.Helpers
 {
     public static class SystemUptimeSnapshot
     {
-        private static readonly DateTime StartedAtUtc = DateTime.UtcNow;
-        private static readonly Stopwatch Sw = Stopwatch.StartNew();
+        private static readonly DateTime _startedAtUtc = DateTime.UtcNow;
+        private static readonly Stopwatch _sw = Stopwatch.StartNew();
 
-        public static object Current => new
-        {
-            startedAtUtc = StartedAtUtc,
-            uptimeSeconds = (long)Sw.Elapsed.TotalSeconds
-        };
+        public static DateTime StartedAtUtc => _startedAtUtc;
+        public static long UptimeSeconds => (long)_sw.Elapsed.TotalSeconds;
     }
 }

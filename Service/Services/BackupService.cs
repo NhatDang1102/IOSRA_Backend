@@ -1,54 +1,98 @@
-﻿using Contract.DTOs.Settings;
+﻿using Contract.DTOs.Response.Admin;
+using Contract.DTOs.Settings;
 using Microsoft.Extensions.Options;
 using Service.Helpers;
 using Service.Interfaces;
-using System;
-using System.Collections.Generic;
 using System.Diagnostics;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
-namespace Service.Services
+public class BackupService : IBackupService
 {
-    public class BackupService : IBackupService
-    {
-        private readonly MySqlBackupSettings _opt;
-        private readonly BackupHistoryStore _store;
+    private readonly MySqlBackupSettings _mysql;
+    private readonly BackupOptions _backupOpt;
 
-        public BackupService(IOptions<MySqlBackupSettings> opt)
+    public BackupService(IOptions<MySqlBackupSettings> mysql, IOptions<BackupOptions> backupOpt)
+    {
+        _mysql = mysql.Value;
+        _backupOpt = backupOpt.Value;
+    }
+
+    public Task<BackupCapabilitiesResponse> GetCapabilitiesAsync(CancellationToken ct = default)
+    {
+        if (string.Equals(_backupOpt.Mode, "snapshot", StringComparison.OrdinalIgnoreCase))
         {
-            _opt = opt.Value;
-            _store = new BackupHistoryStore(_opt.BackupDir);
+            return Task.FromResult(new BackupCapabilitiesResponse
+            {
+                Mode = "snapshot",
+                CanDump = false,
+                CanRestore = false,
+                Provider = _backupOpt.Provider,
+                ActionUrl = _backupOpt.ActionUrl
+            });
         }
 
-        public async Task<object> RunAsync(CancellationToken ct = default)
+        var canDump = CommandHelper.CommandExists("mysqldump");
+        var canRestore = CommandHelper.CommandExists("mysql");
+
+        return Task.FromResult(new BackupCapabilitiesResponse
         {
-            Directory.CreateDirectory(_opt.BackupDir);
+            Mode = "mysqldump",
+            CanDump = canDump,
+            CanRestore = canRestore
+        });
+    }
 
-            var backupId = Guid.NewGuid().ToString("N");
-            var fileName = $"mysql_{_opt.Database}_{DateTime.UtcNow:yyyyMMdd_HHmmss}_{backupId}.sql";
-            var filePath = Path.Combine(_opt.BackupDir, fileName);
-
-            var startedAt = DateTime.UtcNow;
-
-            // mysqldump args (không đưa password vào args để tránh lộ)
-            var args =
-                $"--host={_opt.Host} --port={_opt.Port} --user={_opt.User} " +
-                "--single-transaction --routines --events --triggers " +
-                "--set-gtid-purged=OFF " +
-                $"{_opt.Database}";
-
-            var psi = new ProcessStartInfo
+    public async Task<BackupRunResponse> RunAsync(CancellationToken ct = default)
+    {
+        // Snapshot mode: vẫn trả JSON cho FE hiển thị
+        if (string.Equals(_backupOpt.Mode, "snapshot", StringComparison.OrdinalIgnoreCase))
+        {
+            return new BackupRunResponse
             {
-                FileName = "mysqldump",
-                Arguments = args,
-                RedirectStandardOutput = true,
-                RedirectStandardError = true,
-                UseShellExecute = false
+                Mode = "snapshot",
+                Status = "NotSupported",
+                Message = "Môi trường này sử dụng managed DB snapshot. Vui lòng tạo snapshot trên dashboard provider.",
+                Provider = _backupOpt.Provider,
+                ActionUrl = _backupOpt.ActionUrl
             };
-            psi.Environment["MYSQL_PWD"] = _opt.Password;
+        }
 
+        // mysqldump mode: kiểm tra tool trước, tránh 500
+        if (!CommandHelper.CommandExists("mysqldump"))
+        {
+            return new BackupRunResponse
+            {
+                Mode = "mysqldump",
+                Status = "NotSupported",
+                Message = "Server không có mysqldump. Không thể chạy backup dạng SQL dump ở môi trường hiện tại."
+            };
+        }
+
+        Directory.CreateDirectory(_mysql.BackupDir);
+
+        var backupId = Guid.NewGuid().ToString("N");
+        var fileName = $"mysql_{_mysql.Database}_{DateTime.UtcNow:yyyyMMdd_HHmmss}_{backupId}.sql";
+        var filePath = Path.Combine(_mysql.BackupDir, fileName);
+
+        var startedAt = DateTime.UtcNow;
+
+        var args =
+            $"--host={_mysql.Host} --port={_mysql.Port} --user={_mysql.User} " +
+            "--single-transaction --routines --events --triggers " +
+            "--set-gtid-purged=OFF " +
+            $"{_mysql.Database}";
+
+        var psi = new ProcessStartInfo
+        {
+            FileName = "mysqldump",
+            Arguments = args,
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
+            UseShellExecute = false
+        };
+        psi.Environment["MYSQL_PWD"] = _mysql.Password;
+
+        try
+        {
             using var p = Process.Start(psi)!;
             var dump = await p.StandardOutput.ReadToEndAsync();
             var err = await p.StandardError.ReadToEndAsync();
@@ -56,70 +100,78 @@ namespace Service.Services
 
             var finishedAt = DateTime.UtcNow;
 
-            var history = await _store.ReadAsync(ct);
-
             if (p.ExitCode != 0)
             {
-                history.Insert(0, new BackupRecord(backupId, fileName, filePath, "Failed", err, startedAt, finishedAt));
-                await _store.WriteAsync(history, ct);
-                return new { backupId, fileName, status = "Failed", error = err };
+                return new BackupRunResponse
+                {
+                    Mode = "mysqldump",
+                    Status = "Failed",
+                    Message = "Backup thất bại khi chạy mysqldump.",
+                    Error = err,
+                    BackupId = backupId,
+                    FileName = fileName,
+                    StartedAtUtc = startedAt,
+                    FinishedAtUtc = finishedAt
+                };
             }
 
             await File.WriteAllTextAsync(filePath, dump, ct);
 
-            history.Insert(0, new BackupRecord(backupId, fileName, filePath, "Success", null, startedAt, finishedAt));
-            await _store.WriteAsync(history, ct);
-
-            return new { backupId, fileName, status = "Success", startedAtUtc = startedAt, finishedAtUtc = finishedAt };
-        }
-
-        public async Task<List<object>> GetHistoryAsync(CancellationToken ct = default)
-        {
-            var history = await _store.ReadAsync(ct);
-            return history.Select(h => (object)new
+            return new BackupRunResponse
             {
-                h.BackupId,
-                h.FileName,
-                h.Status,
-                h.Error,
-                h.StartedAtUtc,
-                h.FinishedAtUtc
-            }).ToList();
-        }
-
-        public async Task<object> RestoreAsync(string backupId, CancellationToken ct = default)
-        {
-            var history = await _store.ReadAsync(ct);
-            var rec = history.FirstOrDefault(x => x.BackupId == backupId);
-
-            if (rec is null || !File.Exists(rec.FilePath))
-                return new { backupId, status = "Failed", error = "Backup file not found." };
-
-            var args = $"--host={_opt.Host} --port={_opt.Port} --user={_opt.User} {_opt.Database}";
-
-            var psi = new ProcessStartInfo
-            {
-                FileName = "mysql",
-                Arguments = args,
-                RedirectStandardInput = true,
-                RedirectStandardError = true,
-                UseShellExecute = false
+                Mode = "mysqldump",
+                Status = "Success",
+                Message = "Backup thành công.",
+                BackupId = backupId,
+                FileName = fileName,
+                StartedAtUtc = startedAt,
+                FinishedAtUtc = finishedAt
             };
-            psi.Environment["MYSQL_PWD"] = _opt.Password;
-
-            using var p = Process.Start(psi)!;
-
-            var sql = await File.ReadAllTextAsync(rec.FilePath, ct);
-            await p.StandardInput.WriteAsync(sql);
-            p.StandardInput.Close();
-
-            var err = await p.StandardError.ReadToEndAsync();
-            await p.WaitForExitAsync(ct);
-
-            if (p.ExitCode != 0)
-                return new { backupId, status = "Failed", error = err };
-
-            return new { backupId, status = "Restored" };
         }
+        catch (Exception ex)
+        {
+            return new BackupRunResponse
+            {
+                Mode = "mysqldump",
+                Status = "Failed",
+                Message = "Backup gặp lỗi runtime.",
+                Error = ex.Message
+            };
+        }
+    }
+
+    public Task<List<BackupHistoryItemResponse>> GetHistoryAsync(CancellationToken ct = default)
+    {
+        return Task.FromResult(new List<BackupHistoryItemResponse>());
+    }
+
+    public async Task<BackupRunResponse> RestoreAsync(string backupId, CancellationToken ct = default)
+    {
+        if (string.Equals(_backupOpt.Mode, "snapshot", StringComparison.OrdinalIgnoreCase))
+        {
+            return new BackupRunResponse
+            {
+                Mode = "snapshot",
+                Status = "NotSupported",
+                Message = "Restore được thực hiện bằng snapshot của provider, không thực hiện qua API."
+            };
+        }
+
+        if (!CommandHelper.CommandExists("mysql"))
+        {
+            return new BackupRunResponse
+            {
+                Mode = "mysqldump",
+                Status = "NotSupported",
+                Message = "Server không có mysql client. Không thể restore ở môi trường hiện tại."
+            };
+        }
+
+        return new BackupRunResponse
+        {
+            Mode = "mysqldump",
+            Status = "Failed",
+            Message = "Chưa map backupId -> filePath. Cần implement history store để restore thực."
+        };
     }
 }

@@ -34,6 +34,7 @@ namespace Main
             services.Configure<OpenAiSettings>(configuration.GetSection("OpenAi"));
             services.Configure<ElevenLabsSettings>(configuration.GetSection("ElevenLabs"));
             services.Configure<MySqlBackupSettings>(configuration.GetSection("MySqlBackup"));
+            services.Configure<BackupOptions>(configuration.GetSection("Backup"));
             services.AddMemoryCache();
 
             // --- SSH TUNNEL SETUP ---

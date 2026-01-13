@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Contract.DTOs.Response.Admin;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -8,8 +9,9 @@ namespace Service.Interfaces
 {
     public interface IBackupService
     {
-        Task<object> RunAsync(CancellationToken ct = default);
-        Task<List<object>> GetHistoryAsync(CancellationToken ct = default);
-        Task<object> RestoreAsync(string backupId, CancellationToken ct = default);
+        Task<BackupCapabilitiesResponse> GetCapabilitiesAsync(CancellationToken ct = default);
+        Task<BackupRunResponse> RunAsync(CancellationToken ct = default);
+        Task<List<BackupHistoryItemResponse>> GetHistoryAsync(CancellationToken ct = default);
+        Task<BackupRunResponse> RestoreAsync(string backupId, CancellationToken ct = default);
     }
 }
