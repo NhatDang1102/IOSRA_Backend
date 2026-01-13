@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Threading;
 using System.Threading.Tasks;
 using Contract.DTOs.Request.Admin;
@@ -18,6 +18,7 @@ namespace Main.Controllers
     using Contract.DTOs.Response.Common;
     using Microsoft.AspNetCore.Authorization;
     using Microsoft.AspNetCore.Mvc;
+    using Service.Helpers;
     using Service.Interfaces;
     
     namespace Main.Controllers
@@ -27,14 +28,16 @@ namespace Main.Controllers
         public class AdminController : AppControllerBase
         {
             private readonly IAdminService _adminService;
-    
-                    public AdminController(IAdminService adminService)
+            private readonly ISystemHealthService _systemHealthService;
+
+            public AdminController(IAdminService adminService, ISystemHealthService systemHealthService)
     
                     {
     
                         _adminService = adminService;
-    
-                    }
+                        _systemHealthService = systemHealthService;
+
+            }
     
             
     
@@ -69,6 +72,22 @@ namespace Main.Controllers
             public async Task<ActionResult<AdminAccountResponse>> UpdateStatus(Guid accountId, [FromBody] UpdateAccountStatusRequest request, CancellationToken ct)
             {
                 var result = await _adminService.UpdateStatusAsync(accountId, request, ct);
+                return Ok(result);
+            }
+
+            // Public nhẹ (chỉ để check uptime API có sống không)
+            [HttpGet("uptime")]
+            public IActionResult GetUptime()
+            {
+                return Ok(SystemUptimeSnapshot.Current);
+            }
+
+            // Chi tiết health 
+            [Authorize(Roles = "admin,omod,OPERATION_MOD")]
+            [HttpGet("health")]
+            public async Task<IActionResult> Health(CancellationToken ct)
+            {
+                var result = await _systemHealthService.CheckAsync(ct);
                 return Ok(result);
             }
         }
