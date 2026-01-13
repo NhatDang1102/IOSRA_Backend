@@ -21,6 +21,8 @@ namespace Service
             services.AddSingleton<IOtpStore, RedisOtpStore>();
             services.AddSingleton<IJwtBlacklistService, RedisJwtBlacklist>();
             services.AddSingleton<IImageUploader, CloudinaryUploader>();
+            services.AddScoped<ISystemHealthService, SystemHealthService>();
+            services.AddScoped<IBackupService, BackupService>();
             services.AddSingleton<IAmazonS3>(sp =>
             {
                 var settings = sp.GetRequiredService<IOptions<CloudflareR2Settings>>().Value;

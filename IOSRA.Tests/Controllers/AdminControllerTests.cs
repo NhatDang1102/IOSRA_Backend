@@ -17,14 +17,18 @@ namespace IOSRA.Tests.Controllers
     public class AdminControllerTests
     {
         private readonly Mock<IAdminService> _serviceMock;
+        private readonly Mock<ISystemHealthService> _systemHealthServiceMock;
         private readonly AdminController _controller;
         private readonly Guid _adminId = Guid.NewGuid();
 
         public AdminControllerTests()
         {
             _serviceMock = new Mock<IAdminService>();
-            _controller = new AdminController(_serviceMock.Object);
-            _controller.ControllerContext = CreateControllerContext(_adminId);
+            _systemHealthServiceMock = new Mock<ISystemHealthService>();
+            _controller = new AdminController(_serviceMock.Object, _systemHealthServiceMock.Object)
+            {
+                ControllerContext = CreateControllerContext(_adminId)
+            };
         }
 
         [Fact]

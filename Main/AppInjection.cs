@@ -33,6 +33,7 @@ namespace Main
             services.Configure<CloudflareR2Settings>(configuration.GetSection("CloudflareR2"));
             services.Configure<OpenAiSettings>(configuration.GetSection("OpenAi"));
             services.Configure<ElevenLabsSettings>(configuration.GetSection("ElevenLabs"));
+            services.Configure<MySqlBackupSettings>(configuration.GetSection("MySqlBackup"));
             services.AddMemoryCache();
 
             // --- SSH TUNNEL SETUP ---
