@@ -79,6 +79,7 @@ namespace Service.Services
             var mapped = items.Select(t =>
             {
                 var chapter = t.purchase_log?.chapter ?? t.voice_purchase?.chapter;
+                var story = chapter?.story;
                 var voiceNames = t.voice_purchase?.voice_purchase_items?
                     .Select(v => v.voice?.voice_name)
                     .Where(name => !string.IsNullOrWhiteSpace(name))
@@ -86,11 +87,26 @@ namespace Service.Services
                     .Distinct(StringComparer.OrdinalIgnoreCase)
                     .ToArray();
 
+                var itemType = t.type;
+                if (string.Equals(t.type, "purchase", StringComparison.OrdinalIgnoreCase))
+                {
+                    if (t.purchase_log_id.HasValue)
+                    {
+                        itemType = "chapter_purchase";
+                    }
+                    else if (t.voice_purchase_id.HasValue)
+                    {
+                        itemType = "voice_purchase";
+                    }
+                }
+
                 return new AuthorRevenueTransactionItemResponse
                 {
                     TransactionId = t.trans_id,
-                    Type = t.type,
+                    Type = itemType,
                     Amount = t.amount,
+                    StoryId = story?.story_id,
+                    StoryTitle = story?.title,
                     ChapterId = chapter?.chapter_id,
                     ChapterTitle = chapter?.title,
                     PurchaseLogId = t.purchase_log_id,
@@ -208,7 +224,8 @@ namespace Service.Services
             if (page < 1) throw new AppException("ValidationFailed", "Page phải lớn hơn 0.", 400);
             if (pageSize < 1 || pageSize > 200) throw new AppException("ValidationFailed", "PageSize phải nằm trong khoảng từ 1 đến 200.", 400);
 
-            if (!await _repository.IsStoryOwnedByAuthorAsync(storyId, authorAccountId, ct))
+            var story = await _repository.GetStoryOwnedByAuthorAsync(storyId, authorAccountId, ct);
+            if (story == null)
             {
                 throw new AppException("AccessDenied", "Bạn không có quyền truy cập thông tin doanh thu của truyện này.", 403);
             }
@@ -218,7 +235,7 @@ namespace Service.Services
             return new ContentRevenueDetailResponse
             {
                 ContentId = storyId,
-                Title = items.FirstOrDefault()?.chapter?.story?.title ?? string.Empty,
+                Title = story.title,
                 TotalRevenue = totalRevenue,
                 TotalPurchases = total,
                 Purchasers = new PagedResult<PurchaserDetailDto>
@@ -236,7 +253,8 @@ namespace Service.Services
             if (page < 1) throw new AppException("ValidationFailed", "Page phải lớn hơn 0.", 400);
             if (pageSize < 1 || pageSize > 200) throw new AppException("ValidationFailed", "PageSize phải nằm trong khoảng từ 1 đến 200.", 400);
 
-            if (!await _repository.IsChapterOwnedByAuthorAsync(chapterId, authorAccountId, ct))
+            var chapter = await _repository.GetChapterOwnedByAuthorAsync(chapterId, authorAccountId, ct);
+            if (chapter == null)
             {
                 throw new AppException("AccessDenied", "Bạn không có quyền truy cập thông tin doanh thu của chương này.", 403);
             }
@@ -246,7 +264,7 @@ namespace Service.Services
             return new ContentRevenueDetailResponse
             {
                 ContentId = chapterId,
-                Title = items.FirstOrDefault()?.chapter?.title ?? string.Empty,
+                Title = chapter.title,
                 TotalRevenue = totalRevenue,
                 TotalPurchases = total,
                 Purchasers = new PagedResult<PurchaserDetailDto>

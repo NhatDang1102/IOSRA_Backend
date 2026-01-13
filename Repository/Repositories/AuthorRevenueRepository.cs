@@ -47,11 +47,13 @@ namespace Repository.Repositories
             //trả cả lịch sử ua voice, mua chapter trong transation này luôn, map sang chapter liên quan luôn
             query = query
                 .Include(t => t.purchase_log)
-                    .ThenInclude(pl => pl!.chapter);
+                    .ThenInclude(pl => pl!.chapter)
+                        .ThenInclude(c => c!.story);
 
             query = query
                 .Include(t => t.voice_purchase)
-                    .ThenInclude(vp => vp!.chapter);
+                    .ThenInclude(vp => vp!.chapter)
+                        .ThenInclude(c => c!.story);
 
             query = query
                 .Include(t => t.voice_purchase)
@@ -75,11 +77,26 @@ namespace Repository.Repositories
             return await _db.stories.AnyAsync(s => s.story_id == storyId && s.author_id == authorId, ct);
         }
 
+        public Task<story?> GetStoryOwnedByAuthorAsync(Guid storyId, Guid authorId, CancellationToken ct = default)
+        {
+            return _db.stories
+                .AsNoTracking()
+                .FirstOrDefaultAsync(s => s.story_id == storyId && s.author_id == authorId, ct);
+        }
+
         public async Task<bool> IsChapterOwnedByAuthorAsync(Guid chapterId, Guid authorId, CancellationToken ct = default)
         {
             return await _db.chapter
                 .Include(c => c.story)
                 .AnyAsync(c => c.chapter_id == chapterId && c.story!.author_id == authorId, ct);
+        }
+
+        public Task<chapter?> GetChapterOwnedByAuthorAsync(Guid chapterId, Guid authorId, CancellationToken ct = default)
+        {
+            return _db.chapter
+                .AsNoTracking()
+                .Include(c => c.story)
+                .FirstOrDefaultAsync(c => c.chapter_id == chapterId && c.story!.author_id == authorId, ct);
         }
 
         public async Task<(List<chapter_purchase_log> Items, int Total, long TotalRevenue)> GetStoryPurchaseLogsAsync(Guid storyId, int page, int pageSize, CancellationToken ct = default)
