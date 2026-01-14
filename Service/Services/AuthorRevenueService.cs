@@ -231,13 +231,15 @@ namespace Service.Services
                 throw new AppException("AccessDenied", "Bạn không có quyền truy cập thông tin doanh thu của truyện này.", 403);
             }
 
-            var (items, total, totalRevenue) = await _repository.GetStoryPurchaseLogsAsync(storyId, page, pageSize, ct);
+            var (items, total, totalRevenue, chapterRevenue, voiceRevenue) = await _repository.GetStoryPurchaseLogsAsync(storyId, page, pageSize, ct);
 
             return new ContentRevenueDetailResponse
             {
                 ContentId = storyId,
                 Title = story.title,
                 TotalRevenue = totalRevenue,
+                ChapterRevenue = chapterRevenue,
+                VoiceRevenue = voiceRevenue,
                 TotalPurchases = total,
                 Purchasers = new PagedResult<PurchaserDetailDto>
                 {
@@ -260,13 +262,15 @@ namespace Service.Services
                 throw new AppException("AccessDenied", "Bạn không có quyền truy cập thông tin doanh thu của chương này.", 403);
             }
 
-            var (items, total, totalRevenue) = await _repository.GetChapterPurchaseLogsAsync(chapterId, page, pageSize, ct);
+            var (items, total, totalRevenue, chapterRevenue, voiceRevenue) = await _repository.GetChapterPurchaseLogsAsync(chapterId, page, pageSize, ct);
 
             return new ContentRevenueDetailResponse
             {
                 ContentId = chapterId,
                 Title = chapter.title,
                 TotalRevenue = totalRevenue,
+                ChapterRevenue = chapterRevenue,
+                VoiceRevenue = voiceRevenue,
                 TotalPurchases = total,
                 Purchasers = new PagedResult<PurchaserDetailDto>
                 {
@@ -286,7 +290,8 @@ namespace Service.Services
                 Username = log.Username,
                 AvatarUrl = log.AvatarUrl,
                 Price = (int)log.Price,
-                PurchaseDate = log.CreatedAt
+                PurchaseDate = log.CreatedAt,
+                Type = log.Type
             };
         }
 

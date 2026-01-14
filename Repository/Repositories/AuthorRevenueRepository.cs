@@ -100,8 +100,18 @@ namespace Repository.Repositories
                 .FirstOrDefaultAsync(c => c.chapter_id == chapterId && c.story!.author_id == authorId, ct);
         }
 
-        public async Task<(List<RevenuePurchaseLogData> Items, int Total, long TotalRevenue)> GetStoryPurchaseLogsAsync(Guid storyId, int page, int pageSize, CancellationToken ct = default)
+        public async Task<(List<RevenuePurchaseLogData> Items, int Total, long TotalRevenue, long ChapterRevenue, long VoiceRevenue)> GetStoryPurchaseLogsAsync(Guid storyId, int page, int pageSize, CancellationToken ct = default)
         {
+            var chapterRevenue = await _db.chapter_purchase_logs
+                .AsNoTracking()
+                .Where(log => log.chapter!.story_id == storyId)
+                .SumAsync(log => (long)log.dia_price, ct);
+
+            var voiceRevenue = await _db.voice_purchase_logs
+                .AsNoTracking()
+                .Where(log => log.chapter!.story_id == storyId)
+                .SumAsync(log => (long)log.total_dias, ct);
+
             var chapterPurchases = _db.chapter_purchase_logs
                 .AsNoTracking()
                 .Where(log => log.chapter!.story_id == storyId)
@@ -131,7 +141,7 @@ namespace Repository.Repositories
             var query = chapterPurchases.Union(voicePurchases);
 
             var total = await query.CountAsync(ct);
-            var totalRevenue = await query.SumAsync(x => x.Price, ct);
+            var totalRevenue = chapterRevenue + voiceRevenue;
 
             var items = await query
                 .OrderByDescending(log => log.CreatedAt)
@@ -139,11 +149,21 @@ namespace Repository.Repositories
                 .Take(pageSize)
                 .ToListAsync(ct);
 
-            return (items, total, totalRevenue);
+            return (items, total, totalRevenue, chapterRevenue, voiceRevenue);
         }
 
-        public async Task<(List<RevenuePurchaseLogData> Items, int Total, long TotalRevenue)> GetChapterPurchaseLogsAsync(Guid chapterId, int page, int pageSize, CancellationToken ct = default)
+        public async Task<(List<RevenuePurchaseLogData> Items, int Total, long TotalRevenue, long ChapterRevenue, long VoiceRevenue)> GetChapterPurchaseLogsAsync(Guid chapterId, int page, int pageSize, CancellationToken ct = default)
         {
+            var chapterRevenue = await _db.chapter_purchase_logs
+                .AsNoTracking()
+                .Where(log => log.chapter_id == chapterId)
+                .SumAsync(log => (long)log.dia_price, ct);
+
+            var voiceRevenue = await _db.voice_purchase_logs
+                .AsNoTracking()
+                .Where(log => log.chapter_id == chapterId)
+                .SumAsync(log => (long)log.total_dias, ct);
+
             var chapterPurchases = _db.chapter_purchase_logs
                 .AsNoTracking()
                 .Where(log => log.chapter_id == chapterId)
@@ -173,7 +193,7 @@ namespace Repository.Repositories
             var query = chapterPurchases.Union(voicePurchases);
 
             var total = await query.CountAsync(ct);
-            var totalRevenue = await query.SumAsync(x => x.Price, ct);
+            var totalRevenue = chapterRevenue + voiceRevenue;
 
             var items = await query
                 .OrderByDescending(log => log.CreatedAt)
@@ -181,7 +201,7 @@ namespace Repository.Repositories
                 .Take(pageSize)
                 .ToListAsync(ct);
 
-            return (items, total, totalRevenue);
+            return (items, total, totalRevenue, chapterRevenue, voiceRevenue);
         }
 
         public Task AddTransactionAsync(author_revenue_transaction transaction, CancellationToken ct = default)
