@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using Contract.DTOs.Request.Author;
 using Contract.DTOs.Response.Author;
 using Contract.DTOs.Response.Common;
+using Repository.DataModels;
 using Repository.Entities;
 using Repository.Interfaces;
 using Repository.Utils;
@@ -277,15 +278,15 @@ namespace Service.Services
             };
         }
 
-        private static PurchaserDetailDto MapToPurchaserDto(chapter_purchase_log log)
+        private static PurchaserDetailDto MapToPurchaserDto(RevenuePurchaseLogData log)
         {
             return new PurchaserDetailDto
             {
-                AccountId = log.account_id,
-                Username = log.account?.username ?? "Unknown",
-                AvatarUrl = log.account?.avatar_url,
-                Price = (int)log.dia_price,
-                PurchaseDate = log.created_at
+                AccountId = log.AccountId,
+                Username = log.Username,
+                AvatarUrl = log.AvatarUrl,
+                Price = (int)log.Price,
+                PurchaseDate = log.CreatedAt
             };
         }
 

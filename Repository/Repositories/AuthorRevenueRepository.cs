@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage;
 using Repository.Base;
+using Repository.DataModels;
 using Repository.DBContext;
 using Repository.Entities;
 using Repository.Interfaces;
@@ -99,20 +100,41 @@ namespace Repository.Repositories
                 .FirstOrDefaultAsync(c => c.chapter_id == chapterId && c.story!.author_id == authorId, ct);
         }
 
-        public async Task<(List<chapter_purchase_log> Items, int Total, long TotalRevenue)> GetStoryPurchaseLogsAsync(Guid storyId, int page, int pageSize, CancellationToken ct = default)
+        public async Task<(List<RevenuePurchaseLogData> Items, int Total, long TotalRevenue)> GetStoryPurchaseLogsAsync(Guid storyId, int page, int pageSize, CancellationToken ct = default)
         {
-            var query = _db.chapter_purchase_logs
+            var chapterPurchases = _db.chapter_purchase_logs
                 .AsNoTracking()
-                .Include(log => log.chapter)
-                .Where(log => log.chapter!.story_id == storyId);
+                .Where(log => log.chapter!.story_id == storyId)
+                .Select(log => new RevenuePurchaseLogData
+                {
+                    AccountId = log.account_id,
+                    Username = log.account.username ?? "Unknown",
+                    AvatarUrl = log.account.avatar_url,
+                    Price = (long)log.dia_price,
+                    CreatedAt = log.created_at,
+                    Type = "chapter"
+                });
+
+            var voicePurchases = _db.voice_purchase_logs
+                .AsNoTracking()
+                .Where(log => log.chapter!.story_id == storyId)
+                .Select(log => new RevenuePurchaseLogData
+                {
+                    AccountId = log.account_id,
+                    Username = log.account.username ?? "Unknown",
+                    AvatarUrl = log.account.avatar_url,
+                    Price = (long)log.total_dias,
+                    CreatedAt = log.created_at,
+                    Type = "voice"
+                });
+
+            var query = chapterPurchases.Union(voicePurchases);
 
             var total = await query.CountAsync(ct);
-            var totalRevenue = await query.SumAsync(log => (long)log.dia_price, ct);
+            var totalRevenue = await query.SumAsync(x => x.Price, ct);
 
             var items = await query
-                .Include(log => log.account) // Include Buyer info
-                .Include(log => log.chapter) // Ensure chapter info is available
-                .OrderByDescending(log => log.created_at)
+                .OrderByDescending(log => log.CreatedAt)
                 .Skip((page - 1) * pageSize)
                 .Take(pageSize)
                 .ToListAsync(ct);
@@ -120,19 +142,41 @@ namespace Repository.Repositories
             return (items, total, totalRevenue);
         }
 
-        public async Task<(List<chapter_purchase_log> Items, int Total, long TotalRevenue)> GetChapterPurchaseLogsAsync(Guid chapterId, int page, int pageSize, CancellationToken ct = default)
+        public async Task<(List<RevenuePurchaseLogData> Items, int Total, long TotalRevenue)> GetChapterPurchaseLogsAsync(Guid chapterId, int page, int pageSize, CancellationToken ct = default)
         {
-            var query = _db.chapter_purchase_logs
+            var chapterPurchases = _db.chapter_purchase_logs
                 .AsNoTracking()
-                .Where(log => log.chapter_id == chapterId);
+                .Where(log => log.chapter_id == chapterId)
+                .Select(log => new RevenuePurchaseLogData
+                {
+                    AccountId = log.account_id,
+                    Username = log.account.username ?? "Unknown",
+                    AvatarUrl = log.account.avatar_url,
+                    Price = (long)log.dia_price,
+                    CreatedAt = log.created_at,
+                    Type = "chapter"
+                });
+
+            var voicePurchases = _db.voice_purchase_logs
+                .AsNoTracking()
+                .Where(log => log.chapter_id == chapterId)
+                .Select(log => new RevenuePurchaseLogData
+                {
+                    AccountId = log.account_id,
+                    Username = log.account.username ?? "Unknown",
+                    AvatarUrl = log.account.avatar_url,
+                    Price = (long)log.total_dias,
+                    CreatedAt = log.created_at,
+                    Type = "voice"
+                });
+
+            var query = chapterPurchases.Union(voicePurchases);
 
             var total = await query.CountAsync(ct);
-            var totalRevenue = await query.SumAsync(log => (long)log.dia_price, ct);
+            var totalRevenue = await query.SumAsync(x => x.Price, ct);
 
             var items = await query
-                .Include(log => log.account) // Include Buyer info
-                .Include(log => log.chapter) // Include Chapter info
-                .OrderByDescending(log => log.created_at)
+                .OrderByDescending(log => log.CreatedAt)
                 .Skip((page - 1) * pageSize)
                 .Take(pageSize)
                 .ToListAsync(ct);
