@@ -22,10 +22,12 @@ namespace Service.Services
         private static readonly string[] AllowedStatuses = { "banned", "unbanned" };
 
         private readonly IAdminRepository _repository;
+        private readonly IMailSender _mailSender;
 
-        public AdminService(IAdminRepository repository)
+        public AdminService(IAdminRepository repository, IMailSender mailSender)
         {
             _repository = repository;
+            _mailSender = mailSender;
         }
 
         public async Task<PagedResult<AdminAccountResponse>> GetAccountsAsync(string? status, string? role, string? search, int page, int pageSize, CancellationToken ct = default)
@@ -73,6 +75,15 @@ namespace Service.Services
 
             await _repository.SetAccountStatusAsync(accountId, normalizedStatus, ct);
             await _repository.SaveChangesAsync(ct);
+
+            if (normalizedStatus == "banned")
+            {
+                var (isAuthor, balance, pending) = await _repository.GetAuthorRevenueInfoAsync(accountId, ct);
+                if (isAuthor)
+                {
+                    _ = _mailSender.SendAuthorBanNotificationAsync(account.Email, account.Username, balance, pending);
+                }
+            }
 
             var updated = await _repository.GetAccountAsync(accountId, ct)
                           ?? throw new AppException("AccountNotFound", "Tài khoản ko tồn tại.", 404);

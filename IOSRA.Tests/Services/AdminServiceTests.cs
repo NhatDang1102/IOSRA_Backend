@@ -11,6 +11,7 @@ using Repository.DataModels;
 using Repository.Entities;
 using Repository.Interfaces;
 using Service.Exceptions;
+using Service.Interfaces;
 using Service.Services;
 using Xunit;
 
@@ -19,12 +20,14 @@ namespace IOSRA.Tests.Services
     public class AdminServiceTests
     {
         private readonly Mock<IAdminRepository> _repoMock;
+        private readonly Mock<IMailSender> _mailSenderMock;
         private readonly AdminService _service;
 
         public AdminServiceTests()
         {
             _repoMock = new Mock<IAdminRepository>();
-            _service = new AdminService(_repoMock.Object);
+            _mailSenderMock = new Mock<IMailSender>();
+            _service = new AdminService(_repoMock.Object, _mailSenderMock.Object);
         }
 
         [Fact]
@@ -67,20 +70,40 @@ namespace IOSRA.Tests.Services
         {
             var accId = Guid.NewGuid();
             var req = new UpdateAccountStatusRequest { Status = "banned" };
-            var account = new AdminAccountProjection { AccountId = accId, Status = "unbanned", Roles = Array.Empty<string>() };
+            var account = new AdminAccountProjection { AccountId = accId, Status = "unbanned", Roles = Array.Empty<string>(), Email = "test@test.com", Username = "test" };
 
+            // Mock GetAccountAsync: First call returns current state
             _repoMock.Setup(x => x.GetAccountAsync(accId, It.IsAny<CancellationToken>()))
-                .ReturnsAsync(account); // First call returns current state
+                .ReturnsAsync(account);
             
-            // Second call (after save) returns updated state
-            _repoMock.SetupSequence(x => x.GetAccountAsync(accId, It.IsAny<CancellationToken>()))
-                .ReturnsAsync(account)
-                .ReturnsAsync(new AdminAccountProjection { AccountId = accId, Status = "banned", Roles = Array.Empty<string>() });
+            // Mock GetAuthorRevenueInfoAsync (Required since we are banning)
+            _repoMock.Setup(x => x.GetAuthorRevenueInfoAsync(accId, It.IsAny<CancellationToken>()))
+                .ReturnsAsync((false, 0, 0)); // Not an author
 
             await _service.UpdateStatusAsync(accId, req);
 
             _repoMock.Verify(x => x.SetAccountStatusAsync(accId, "banned", It.IsAny<CancellationToken>()), Times.Once);
             _repoMock.Verify(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
+        }
+        
+        [Fact]
+        public async Task UpdateStatusAsync_Should_Send_Email_If_Author_Banned()
+        {
+            var accId = Guid.NewGuid();
+            var req = new UpdateAccountStatusRequest { Status = "banned" };
+            var account = new AdminAccountProjection { AccountId = accId, Status = "unbanned", Roles = new[] { "author" }, Email = "author@test.com", Username = "author" };
+
+            _repoMock.Setup(x => x.GetAccountAsync(accId, It.IsAny<CancellationToken>()))
+                .ReturnsAsync(account);
+
+            // Is Author
+            _repoMock.Setup(x => x.GetAuthorRevenueInfoAsync(accId, It.IsAny<CancellationToken>()))
+                .ReturnsAsync((true, 100, 50));
+
+            await _service.UpdateStatusAsync(accId, req);
+
+            _repoMock.Verify(x => x.SetAccountStatusAsync(accId, "banned", It.IsAny<CancellationToken>()), Times.Once);
+            _mailSenderMock.Verify(x => x.SendAuthorBanNotificationAsync("author@test.com", "author", 100, 50), Times.Once);
         }
     }
 }

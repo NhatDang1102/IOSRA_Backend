@@ -140,6 +140,22 @@ namespace Service.Helpers
             await client.SendMailAsync(message);
         }
 
+        public async Task SendAuthorBanNotificationAsync(string toEmail, string username, long balance, long pending)
+        {
+            var body = $"Chào {username},\n\n"
+                       + "Tài khoản của bạn đã bị khóa vĩnh viễn do vi phạm quy định của hệ thống.\n"
+                       + $"Vì bạn là Tác giả, chúng tôi ghi nhận số dư hiện tại của bạn là:\n"
+                       + $"- Số dư khả dụng: {balance} Dias\n"
+                       + $"- Doanh thu đang chờ duyệt: {pending} Dias\n"
+                       + $"Tổng cộng: {balance + pending} Dias.\n\n"
+                       + "Do bạn không thể đăng nhập được nữa, vui lòng phản hồi lại (reply) trực tiếp email này để chúng tôi hướng dẫn thủ tục tất toán và nhận tiền.\n\n"
+                       + "Trân trọng,\nBan quản trị IOSRA.";
+
+            using var message = BuildMessage("Thông báo khóa tài khoản & Tất toán số dư", body, toEmail);
+            using var client = CreateClient();
+            await client.SendMailAsync(message);
+        }
+
         private MailMessage BuildMessage(string subject, string body, string toEmail)
         {
             var message = new MailMessage

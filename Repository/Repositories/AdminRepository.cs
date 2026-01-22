@@ -238,6 +238,20 @@ namespace Repository.Repositories
             account.updated_at = TimezoneConverter.VietnamNow;
         }
 
+        public async Task<(bool IsAuthor, long Balance, long Pending)> GetAuthorRevenueInfoAsync(Guid accountId, CancellationToken ct = default)
+        {
+            var author = await _db.authors
+                .AsNoTracking()
+                .FirstOrDefaultAsync(a => a.account_id == accountId, ct);
+
+            if (author == null)
+            {
+                return (false, 0, 0);
+            }
+
+            return (true, author.revenue_balance, author.revenue_pending);
+        }
+
         public Task SaveChangesAsync(CancellationToken ct = default)
             => _db.SaveChangesAsync(ct);
     }

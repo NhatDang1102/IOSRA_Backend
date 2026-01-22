@@ -18,8 +18,8 @@ namespace Repository.Interfaces
         Task<bool> IsChapterOwnedByAuthorAsync(Guid chapterId, Guid authorId, CancellationToken ct = default);
         Task<chapter?> GetChapterOwnedByAuthorAsync(Guid chapterId, Guid authorId, CancellationToken ct = default);
 
-        Task<(List<RevenuePurchaseLogData> Items, int Total, long TotalRevenue, long ChapterRevenue, long VoiceRevenue)> GetStoryPurchaseLogsAsync(Guid storyId, int page, int pageSize, CancellationToken ct = default);
-        Task<(List<RevenuePurchaseLogData> Items, int Total, long TotalRevenue, long ChapterRevenue, long VoiceRevenue)> GetChapterPurchaseLogsAsync(Guid chapterId, int page, int pageSize, CancellationToken ct = default);
+        Task<(List<RevenuePurchaseLogData> Items, int Total, long TotalRevenue, long ChapterRevenue, long VoiceRevenue, int TotalChapterCount, int TotalVoiceCount)> GetStoryPurchaseLogsAsync(Guid storyId, int page, int pageSize, CancellationToken ct = default);
+        Task<(List<RevenuePurchaseLogData> Items, int Total, long TotalRevenue, long ChapterRevenue, long VoiceRevenue, int TotalChapterCount, int TotalVoiceCount)> GetChapterPurchaseLogsAsync(Guid chapterId, int page, int pageSize, CancellationToken ct = default);
 
         Task AddTransactionAsync(author_revenue_transaction transaction, CancellationToken ct = default);
         Task<IDbContextTransaction> BeginTransactionAsync(CancellationToken ct = default);

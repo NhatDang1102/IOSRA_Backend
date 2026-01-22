@@ -231,7 +231,7 @@ namespace Service.Services
                 throw new AppException("AccessDenied", "Bạn không có quyền truy cập thông tin doanh thu của truyện này.", 403);
             }
 
-            var (items, total, totalRevenue, chapterRevenue, voiceRevenue) = await _repository.GetStoryPurchaseLogsAsync(storyId, page, pageSize, ct);
+            var (items, total, totalRevenue, chapterRevenue, voiceRevenue, chapterCount, voiceCount) = await _repository.GetStoryPurchaseLogsAsync(storyId, page, pageSize, ct);
 
             return new ContentRevenueDetailResponse
             {
@@ -241,6 +241,8 @@ namespace Service.Services
                 ChapterRevenue = chapterRevenue,
                 VoiceRevenue = voiceRevenue,
                 TotalPurchases = total,
+                TotalChapterPurchaseCount = chapterCount,
+                TotalVoicePurchaseCount = voiceCount,
                 Purchasers = new PagedResult<PurchaserDetailDto>
                 {
                     Items = items.Select(MapToPurchaserDto).ToList(),
@@ -262,7 +264,7 @@ namespace Service.Services
                 throw new AppException("AccessDenied", "Bạn không có quyền truy cập thông tin doanh thu của chương này.", 403);
             }
 
-            var (items, total, totalRevenue, chapterRevenue, voiceRevenue) = await _repository.GetChapterPurchaseLogsAsync(chapterId, page, pageSize, ct);
+            var (items, total, totalRevenue, chapterRevenue, voiceRevenue, chapterCount, voiceCount) = await _repository.GetChapterPurchaseLogsAsync(chapterId, page, pageSize, ct);
 
             return new ContentRevenueDetailResponse
             {
@@ -272,6 +274,8 @@ namespace Service.Services
                 ChapterRevenue = chapterRevenue,
                 VoiceRevenue = voiceRevenue,
                 TotalPurchases = total,
+                TotalChapterPurchaseCount = chapterCount,
+                TotalVoicePurchaseCount = voiceCount,
                 Purchasers = new PagedResult<PurchaserDetailDto>
                 {
                     Items = items.Select(MapToPurchaserDto).ToList(),

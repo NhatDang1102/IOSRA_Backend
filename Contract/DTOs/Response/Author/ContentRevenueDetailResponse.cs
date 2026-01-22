@@ -22,6 +22,9 @@ namespace Contract.DTOs.Response.Author
         public long ChapterRevenue { get; set; }
         public long VoiceRevenue { get; set; }
         public int TotalPurchases { get; set; }
+        public int TotalPurchaseCount => TotalPurchases;
+        public int TotalChapterPurchaseCount { get; set; }
+        public int TotalVoicePurchaseCount { get; set; }
         public PagedResult<PurchaserDetailDto> Purchasers { get; set; } = null!;
     }
 }
