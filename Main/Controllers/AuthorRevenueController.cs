@@ -57,7 +57,7 @@ namespace Main.Controllers
         }
 
         [HttpGet("stories/{storyId}")]
-        public async Task<ActionResult<ContentRevenueDetailResponse>> GetStoryRevenue(Guid storyId, [FromQuery] int page = 1, [FromQuery] int pageSize = 20, CancellationToken ct = default)
+        public async Task<ActionResult<StoryRevenueDetailResponse>> GetStoryRevenue(Guid storyId, [FromQuery] int page = 1, [FromQuery] int pageSize = 20, CancellationToken ct = default)
         {
             var result = await _authorRevenueService.GetStoryRevenueDetailAsync(AccountId, storyId, page, pageSize, ct);
             return Ok(result);

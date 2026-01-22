@@ -21,6 +21,8 @@ namespace Repository.Interfaces
         Task<(List<RevenuePurchaseLogData> Items, int Total, long TotalRevenue, long ChapterRevenue, long VoiceRevenue, int TotalChapterCount, int TotalVoiceCount)> GetStoryPurchaseLogsAsync(Guid storyId, int page, int pageSize, CancellationToken ct = default);
         Task<(List<RevenuePurchaseLogData> Items, int Total, long TotalRevenue, long ChapterRevenue, long VoiceRevenue, int TotalChapterCount, int TotalVoiceCount)> GetChapterPurchaseLogsAsync(Guid chapterId, int page, int pageSize, CancellationToken ct = default);
 
+        Task<List<chapter>> GetStoryChaptersWithRevenueAsync(Guid storyId, CancellationToken ct = default);
+
         Task AddTransactionAsync(author_revenue_transaction transaction, CancellationToken ct = default);
         Task<IDbContextTransaction> BeginTransactionAsync(CancellationToken ct = default);
         Task SaveChangesAsync(CancellationToken ct = default);

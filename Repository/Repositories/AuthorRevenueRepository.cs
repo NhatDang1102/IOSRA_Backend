@@ -224,6 +224,19 @@ namespace Repository.Repositories
             return (items, total, totalRevenue, chapterRevenue, voiceRevenue, chapterCount, voiceCount);
         }
 
+        public Task<List<chapter>> GetStoryChaptersWithRevenueAsync(Guid storyId, CancellationToken ct = default)
+        {
+            return _db.chapter
+                .AsNoTracking()
+                .Where(c => c.story_id == storyId)
+                .Include(c => c.chapter_purchase_logs)
+                    .ThenInclude(l => l.account)
+                .Include(c => c.voice_purchase_logs)
+                    .ThenInclude(l => l.account)
+                .OrderBy(c => c.chapter_no)
+                .ToListAsync(ct);
+        }
+
         public Task AddTransactionAsync(author_revenue_transaction transaction, CancellationToken ct = default)
         {
             _db.author_revenue_transaction.Add(transaction);

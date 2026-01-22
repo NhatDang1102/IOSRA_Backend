@@ -220,37 +220,76 @@ namespace Service.Services
             return requests.Select(MapWithdrawResponse).ToArray();
         }
 
-        public async Task<ContentRevenueDetailResponse> GetStoryRevenueDetailAsync(Guid authorAccountId, Guid storyId, int page, int pageSize, CancellationToken ct = default)
+        public async Task<StoryRevenueDetailResponse> GetStoryRevenueDetailAsync(Guid authorAccountId, Guid storyId, int page, int pageSize, CancellationToken ct = default)
         {
-            if (page < 1) throw new AppException("ValidationFailed", "Page phải lớn hơn 0.", 400);
-            if (pageSize < 1 || pageSize > 200) throw new AppException("ValidationFailed", "PageSize phải nằm trong khoảng từ 1 đến 200.", 400);
-
+            // Note: page and pageSize are ignored as requested to show all chapters and buyers
             var story = await _repository.GetStoryOwnedByAuthorAsync(storyId, authorAccountId, ct);
             if (story == null)
             {
                 throw new AppException("AccessDenied", "Bạn không có quyền truy cập thông tin doanh thu của truyện này.", 403);
             }
 
-            var (items, total, totalRevenue, chapterRevenue, voiceRevenue, chapterCount, voiceCount) = await _repository.GetStoryPurchaseLogsAsync(storyId, page, pageSize, ct);
+            var chapters = await _repository.GetStoryChaptersWithRevenueAsync(storyId, ct);
 
-            return new ContentRevenueDetailResponse
+            var response = new StoryRevenueDetailResponse
             {
-                ContentId = storyId,
+                ContentId = story.story_id,
                 Title = story.title,
-                TotalRevenue = totalRevenue,
-                ChapterRevenue = chapterRevenue,
-                VoiceRevenue = voiceRevenue,
-                TotalPurchases = total,
-                TotalChapterPurchaseCount = chapterCount,
-                TotalVoicePurchaseCount = voiceCount,
-                Purchasers = new PagedResult<PurchaserDetailDto>
-                {
-                    Items = items.Select(MapToPurchaserDto).ToList(),
-                    Total = total,
-                    Page = page,
-                    PageSize = pageSize
-                }
+                Chapters = new List<ChapterRevenueDetailDto>()
             };
+
+            foreach (var chapter in chapters)
+            {
+                var chapDto = new ChapterRevenueDetailDto
+                {
+                    ChapterId = chapter.chapter_id,
+                    ChapterNo = chapter.chapter_no,
+                    Title = chapter.title,
+                    Purchasers = new List<PurchaserDetailDto>()
+                };
+
+                var chapLogs = chapter.chapter_purchase_logs.Select(log => new PurchaserDetailDto
+                {
+                    AccountId = log.account_id,
+                    Username = log.account?.username ?? "Unknown",
+                    AvatarUrl = log.account?.avatar_url,
+                    Price = (int)log.dia_price,
+                    PurchaseDate = log.created_at,
+                    Type = "chapter"
+                });
+
+                var voiceLogs = chapter.voice_purchase_logs.Select(log => new PurchaserDetailDto
+                {
+                    AccountId = log.account_id,
+                    Username = log.account?.username ?? "Unknown",
+                    AvatarUrl = log.account?.avatar_url,
+                    Price = (int)log.total_dias,
+                    PurchaseDate = log.created_at,
+                    Type = "voice"
+                });
+
+                chapDto.Purchasers = chapLogs.Concat(voiceLogs).OrderByDescending(p => p.PurchaseDate).ToList();
+
+                chapDto.ChapterRevenue = chapter.chapter_purchase_logs.Sum(l => (long)l.dia_price);
+                chapDto.VoiceRevenue = chapter.voice_purchase_logs.Sum(l => (long)l.total_dias);
+                chapDto.TotalRevenue = chapDto.ChapterRevenue + chapDto.VoiceRevenue;
+
+                chapDto.TotalChapterPurchaseCount = chapter.chapter_purchase_logs.Count;
+                chapDto.TotalVoicePurchaseCount = chapter.voice_purchase_logs.Count;
+                chapDto.TotalPurchases = chapDto.TotalChapterPurchaseCount + chapDto.TotalVoicePurchaseCount;
+
+                response.Chapters.Add(chapDto);
+            }
+
+            response.ChapterRevenue = response.Chapters.Sum(c => c.ChapterRevenue);
+            response.VoiceRevenue = response.Chapters.Sum(c => c.VoiceRevenue);
+            response.TotalRevenue = response.ChapterRevenue + response.VoiceRevenue;
+
+            response.TotalChapterPurchaseCount = response.Chapters.Sum(c => c.TotalChapterPurchaseCount);
+            response.TotalVoicePurchaseCount = response.Chapters.Sum(c => c.TotalVoicePurchaseCount);
+            response.TotalPurchases = response.TotalChapterPurchaseCount + response.TotalVoicePurchaseCount;
+
+            return response;
         }
 
         public async Task<ContentRevenueDetailResponse> GetChapterRevenueDetailAsync(Guid authorAccountId, Guid chapterId, int page, int pageSize, CancellationToken ct = default)
