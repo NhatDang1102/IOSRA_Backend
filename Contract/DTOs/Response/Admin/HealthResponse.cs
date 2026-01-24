@@ -1,16 +1,17 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Contract.DTOs.Response.Admin
 {
     public class HealthResponse
     {
-        public string Status { get; set; } = "Healthy"; // Healthy | Degraded
+        // Status tổng quan: Healthy | Degraded
+        public string Status { get; set; } = "Healthy";
+
+        // Thời điểm server thực hiện health-check (UTC)
         public DateTime CheckedAtUtc { get; set; }
 
+        // Map các thành phần để FE render danh sách checkmark
         public Dictionary<string, bool> Components { get; set; } = new();
     }
 }
