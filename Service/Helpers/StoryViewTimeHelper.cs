@@ -20,7 +20,7 @@ namespace Service.Helpers
             var mondayUtc = mondayLocal - LocalOffset;
             return DateTime.SpecifyKind(mondayUtc, DateTimeKind.Utc);
         }
-        //làm tròn thời gian tới phút
+        // làm tròn thời gian tới phút
         internal static DateTime NormalizeToMinuteUtc(DateTime utc)
         {
             return DateTime.SpecifyKind(new DateTime(utc.Year, utc.Month, utc.Day, utc.Hour, utc.Minute, 0), DateTimeKind.Utc);
