@@ -31,6 +31,7 @@ namespace Repository.Interfaces
         Task AddRoleAsync(Guid accountId, string roleCode, CancellationToken ct = default);
         Task SetAccountStatusAsync(Guid accountId, string status, CancellationToken ct = default);
         Task<(bool IsAuthor, long Balance, long Pending)> GetAuthorRevenueInfoAsync(Guid accountId, CancellationToken ct = default);
+        Task HideAuthorContentAsync(Guid accountId, CancellationToken ct = default);
         Task SaveChangesAsync(CancellationToken ct = default);
     }
 }

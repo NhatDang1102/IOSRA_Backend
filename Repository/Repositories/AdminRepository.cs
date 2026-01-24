@@ -252,6 +252,33 @@ namespace Repository.Repositories
             return (true, author.revenue_balance, author.revenue_pending);
         }
 
+        public async Task HideAuthorContentAsync(Guid accountId, CancellationToken ct = default)
+        {
+            var isAuthor = await _db.authors
+                .AnyAsync(a => a.account_id == accountId, ct);
+
+            if (!isAuthor)
+            {
+                return;
+            }
+
+            var now = TimezoneConverter.VietnamNow;
+
+            // Update stories
+            await _db.stories
+                .Where(s => s.author_id == accountId)
+                .ExecuteUpdateAsync(s => s
+                    .SetProperty(x => x.status, "hidden")
+                    .SetProperty(x => x.updated_at, now), ct);
+
+            // Update chapters
+            await _db.chapter
+                .Where(c => c.story.author_id == accountId)
+                .ExecuteUpdateAsync(c => c
+                    .SetProperty(x => x.status, "hidden")
+                    .SetProperty(x => x.updated_at, now), ct);
+        }
+
         public Task SaveChangesAsync(CancellationToken ct = default)
             => _db.SaveChangesAsync(ct);
     }

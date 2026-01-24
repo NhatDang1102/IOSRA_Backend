@@ -78,6 +78,8 @@ namespace Service.Services
 
             if (normalizedStatus == "banned")
             {
+                await _repository.HideAuthorContentAsync(accountId, ct);
+
                 var (isAuthor, balance, pending) = await _repository.GetAuthorRevenueInfoAsync(accountId, ct);
                 if (isAuthor)
                 {
