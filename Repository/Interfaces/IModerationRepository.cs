@@ -13,5 +13,9 @@ namespace Repository.Interfaces
         Task UpdateChapterAsync(chapter entity, CancellationToken ct = default);
         Task<chapter_comment?> GetCommentAsync(Guid commentId, CancellationToken ct = default);
         Task UpdateCommentAsync(chapter_comment entity, CancellationToken ct = default);
+        
+        Task<report?> GetReportAsync(Guid reportId, CancellationToken ct = default);
+        Task UpdateReportAsync(report entity, CancellationToken ct = default);
+        Task BulkResolvePendingReportsAsync(string targetType, Guid targetId, Guid moderatorId, string note, CancellationToken ct = default);
     }
 }

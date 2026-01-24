@@ -121,9 +121,56 @@ namespace Service.Services
                          ?? throw new AppException("ReportNotFound", "Không tìm thấy báo cáo.", 404);
 
             var previousStatus = report.status;
+            var now = TimezoneConverter.VietnamNow;
+
             report.status = normalizedStatus;
             report.moderator_id = moderatorAccountId;
-            report.reviewed_at = TimezoneConverter.VietnamNow;
+            report.reviewed_at = now;
+
+            // --- GIẢI PHÁP THÔNG MINH: AUTO-ACTION ---
+            if (normalizedStatus == ReportStatuses.Resolved && previousStatus == ReportStatuses.Pending)
+            {
+                //Tự động ẩn nội dung bị report (Story/Chapter/Comment)
+                switch (report.target_type)
+                {
+                    case ReportTargetTypes.Story:
+                        var story = await _moderationRepository.GetStoryAsync(report.target_id, ct);
+                        if (story != null && story.status != "hidden")
+                        {
+                            story.status = "hidden";
+                            story.updated_at = now;
+                            await _moderationRepository.UpdateStoryAsync(story, ct);
+                        }
+                        break;
+                    case ReportTargetTypes.Chapter:
+                        var chapter = await _moderationRepository.GetChapterAsync(report.target_id, ct);
+                        if (chapter != null && chapter.status != "hidden")
+                        {
+                            chapter.status = "hidden";
+                            chapter.updated_at = now;
+                            await _moderationRepository.UpdateChapterAsync(chapter, ct);
+                        }
+                        break;
+                    case ReportTargetTypes.Comment:
+                        var comment = await _moderationRepository.GetCommentAsync(report.target_id, ct);
+                        if (comment != null && comment.status != "hidden")
+                        {
+                            comment.status = "hidden";
+                            comment.updated_at = now;
+                            await _moderationRepository.UpdateCommentAsync(comment, ct);
+                        }
+                        break;
+                }
+
+                //Tự động đóng toàn bộ các report pending khác cùng mục tiêu
+                var bulkNote = $"Hệ thống tự động xử lý dựa trên quyết định của báo cáo #{reportId}.";
+                await _moderationRepository.BulkResolvePendingReportsAsync(
+                    report.target_type,
+                    report.target_id,
+                    moderatorAccountId,
+                    bulkNote,
+                    ct);
+            }
 
             await _reportRepository.UpdateAsync(report, ct);
             var saved = await _reportRepository.GetByIdAsync(report.report_id, ct)

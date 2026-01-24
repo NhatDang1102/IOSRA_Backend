@@ -6,6 +6,7 @@ using Repository.Base;
 using Repository.DBContext;
 using Repository.Entities;
 using Repository.Interfaces;
+using Repository.Utils;
 
 namespace Repository.Repositories
 {
@@ -48,6 +49,27 @@ namespace Repository.Repositories
         {
             _db.chapter_comments.Update(entity);
             await _db.SaveChangesAsync(ct);
+        }
+
+        public Task<report?> GetReportAsync(Guid reportId, CancellationToken ct = default)
+            => _db.report.FirstOrDefaultAsync(r => r.report_id == reportId, ct);
+
+        public async Task UpdateReportAsync(report entity, CancellationToken ct = default)
+        {
+            _db.report.Update(entity);
+            await _db.SaveChangesAsync(ct);
+        }
+
+        public async Task BulkResolvePendingReportsAsync(string targetType, Guid targetId, Guid moderatorId, string note, CancellationToken ct = default)
+        {
+            var now = TimezoneConverter.VietnamNow;
+            
+            await _db.report
+                .Where(r => r.target_type == targetType && r.target_id == targetId && r.status == "pending")
+                .ExecuteUpdateAsync(r => r
+                    .SetProperty(x => x.status, "resolved")
+                    .SetProperty(x => x.moderator_id, moderatorId)
+                    .SetProperty(x => x.reviewed_at, now), ct);
         }
     }
 }
